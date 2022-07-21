@@ -1,4 +1,4 @@
-function QDM_series = QDM(obs,mod,var,frq,pp_threshold,pp_factor)
+function QDM_series = QDM(obs,mod,var,frq,pp_threshold,pp_factor, rel_change_th,inv_mod_th)
 %% QDM_series:
 %   This function performs bias correction of modeled series based on
 %   observed data by the Quantile Delta Mapping (QDM) method, as described
@@ -125,6 +125,14 @@ if ~exist('pp_factor','var')
     pp_factor = 1/100;
 end
 
+if ~exist('rel_change_th','var')
+    rel_change_th = 2;
+end
+
+if ~exist('inv_mod_th','var')
+    inv_mod_th = pp_threshold;
+end
+
 % 0) Check if annual or monthly data is specified.
 if ~exist('frq','var')
     frq = 'M';
@@ -181,6 +189,7 @@ inv_mod = getCDFinv(PDF_mod,Taot,mu_mod,std_mod,skew_mod,skewy_mod);
 %    obtained in 4b). Equation 4 and 6 of Cannon et al. (2015).
 if var == 1
     DM = mod_series(:,y_obs+1:end)./inv_mod;
+    DM((DM>rel_change_th) & (inv_mod<inv_mod_th)) = rel_change_th;
     QDM = inv_obs.*DM;
 else
     DM = mod_series(:,y_obs+1:end) - inv_mod;
