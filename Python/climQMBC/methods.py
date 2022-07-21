@@ -17,20 +17,23 @@ References:
     Hydrology &amp; Earth System Sciences, 21, 2649-2666,
     https://doi.org/10.5194/hess-21-2649-2017.
     
-    Chadwick et al. (2021) [under revision]
+    Chadwick et al. (2022) [under revision]
 
 
-Written by Sebastian Aedo Quililongo (1)
+Written by Sebastian Aedo Quililongo (1*)
            Cristian Chadwick         (2)
-           Fernando Gonzalez-Leiva   (1)
-           Jorge Gironas             (1)
+           Fernando Gonzalez-Leiva   (3)
+           Jorge Gironas             (3)
            
-  (1) Pontificia Universidad Catolica de Chile, Santiago, Chile
-      Department of Environmental and Hydraulic Engineering
-  (2) Universidad Adolfo Ibanez, Santiago, Chile
-      Faculty of Engineering and Sciences
-Maintainer contact: slaedo@uc.cl
-Revision: 0, updated Dec 2021
+  (1) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
+      Santiago, Chile
+  (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez, Santiago,
+      Chile
+  (3) Department of Hydraulics and Environmental Engineering, Pontificia
+      Universidad Catolica de Chile, Santiago, Chile
+      
+*Maintainer contact: slaedo@uc.cl
+Revision: 1, updated Jul 2022
 """
 
 from .utils import formatQM, getDist, getCDF, getCDFinv
@@ -100,6 +103,13 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
                 not specified, it is set monthly as default.
                     Monthly:   frq = 'M'
                     Annual:    frq = 'A'
+
+        pp_threshold:    A float indicating the threshold to consider 
+                         physically null precipitation values.
+                
+        pp_factor:       A float indicating the maximum value of the random
+                         values that replace physically null precipitation 
+                         values.
 
     Output:
         QM_series:  A column vector of monthly or annual modeled data 
@@ -227,6 +237,13 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
                 not specified, it is set monthly as default.
                     Monthly:   frq = 'M'
                     Annual:    frq = 'A'
+                    
+        pp_threshold:    A float indicating the threshold to consider 
+                         physically null precipitation values.
+                
+        pp_factor:       A float indicating the maximum value of the random
+                         values that replace physically null precipitation 
+                         values.
 
     Output:
         DQM_series:  A column vector of monthly or annual modeled data 
@@ -312,7 +329,7 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     return DQM_series
 
 
-def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
+def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2, inv_mod_th=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Quantile Delta Mapping (QDM) method, as described by Cannon
@@ -386,11 +403,28 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
         of the first year and ends in december of the last year.
 
     Optional inputs:
-        frq:    A string specifying if the input is annual or monthly data. If
-                not specified, it is set monthly as default.
-                    Monthly:   frq = 'M'
-                    Annual:    frq = 'A'
-
+        frq:             A string specifying if the input is annual or monthly
+                         data. If not specified, it is set monthly as default.
+                             Monthly:   frq = 'M'
+                             Annual:    frq = 'A'
+                    
+        pp_threshold:     A float indicating the threshold to consider 
+                          physically null precipitation values.
+                
+        pp_factor:        A float indicating the maximum value of the random
+                          values that replace physically null precipitation 
+                          values.
+                         
+        rel_change_th:    A float indicating the maximum scaling factor 
+                          (Equation 4 of Cannon et al. (2015)) when the
+                          denominator is below inv_mod_th.
+                
+        inv_mod_th:       A float indicating the upper threshold of the 
+                          denominator of the scaling factor (Equation 4 of
+                          Cannon et al. (2015)) to truncate the scaling factor.
+                          This parameter is defined as default as the
+                          pp_threshold parameter, described above.
+                          
     Output:
         QDM_series:  A column vector of monthly or annual modeled data 
                     (temperature or precipitation) corrected by the QDM method. 
@@ -407,6 +441,8 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
         https://doi.org/10.1175/JCLI-D-14-00754.1
 
     """
+    if inv_mod_th is None:
+        inv_mod_th = pp_threshold
     
     # 0) Check if annually or monthly data is specified.
     if frq != 'A':
@@ -466,6 +502,7 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     #    obtained in 4b). Equation 4 and 6 of Cannon et al. (2015).
     if var == 1:
         DM = mod_series[:,y_obs:]/inv_mod
+        DM[(DM>rel_change_th) & (inv_mod<inv_mod_th)] = rel_change_th
         QDM = inv_obs*DM
     else:
         DM = mod_series[:,y_obs:] - inv_mod
@@ -486,7 +523,7 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     """
     This function performs bias correction of modeled series based on observed
     data by the Unbiased Quantile Mapping (UQM) method, as described by 
-    Chadwick et al. (2021). Correction is performed to monthly or annual
+    Chadwick et al. (2022). Correction is performed to monthly or annual
     precipitation or temperature data in a single location. An independent
     probability distribution function is assigned to each month and to each
     projected period based on the Kolmogorov-Smirnov test. If annual frequency
@@ -557,6 +594,13 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
                 not specified, it is set monthly as default.
                     Monthly:   frq = 'M'
                     Annual:    frq = 'A'
+                    
+        pp_threshold:    A float indicating the threshold to consider 
+                         physically null precipitation values.
+                
+        pp_factor:       A float indicating the maximum value of the random
+                         values that replace physically null precipitation 
+                         values.
 
     Output:
         UQM_series:  A column vector of monthly or annual modeled data 
@@ -568,7 +612,7 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
                     years [y_mod, 1].
     
     References:
-        Chadwick et al. (2021) [under revision]
+        Chadwick et al. (2022) [under revision]
   
     """
     
@@ -800,6 +844,13 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
                 not specified, it is set monthly as default.
                     Monthly:   frq = 'M'
                     Annual:    frq = 'A'
+                    
+        pp_threshold:    A float indicating the threshold to consider 
+                         physically null precipitation values.
+                
+        pp_factor:       A float indicating the maximum value of the random
+                         values that replace physically null precipitation 
+                         values.
 
     Output:
         SDM_series:  A column vector of monthly or annual modeled data 

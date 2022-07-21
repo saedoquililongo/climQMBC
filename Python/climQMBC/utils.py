@@ -204,7 +204,7 @@ def formatQM(obs, mod, var, frq, pp_threshold, pp_factor):
     return y_obs,obs_series,mod_series,mu_obs,sigma_obs,skew_obs,skewy_obs,mu_mod,sigma_mod,skew_mod,skewy_mod
 
 
-def getDist(series,mu,sigma,skew,skewy,var):
+def getDist(series, mu, sigma, skew, skewy, var):
     """
     This function assigns an independent probability distribution function to
     each row of the input series by comparing the empirical probability
@@ -384,7 +384,7 @@ def getDist(series,mu,sigma,skew,skewy,var):
     return PDF
 
 
-def getCDF(PDF,series,mu,sigma,skew,skewy):
+def getCDF(PDF, series, mu, sigma, skew, skewy):
     """
     This function evaluates each row of the series in the respective cumulative
     distribution function assigned by the Kolmogorov-Smirnov (KS) test in the 
@@ -508,7 +508,7 @@ def getCDF(PDF,series,mu,sigma,skew,skewy):
     return Taot
 
 
-def getCDFinv(PDF,Taot,mu,sigma,skew,skewy):
+def getCDFinv(PDF, Taot, mu, sigma, skew, skewy):
     """
     This function evaluates the probability, Taot, in the respective inverse
     cumulative distribution function assigned by the Kolmogorov-Smirnov (KS)
