@@ -83,6 +83,15 @@ function QDM_series = QDM(obs,mod,var,frq,pp_threshold,pp_factor, rel_change_th,
 %   pp_factor = A float indicating the maximum value of the random values
 %               that replace physically null precipitation values.
 %
+%   rel_change_th = A float indicating the maximum scaling factor (Equation
+%                   4 of Cannon et al. (2015)) when the denominator is
+%                   below inv_mod_th.
+%
+%   inv_mod_th = A float indicating the upper threshold of the denominator
+%                of the scaling factor (Equation 4 of Cannon et al. (2015))
+%                to truncate the scaling factor. This parameter is defined
+%                as default as the pp_threshold parameter, described above.
+%
 % Output:
 %   QDM_series = A column vector of monthly or annual modeled data 
 %              (temperature or precipitation) corrected by the QDM method.
