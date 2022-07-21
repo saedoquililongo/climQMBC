@@ -4,66 +4,90 @@ This script contains the main functions requiered by the methods implemented in
 the climQMBC package, including the formatQM, the getDist, the getCDF, and the
 getCDFinv functions.
 
-Written by Sebastian Aedo Quililongo (1)
+Written by Sebastian Aedo Quililongo (1*)
            Cristian Chadwick         (2)
-           Fernando Gonzalez-Leiva   (1)
-           Jorge Gironas             (1)
+           Fernando Gonzalez-Leiva   (3)
+           Jorge Gironas             (3)
            
-  (1) Pontificia Universidad Catolica de Chile, Santiago, Chile
-      Department of Environmental and Hydraulic Engineering
-  (2) Universidad Adolfo Ibanez, Santiago, Chile
-      Faculty of Engineering and Sciences
-Maintainer contact: slaedo@uc.cl
-Revision: 0, updated Dec 2021
+  (1) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
+      Santiago, Chile
+  (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez, Santiago,
+      Chile
+  (3) Department of Hydraulics and Environmental Engineering, Pontificia
+      Universidad Catolica de Chile, Santiago, Chile
+      
+*Maintainer contact: slaedo@uc.cl
+Revision: 1, updated Jul 2022
 """
 
 import scipy.stats as stat
 import numpy as np
 
-def formatQM(obs,mod,frq):
+def formatQM(obs, mod, var, frq, pp_threshold, pp_factor):
     """
     This function formats the inputs and gets basic statistics for the 
     different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available in
     the climQMBC package. If monthly data is specified, the input series will 
     be reshaped to a matrix of 12 rows and several columns equal to the number 
     of years of each series. If annual data is specified, the input is reshaped
-    to a row vector with same entries as the input series.
+    to a row vector with same entries as the input series. For precipitation,
+    physically null values (values below pp_threshold) are replaced by random
+    positive values below pp_factor.
 
     Description:
         0) Check if annual or monthly data is specified.
         
-        1) Get number of years of the observed period.
+        1) If variable is precipitation, replace low values with random values.
+
+        2) Get number of years of the observed period.
         
-        2) If monthly data is specified, reshape the input series to a matrix
+        3) If monthly data is specified, reshape the input series to a matrix
            of 12 rows and several columns equal to the number of years of each
            series. If annual data is specified, reshape the input to a row
            vector with same entries as the input series.
         
-        3) If monthly data is specified, get monthly mean, standard deviation,
+        4) If monthly data is specified, get monthly mean, standard deviation,
            skewness, and log-skewness for the historical period of the observed
            and modeled series. If annual data is specified, get monthly mean, 
            standard deviation, skewness, and log-skewness for the historical 
            period of the observed and modeled series.
 
     Inputs:
-        obs:    A column vector of monthly or annual observed data (temperature
-                or precipitation). If monthly frequency is specified, 
-                the length of this vector is 12 times the number of observed 
-                years [12 x y_obs, 1]. If annual frequency is specified, the 
-                length of this vector is equal to the number of observed years
-                [y_obs, 1].
+        obs:             A column vector of monthly or annual observed data 
+                         (temperature or precipitation). If monthly frequency 
+                         is specified, the length of this vector is 12 times 
+                         the number of observed years [12 x y_obs, 1]. If
+                         annual frequency is specified, the length of this
+                         vector is equal to the number of observed years 
+                         [y_obs, 1].
 
-        mod:    A column vector of monthly or annual modeled data (temperature
-                or precipitation). If monthly frequency is specified, 
-                the length of this vector is 12 times the number of observed
-                years [12 x y_mod, 1]. If annual frequency is specified, the 
-                length of this vector is equal to the number of observed years
-                [y_mod, 1].
+        mod:             A column vector of monthly or annual modeled data
+                         (temperature or precipitation). If monthly frequency
+                         is specified, the length of this vector is 12 times
+                         the number of observed years [12 x y_mod, 1]. If 
+                         annual frequency is specified, the length of this
+                         vector is equal to the number of observed years
+                         [y_mod, 1].
+                
+        var:             A flag that identifies if data are temperature or 
+                         precipitation. This flag tells the getDist function if
+                         it has to discard distribution functions that allow
+                         negative numbers, and if the terms in the correction
+                         equations are multiplied/divided or added/subtracted.
+                             Temperature:   var = 0
+                             Precipitation: var = 1
 
-        frq:    A string specifying if the input is annual or monthly data. If
-                not specified, it is set monthly as default.
-                    Monthly:   frq = 'M'
-                    Annual:    frq = 'A'
+        frq:             A string specifying if the input is annual or monthly
+                         data. If not specified, it is set monthly as default.
+                             Monthly:   frq = 'M'
+                             Annual:    frq = 'A'
+                    
+        pp_threshold:    A float indicating the threshold to consider 
+                         physically null precipitation values.
+                
+        pp_factor:       A float indicating the maximum value of the random
+                         values that replace physically null precipitation 
+                         values.
 
         NOTE: This routine considers that obs and mod series start in january
         of the first year and ends in december of the last year.
@@ -136,18 +160,25 @@ def formatQM(obs,mod,frq):
         I = 1
     else:
         I = 12
+        
+    # 1) If variable is precipitation, replace low values with random values.
+    if var==1:
+        bool_low_obs = obs<pp_threshold
+        bool_low_mod = mod<pp_threshold
+        obs[bool_low_obs] = np.random.rand(bool_low_obs.sum())*pp_factor
+        mod[bool_low_mod] = np.random.rand(bool_low_mod.sum())*pp_factor
     
-    # 1) Get number of years of the observed period.
+    # 2) Get number of years of the observed period.
     y_obs = int(obs.shape[0]/I)
     
-    # 2) If monthly data is specified, reshape the input series to a matrix of
+    # 3) If monthly data is specified, reshape the input series to a matrix of
     #    12 rows and several columns equal to the number of years of each 
     #    series. If annually data is specified, reshape the input to a row 
     #    vector with same entries as the input series.
     obs_series = obs.reshape((I,int(obs.shape[0]/I)),order='F')
     mod_series = mod.reshape((I,int(mod.shape[0]/I)),order='F')
         
-    # 3) If monthly data is specified, get monthly mean, standard deviation, 
+    # 4) If monthly data is specified, get monthly mean, standard deviation, 
     #    skewness, and log-skewness for the historical period of the observed
     #    and modeled series. If annually data is specified, get monthly mean,
     #    standard deviation, skewness, and log-skewness for the historical

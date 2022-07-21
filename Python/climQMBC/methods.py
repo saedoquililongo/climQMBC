@@ -38,7 +38,7 @@ from scipy.signal import detrend
 import scipy.stats as stat
 import numpy as np
 
-def QM(obs,mod,var,frq='M'):
+def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     """
     This function performs bias correction of modeled series based on observed
     data by the Quantile Mapping (QM) method, as described by Cannon et al. 
@@ -124,7 +124,7 @@ def QM(obs,mod,var,frq='M'):
         
     # 1) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs,mod,frq)
+    y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
     
     # 2) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
@@ -145,11 +145,12 @@ def QM(obs,mod,var,frq='M'):
     #    function of the climQMBC package). Equation 1 of Cannon et al. (2015).
     QM_series = getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs)
     QM_series = QM_series.reshape(-1,order='F')
+    QM_series[QM_series<pp_threshold] = 0
 
     return QM_series
 
 
-def DQM(obs,mod,var,frq='M'):
+def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     """
     This function performs bias correction of modeled series based on observed
     data by the Detrended Quantile Mapping (DQM) method, as described by Cannon
@@ -250,7 +251,7 @@ def DQM(obs,mod,var,frq='M'):
     
     # 1) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs,mod,frq)
+    y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
     
     # 2) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
@@ -306,11 +307,12 @@ def DQM(obs,mod,var,frq='M'):
     mod_h = mod_series[:,:y_obs].reshape(-1,order='F')
     QM_series = QM(obs,mod_h,var,frq)
     DQM_series = np.hstack([QM_series,DQM])
+    DQM_series[DQM_series<pp_threshold] = 0
     
     return DQM_series
 
 
-def QDM(obs,mod,var,frq='M'):
+def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     """
     This function performs bias correction of modeled series based on observed
     data by the Quantile Delta Mapping (QDM) method, as described by Cannon
@@ -412,7 +414,7 @@ def QDM(obs,mod,var,frq='M'):
     
     # 1) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs,mod,frq)
+    y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
     
     # 2) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
@@ -475,11 +477,12 @@ def QDM(obs,mod,var,frq='M'):
     mod_h = mod_series[:,:y_obs].reshape(-1,order='F')
     QM_series = QM(obs,mod_h,var,frq)
     QDM_series = np.hstack([QM_series,QDM])
+    QDM_series[QDM_series<pp_threshold] = 0
     
     return QDM_series
 
 
-def UQM(obs,mod,var,frq='M'):
+def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     """
     This function performs bias correction of modeled series based on observed
     data by the Unbiased Quantile Mapping (UQM) method, as described by 
@@ -575,7 +578,7 @@ def UQM(obs,mod,var,frq='M'):
     
     # 1) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs,mod,frq)
+    y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
     
     # 2) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
@@ -682,11 +685,12 @@ def UQM(obs,mod,var,frq='M'):
     mod_h = mod_series[:,:y_obs].reshape(-1,order='F')
     QM_series = QM(obs,mod_h,var,frq)
     UQM_series = np.hstack([QM_series,UQM])
+    UQM_series[UQM_series<pp_threshold] = 0
     
     return UQM_series
 
 
-def SDM(obs,mod,var,frq='M'):
+def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     """
     This function performs bias correction of modeled series based on observed
     data by the Scaled Distribution Mapping (SDM) method, as described by 
@@ -815,7 +819,7 @@ def SDM(obs,mod,var,frq='M'):
  
     """
     
-    lower_lim = 0.1
+    lower_lim = pp_threshold
     CDF_th = 1e-3
     
     # 0) Check if annually or monthly data is specified.
@@ -824,7 +828,7 @@ def SDM(obs,mod,var,frq='M'):
     
     # 1) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs,obs_series,mod_series = formatQM(obs,mod,frq)[:3]
+    y_obs,obs_series,mod_series = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)[:3]
     
     SDM = np.zeros((mod_series.shape[0],mod_series.shape[1] - y_obs))    
     SDM_h = np.zeros((obs_series.shape[0], y_obs))    
@@ -1014,5 +1018,6 @@ def SDM(obs,mod,var,frq='M'):
     SDM_h = SDM_h.reshape(-1,order='F')
     SDM = SDM.reshape(-1,order='F')
     SDM_series = np.hstack([SDM_h,SDM])
+    SDM_series[SDM_series<pp_threshold] = 0
 
     return SDM_series
