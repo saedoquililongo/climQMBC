@@ -1,10 +1,12 @@
 #' formatQM
 #'
-#'This script contains the main functions requiered by the methods implemented in the climQMBC package, including the formatQM, the getDist, the getCDF, and the getCDFinv functions.
+#'This function formats the inputs and gets basic statistics for the different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available in the climQMBC package. If monthly data is specified, the input series will be reshaped to a matrix of 12 rows and several columns equal to the number of years of each series. If annual data is specified, the input is reshaped to a row vector with same entries as the input series. For precipitation, physically null values (values below pp_threshold) are replaced by random positive values below pp_factor.
 #'
 #' @param obs A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_obs, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_obs, 1].
 #' @param mod A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].
-#' @param frq (Optional) A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'
+#' @param frq A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'
+#' @param pp_threshold A float indicating the threshold to consider physically null precipitation values.
+#' @param pp_factor A float indicating the maximum value of the random values that replace physically null precipitation values.
 #'
 #' @return y_obs:          Number of observed years.
 #' @return obs_series:     A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12, y_obs]. If annual frequency is specified, the length of this vector is equal to the number of observed years [1, y_obs].
@@ -19,8 +21,8 @@
 #' @return skewy_mod:      If monthly frequency is specified, a column vector of monthly skewness of the logarithm of modeled data of the historical period [12,1]. If annual frequency is specified, the skewness of the logarithm of the modeled data of the historical period(float).
 #' @export
 #'
-#' @examples formatQM(obs,mod,frq)
-formatQM <- function(obs,mod,frq){
+#' @examples formatQM(obs,mod,frq,pp_threshold,pp_factor)
+formatQM <- function(obs,mod,frq,pp_threshold,pp_factor){
 
   # 0) Check if annually or monthly data is specified.
   if (frq == 'A') {
@@ -29,17 +31,25 @@ formatQM <- function(obs,mod,frq){
     I <- 12
   }
 
-  # 1) Get number of years of the observed period.
+  # 1) If variable is precipitation, replace low values with random values.
+  if (var==1){
+    bool_low_obs <- obs<pp_threshold
+    bool_low_mod <- mod<pp_threshold
+    obs[bool_low_obs] <- runif(sum(bool_low_obs))*pp_factor
+    mod[bool_low_mod] <- runif(sum(bool_low_mod))*pp_factor
+  }
+
+  # 2) Get number of years of the observed period.
   y_obs <- length(obs)/I
 
-  # 2) If monthly data is specified, reshape the input series to a matrix of
+  # 3) If monthly data is specified, reshape the input series to a matrix of
   #    12 rows and several columns equal to the number of years of each
   #    series. If annually data is specified, reshape the input to a row
   #    vector with same entries as the input series.
   obs_series <- matrix(obs,nrow = I, ncol = length(obs)/I)
   mod_series <- matrix(mod,nrow = I, ncol = length(mod)/I)
 
-  # 3) If monthly data is specified, get monthly mean, standard deviation,
+  # 4) If monthly data is specified, get monthly mean, standard deviation,
   #   skewness, and log-skewness for the historical period of the observed
   #   and modeled series. If annually data is specified, get monthly mean,
   #   standard deviation, skewness, and log-skewness for the historical

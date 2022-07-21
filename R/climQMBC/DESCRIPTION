@@ -1,8 +1,8 @@
 Package: climQMBC
 Type: Package
 Title: Climatic variables Quantile Mapping Bias Correction
-Version: 0.1.0
-Author: Sebastian Aedo (1), Cristian Chadwick (2), Fernando Gonzalez-Leiva (1), and Jorge Gironas (1). (1) Pontificia Universidad Catolica de Chile, Santiago, Chile. Department of Environmental and Hydraulic Engineering. (2) Universidad Adolfo Ibanez, Santiago, Chile. Faculty of Engineering and Sciences.
+Version: 0.1
+Author: Sebastian Aedo (1*), Cristian Chadwick (2), Fernando Gonzalez-Leiva (3), and Jorge Gironas (3). (1) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile, Santiago, Chile. (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez, Santiago, Chile. (3) Department of Hydraulics and Environmental Engineering, Pontificia Universidad Catolica de Chile, Santiago, Chile.
 Maintainer: Sebastian Aedo <slaedo@uc.cl>
 Description: This package contains five bias correction methods: 1) Quantile Mapping (QM), 2) Detrended Quantile Mapping (DQM), 3) Quantile Delta Mapping (QDM), 4) Unbiased Quantile Mapping (UQM), and Scaled Distribution Mapping (SDM). Correction is performed to monthly or annual precipitation or temperature data in a single location.
 License: What license is it under?

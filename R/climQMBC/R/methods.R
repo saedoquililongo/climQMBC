@@ -8,6 +8,8 @@
 #' @param mod A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].
 #' @param var A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1
 #' @param frq (Optional) A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'
+#' @param pp_threshold (Optional) A float indicating the threshold to consider physically null precipitation values.
+#' @param pp_factor (Optional) A float indicating the maximum value of the random values that replace physically null precipitation values.
 #'
 #' @return A column vector of monthly or annual modeled data (temperature or precipitation) corrected by the QM method. If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed  years [y_mod, 1].
 #' @export
@@ -15,7 +17,18 @@
 #' @examples QM(obs,mod,var)
 #' @examples QM(obs,mod,var,frq='A')
 #' @examples QM(obs,mod,var,frq='M')
-QM <- function(obs,mod,var,frq){
+#' @examples QM(obs,mod,var,frq='M',pp_threshold=0.1)
+#' @examples QM(obs,mod,var,frq='M',pp_factor=1/1000)
+#' @examples QM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
+QM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
+
+  if(missing(pp_threshold)) {
+    pp_threshold <- 1
+  }
+
+  if(missing(pp_factor)) {
+    pp_factor <- 1/100
+  }
 
   # 0) Check if annually or monthly data is specified.
   if(missing(frq)) {
@@ -24,7 +37,7 @@ QM <- function(obs,mod,var,frq){
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,frq)
+  format_list <- formatQM(obs,mod,frq,pp_threshold,pp_factor)
 
   y_obs       <- format_list[[1]]
   obs_series  <- format_list[[2]]
@@ -57,6 +70,7 @@ QM <- function(obs,mod,var,frq){
   #    function of the climQMBC package). Equation 1 of Cannon et al. (2015).
   QM_series <- getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs)
   QM_series <- matrix(QM_series)
+  QM_series[QM_series<pp_threshold] <- 0
 
   return(QM_series)
 }
@@ -71,6 +85,8 @@ QM <- function(obs,mod,var,frq){
 #' @param mod A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].
 #' @param var A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1
 #' @param frq (Optional) A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'
+#' @param pp_threshold (Optional) A float indicating the threshold to consider physically null precipitation values.
+#' @param pp_factor (Optional) A float indicating the maximum value of the random values that replace physically null precipitation values.
 #'
 #' @return A column vector of monthly or annual modeled data (temperature or precipitation) corrected by the DQM method. If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed  years [y_mod, 1].
 #' @export
@@ -78,7 +94,18 @@ QM <- function(obs,mod,var,frq){
 #' @examples DQM(obs,mod,var)
 #' @examples DQM(obs,mod,var,frq='A')
 #' @examples DQM(obs,mod,var,frq='M')
-DQM <- function(obs,mod,var,frq){
+#' @examples DQM(obs,mod,var,frq='M',pp_threshold=0.1)
+#' @examples DQM(obs,mod,var,frq='M',pp_factor=1/1000)
+#' @examples DQM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
+DQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
+
+  if(missing(pp_threshold)) {
+    pp_threshold <- 1
+  }
+
+  if(missing(pp_factor)) {
+    pp_factor <- 1/100
+  }
 
   # 0) Check if annually or monthly data is specified.
   if(missing(frq)) {
@@ -87,7 +114,7 @@ DQM <- function(obs,mod,var,frq){
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,frq)
+  format_list <- formatQM(obs,mod,frq,pp_threshold,pp_factor)
 
   y_obs       <- format_list[[1]]
   obs_series  <- format_list[[2]]
@@ -162,6 +189,7 @@ DQM <- function(obs,mod,var,frq){
   mod_h <- matrix(mod_h)
   QM_series <- QM(obs,mod_h,var,frq)
   DQM_series <- c(QM_series,DQM)
+  DQM_series[DQM_series<pp_threshold] <- 0
 
   return(DQM_series)
 }
@@ -176,6 +204,8 @@ DQM <- function(obs,mod,var,frq){
 #' @param mod A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].
 #' @param var A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1
 #' @param frq (Optional) A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'
+#' @param pp_threshold (Optional) A float indicating the threshold to consider physically null precipitation values.
+#' @param pp_factor (Optional) A float indicating the maximum value of the random values that replace physically null precipitation values.
 #'
 #' @return A column vector of monthly or annual modeled data (temperature or precipitation) corrected by the QDM method. If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed  years [y_mod, 1].
 #' @export
@@ -183,7 +213,18 @@ DQM <- function(obs,mod,var,frq){
 #' @examples QDM(obs,mod,var)
 #' @examples QDM(obs,mod,var,frq='A')
 #' @examples QDM(obs,mod,var,frq='M')
-QDM <- function(obs,mod,var,frq){
+#' @examples QDM(obs,mod,var,frq='M',pp_threshold=0.1)
+#' @examples QDM(obs,mod,var,frq='M',pp_factor=1/1000)
+#' @examples QDM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
+QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
+
+  if(missing(pp_threshold)) {
+    pp_threshold <- 1
+  }
+
+  if(missing(pp_factor)) {
+    pp_factor <- 1/100
+  }
 
   # 0) Check if annually or monthly data is specified.
   if(missing(frq)) {
@@ -192,7 +233,7 @@ QDM <- function(obs,mod,var,frq){
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,frq)
+  format_list <- formatQM(obs,mod,frq,pp_threshold,pp_factor)
 
   y_obs       <- format_list[[1]]
   obs_series  <- format_list[[2]]
@@ -269,6 +310,7 @@ QDM <- function(obs,mod,var,frq){
   mod_h <- matrix(mod_h)
   QM_series <- QM(obs,mod_h,var,frq)
   QDM_series <- c(QM_series,QDM)
+  QDM_series[QDM_series<pp_threshold] <- 0
 
   return(QDM_series)
 }
@@ -283,6 +325,8 @@ QDM <- function(obs,mod,var,frq){
 #' @param mod A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].
 #' @param var A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1
 #' @param frq (Optional) A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'
+#' @param pp_threshold (Optional) A float indicating the threshold to consider physically null precipitation values.
+#' @param pp_factor (Optional) A float indicating the maximum value of the random values that replace physically null precipitation values.
 #'
 #' @return A column vector of monthly or annual modeled data (temperature or precipitation) corrected by the UQM method. If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed  years [y_mod, 1].
 #' @export
@@ -290,7 +334,18 @@ QDM <- function(obs,mod,var,frq){
 #' @examples UQM(obs,mod,var)
 #' @examples UQM(obs,mod,var,frq='A')
 #' @examples UQM(obs,mod,var,frq='M')
-UQM <- function(obs,mod,var,frq){
+#' @examples UQM(obs,mod,var,frq='M',pp_threshold=0.1)
+#' @examples UQM(obs,mod,var,frq='M',pp_factor=1/1000)
+#' @examples UQM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
+UQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
+
+  if(missing(pp_threshold)) {
+    pp_threshold <- 1
+  }
+
+  if(missing(pp_factor)) {
+    pp_factor <- 1/100
+  }
 
   # 0) Check if annually or monthly data is specified.
   if(missing(frq)) {
@@ -299,7 +354,7 @@ UQM <- function(obs,mod,var,frq){
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,frq)
+  format_list <- formatQM(obs,mod,frq,pp_threshold,pp_factor)
 
   y_obs       <- format_list[[1]]
   obs_series  <- format_list[[2]]
@@ -426,6 +481,7 @@ UQM <- function(obs,mod,var,frq){
   mod_h <- matrix(mod_h)
   QM_series <- QM(obs,mod_h,var,frq)
   UQM_series <- c(QM_series,UQM)
+  UQM_series[UQM_series<pp_threshold] <- 0
 
   return(UQM_series)
 }
@@ -441,6 +497,8 @@ UQM <- function(obs,mod,var,frq){
 #' @param mod A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].
 #' @param var A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1
 #' @param frq (Optional) A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'
+#' @param pp_threshold (Optional) A float indicating the threshold to consider physically null precipitation values.
+#' @param pp_factor (Optional) A float indicating the maximum value of the random values that replace physically null precipitation values.
 #'
 #' @return A column vector of monthly or annual modeled data (temperature or precipitation) corrected by the SDM method. If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed  years [y_mod, 1].
 #' @export
@@ -448,9 +506,20 @@ UQM <- function(obs,mod,var,frq){
 #' @examples SDM(obs,mod,var)
 #' @examples SDM(obs,mod,var,frq='A')
 #' @examples SDM(obs,mod,var,frq='M')
-SDM <- function(obs,mod,var,frq){
+#' @examples SDM(obs,mod,var,frq='M',pp_threshold=0.1)
+#' @examples SDM(obs,mod,var,frq='M',pp_factor=1/1000)
+#' @examples SDM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
+SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 
-  lower_lim <- 0.1
+  if(missing(pp_threshold)) {
+    pp_threshold <- 1
+  }
+
+  if(missing(pp_factor)) {
+    pp_factor <- 1/100
+  }
+
+  lower_lim <- pp_threshold
   CDF_th <- 10^-3
 
   # 0) Check if annually or monthly data is specified.
@@ -460,7 +529,7 @@ SDM <- function(obs,mod,var,frq){
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,frq)
+  format_list <- formatQM(obs,mod,frq,pp_threshold,pp_factor)
 
   y_obs       <- format_list[[1]]
   obs_series  <- format_list[[2]]
@@ -655,6 +724,7 @@ SDM <- function(obs,mod,var,frq){
   SDM <- matrix(SDM)
   SDM_h <- matrix(SDM_h)
   SDM_series <- c(SDM_h,SDM)
+  SDM_series[SDM_series<pp_threshold] <- 0
 
   return(SDM_series)
 }
