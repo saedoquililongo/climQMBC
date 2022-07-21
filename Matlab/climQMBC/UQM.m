@@ -1,8 +1,8 @@
-function UQM_series = UQM(obs,mod,var,frq)
+function UQM_series = UQM(obs,mod,var,frq,pp_threshold,pp_factor)
 %% UQM_series:
 %   This function performs bias correction of modeled series based on
 %   observed data by the Unbiased Quantile Mapping (UQM) method, as 
-%   described by Chadwick et al. (2021) . Correction is performed to  
+%   described by Chadwick et al. (2022) . Correction is performed to  
 %   monthly or annual precipitation or temperature data in a single 
 %   location. An independent probability distribution function is assigned 
 %   to each month and to each projected period based on the  
@@ -74,6 +74,12 @@ function UQM_series = UQM(obs,mod,var,frq)
 %         not specified, it is set monthly as default.
 %         Monthly:    frq = 'M'
 %         annual:   frq = 'A'
+% 
+%   pp_threshold = A float indicating the threshold to consider physically 
+%                  null precipitation values.
+%
+%   pp_factor = A float indicating the maximum value of the random values
+%               that replace physically null precipitation values.
 %
 % Output:
 %   UQM_series = A column vector of monthly or annual modeled data 
@@ -84,23 +90,36 @@ function UQM_series = UQM(obs,mod,var,frq)
 %              is equal to the number of observed years [y_mod, 1].
 %
 % References:
-%   Chadwick et al. (2021) [under revision]
+%   Chadwick et al. (2022) [under revision]
 %
 
-% Written by Sebastian Aedo Quililongo (1)
+% Written by Sebastian Aedo Quililongo (1*)
 %            Cristian Chadwick         (2)
-%            Fernando Gonzalez-Leiva   (1)
-%            Jorge Gironas             (1)
+%            Fernando Gonzalez-Leiva   (3)
+%            Jorge Gironas             (3)
 %            
-%   (1) Pontificia Universidad Catolica de Chile, Santiago, Chile
-%       Department of Environmental and Hydraulic Engineering
-%   (2) Universidad Adolfo Ibanez, Santiago, Chile
-%       Faculty of Engineering and Sciences
-% Maintainer contact: slaedo@uc.cl
-% Revision: 0, updated Dec 2021
+%   (1) Centro de CAmbio Global UC, Pontificia Universidad Catolica de 
+%       Chile, Santiago, Chile
+%   (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
+%       Santiago, Chile
+%   (3) Department of Hydraulics and Environmental Engineering, Pontificia
+%       Universidad Catolica de Chile, Santiago, Chile
+%       
+%   *Maintainer contact: slaedo@uc.cl
+% Revision: 1, updated Jul 2022
 
 
 %%
+
+% Define optional arguments
+if ~exist('pp_threshold','var')
+    pp_threshold = 1;
+end
+
+if ~exist('pp_factor','var')
+    pp_factor = 1/100;
+end
+
 % 0) Check if annual or monthly data is specified.
 if ~exist('frq','var')
     frq = 'M';
@@ -108,7 +127,7 @@ end
 
 % 1) Format inputs and get statistics of the observed and modeled series of
 %    the historical period (formatQM function of the climQMBC package).
-[y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod] = formatQM(obs,mod,frq);
+[y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod] = formatQM(obs,mod,var,frq,pp_threshold,pp_factor);
 
 % 2) Assign a probability distribution function to each month of the 
 %    historical period (getDist function of the climQMBC package).
@@ -218,4 +237,5 @@ mod_h = mod_series(:,1:y_obs);
 mod_h = mod_h(:);
 QM_series = QM(obs,mod_h,var,frq);
 UQM_series = [QM_series' UQM']';
+UQM_series(UQM_series<pp_threshold) = 0;
 end

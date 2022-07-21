@@ -69,7 +69,7 @@ mod = np.array(pd.read_csv('../Sample_data/mod_'+var_name[var]+'.csv',header=Non
 # of the modeled period. Remember that the projected periods length is
 # equal to the length of the historical period.
 
-# QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, var)
+QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, var)
 
 
 # Example 2
@@ -78,7 +78,7 @@ mod = np.array(pd.read_csv('../Sample_data/mod_'+var_name[var]+'.csv',header=Non
 # (QDM), Unbiased Quantile Mapping (UQM), and Scaled Distribution Mapping
 # (SDM) methods will be reported. The report will analyze the projected
 
-QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, var,y_init = 1979,y_wind = [2035,2060,2080])
+# QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, var,y_init = 1979,y_wind = [2035,2060,2080])
 
 
 # Example 3
