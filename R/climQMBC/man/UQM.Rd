@@ -4,7 +4,7 @@
 \alias{UQM}
 \title{Unbiased Quantile Mapping}
 \usage{
-UQM(obs, mod, var, frq)
+UQM(obs, mod, var, frq, pp_threshold, pp_factor)
 }
 \arguments{
 \item{obs}{A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_obs, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_obs, 1].}
@@ -14,6 +14,10 @@ UQM(obs, mod, var, frq)
 \item{var}{A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1}
 
 \item{frq}{(Optional) A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'}
+
+\item{pp_threshold}{(Optional) A float indicating the threshold to consider physically null precipitation values.}
+
+\item{pp_factor}{(Optional) A float indicating the maximum value of the random values that replace physically null precipitation values.}
 }
 \value{
 A column vector of monthly or annual modeled data (temperature or precipitation) corrected by the UQM method. If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed  years [y_mod, 1].
@@ -22,10 +26,13 @@ A column vector of monthly or annual modeled data (temperature or precipitation)
 This function performs bias correction of modeled series based on observed data by the Unbiased Quantile Mapping (UQM) method, as described by Chadwick et al.  (2021). Correction is performed to monthly or annual precipitation or temperature data in a single location. An independent probability distribution function is assigned to each month and to each projected period based on the Kolmogorov-Smirnov test. If annual frequency is specified, this is applied to the complete period. Each projected period  considers a window whose length is equal to the number of years of the historical period and ends in the analyzed year. Correction of the historical period is performed by the Quantile Mapping (QM) method, as described by Cannon et al. (2015).
 }
 \details{
-Chadwick et al. (2021) [under revision]
+Chadwick et al. (2022) [under revision]
 }
 \examples{
 UQM(obs,mod,var)
 UQM(obs,mod,var,frq='A')
 UQM(obs,mod,var,frq='M')
+UQM(obs,mod,var,frq='M',pp_threshold=0.1)
+UQM(obs,mod,var,frq='M',pp_factor=1/1000)
+UQM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
 }

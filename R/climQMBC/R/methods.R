@@ -206,6 +206,8 @@ DQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 #' @param frq (Optional) A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'
 #' @param pp_threshold (Optional) A float indicating the threshold to consider physically null precipitation values.
 #' @param pp_factor (Optional) A float indicating the maximum value of the random values that replace physically null precipitation values.
+#' @param rel_change_th (Optional) A float indicating the maximum scaling factor (Equation 4 of Cannon et al. (2015)) when the denominator is below inv_mod_th.
+#' @param inv_mod_th (Optional) A float indicating the upper threshold of the denominator of the scaling factor (Equation 4 of Cannon et al. (2015)) to truncate the scaling factor. This parameter is defined as default as the pp_threshold parameter, described above.
 #'
 #' @return A column vector of monthly or annual modeled data (temperature or precipitation) corrected by the QDM method. If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed  years [y_mod, 1].
 #' @export
@@ -216,6 +218,9 @@ DQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 #' @examples QDM(obs,mod,var,frq='M',pp_threshold=0.1)
 #' @examples QDM(obs,mod,var,frq='M',pp_factor=1/1000)
 #' @examples QDM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
+#' @examples QDM(obs,mod,var,frq='M',rel_change_th=4)
+#' @examples QDM(obs,mod,var,frq='M',inv_mod_th=1/10)
+#' @examples QDM(obs,mod,var,frq='M',rel_change_th=4,inv_mod_th=1/10)
 QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor,rel_change_th,inv_mod_th){
 
   if(missing(pp_threshold)) {
@@ -227,11 +232,11 @@ QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor,rel_change_th,inv_mod_th)
   }
 
   if(missing(rel_change_th)) {
-    pp_threshold <- 2
+    rel_change_th <- 2
   }
 
   if(missing(inv_mod_th)) {
-    pp_factor <- pp_threshold
+    inv_mod_th <- pp_threshold
   }
 
   # 0) Check if annually or monthly data is specified.

@@ -4,14 +4,18 @@
 \alias{formatQM}
 \title{formatQM}
 \usage{
-formatQM(obs, mod, frq)
+formatQM(obs, mod, frq, pp_threshold, pp_factor)
 }
 \arguments{
 \item{obs}{A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_obs, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_obs, 1].}
 
 \item{mod}{A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].}
 
-\item{frq}{(Optional) A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'}
+\item{frq}{A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'}
+
+\item{pp_threshold}{A float indicating the threshold to consider physically null precipitation values.}
+
+\item{pp_factor}{A float indicating the maximum value of the random values that replace physically null precipitation values.}
 }
 \value{
 y_obs:          Number of observed years.
@@ -37,8 +41,8 @@ skewy_obs:      If monthly frequency is specified, a column vector of monthly sk
 skewy_mod:      If monthly frequency is specified, a column vector of monthly skewness of the logarithm of modeled data of the historical period [12,1]. If annual frequency is specified, the skewness of the logarithm of the modeled data of the historical period(float).
 }
 \description{
-This script contains the main functions requiered by the methods implemented in the climQMBC package, including the formatQM, the getDist, the getCDF, and the getCDFinv functions.
+This function formats the inputs and gets basic statistics for the different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available in the climQMBC package. If monthly data is specified, the input series will be reshaped to a matrix of 12 rows and several columns equal to the number of years of each series. If annual data is specified, the input is reshaped to a row vector with same entries as the input series. For precipitation, physically null values (values below pp_threshold) are replaced by random positive values below pp_factor.
 }
 \examples{
-formatQM(obs,mod,frq)
+formatQM(obs,mod,frq,pp_threshold,pp_factor)
 }
