@@ -216,7 +216,7 @@ DQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 #' @examples QDM(obs,mod,var,frq='M',pp_threshold=0.1)
 #' @examples QDM(obs,mod,var,frq='M',pp_factor=1/1000)
 #' @examples QDM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
-QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
+QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor,rel_change_th,inv_mod_th){
 
   if(missing(pp_threshold)) {
     pp_threshold <- 1
@@ -224,6 +224,14 @@ QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 
   if(missing(pp_factor)) {
     pp_factor <- 1/100
+  }
+
+  if(missing(rel_change_th)) {
+    pp_threshold <- 2
+  }
+
+  if(missing(inv_mod_th)) {
+    pp_factor <- pp_threshold
   }
 
   # 0) Check if annually or monthly data is specified.
@@ -297,6 +305,7 @@ QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
   #    obtained in 4b). Equation 4 and 6 of Cannon et al. (2015).
   if (var == 1){
     DM <- mod_series[,(y_obs+1):dim(mod_series)[2]]/inv_mod
+    DM[(DM>rel_change_th) & (inv_mod<inv_mod_th)] <- rel_change_th
     QDM <- inv_obs*DM
   } else{
     DM <- mod_series[,(y_obs+1):dim(mod_series)[2]] - inv_mod
@@ -319,7 +328,7 @@ QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 #'
 #' This function performs bias correction of modeled series based on observed data by the Unbiased Quantile Mapping (UQM) method, as described by Chadwick et al.  (2021). Correction is performed to monthly or annual precipitation or temperature data in a single location. An independent probability distribution function is assigned to each month and to each projected period based on the Kolmogorov-Smirnov test. If annual frequency is specified, this is applied to the complete period. Each projected period  considers a window whose length is equal to the number of years of the historical period and ends in the analyzed year. Correction of the historical period is performed by the Quantile Mapping (QM) method, as described by Cannon et al. (2015).
 #'
-#' Chadwick et al. (2021) [under revision]
+#' Chadwick et al. (2022) [under revision]
 #'
 #' @param obs A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_obs, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_obs, 1].
 #' @param mod A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].
