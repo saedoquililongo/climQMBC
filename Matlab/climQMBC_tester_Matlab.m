@@ -31,17 +31,20 @@
 % datasets.
 %  
 % 
-% Written by Sebastian Aedo Quililongo (1)
+% Written by Sebastian Aedo Quililongo (1*)
 %            Cristian Chadwick         (2)
-%            Fernando Gonzalez-Leiva   (1)
-%            Jorge Gironas             (1)
+%            Fernando Gonzalez-Leiva   (3)
+%            Jorge Gironas             (3)
 %            
-%   (1) Pontificia Universidad Catolica de Chile, Santiago, Chile
-%       Department of Environmental and Hydraulic Engineering
-%   (2) Universidad Adolfo Ibanez, Santiago, Chile
-%       Faculty of Engineering and Sciences
-% Maintainer contact: slaedo@uc.cl
-% Revision: 0, updated Dec 2021
+%   (1) Centro de CAmbio Global UC, Pontificia Universidad Catolica de 
+%       Chile, Santiago, Chile
+%   (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
+%       Santiago, Chile
+%   (3) Department of Hydraulics and Environmental Engineering, Pontificia
+%       Universidad Catolica de Chile, Santiago, Chile
+%       
+%   *Maintainer contact: slaedo@uc.cl
+% Revision: 1, updated Jul 2022
 
 %% Set path to the climQMBC package and import datasets
 clc
