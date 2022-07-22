@@ -427,6 +427,9 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
  pracma::disp(' ')
 
   # c) Figures
+  series_mn <- min(c(obs,mod,QM_series,DQM_series,QDM_series,UQM_series,SDM_series))
+  series_mx <- max(c(obs,mod,QM_series,DQM_series,QDM_series,UQM_series,SDM_series))
+
   mu_mn <- min(c(mu_mod_Mw,mu_QM_Mw,mu_DQM_Mw,mu_QDM_Mw,mu_UQM_Mw,mu_SDM_Mw))
   mu_mx <- max(c(mu_mod_Mw,mu_QM_Mw,mu_DQM_Mw,mu_QDM_Mw,mu_UQM_Mw,mu_SDM_Mw))
 
@@ -460,7 +463,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
   # Plot empirical cumulative distribution function
   dev.new()
   par(mfrow=c(1,2))
-  plot(xo,fo,col='red',type='l',xlab=c('Temperature (?C)','Precipitation (mm)')[var+1],ylab='Probability',main='Empirical cumulative distribution function',ylim=c(0,1))
+  plot(xo,fo,col='red',type='l',xlab=c('Temperature (C)','Precipitation (mm)')[var+1],ylab='Probability',main='Empirical cumulative distribution function',ylim=c(0,1),xlim=c(series_mn,series_mx))
   grid()
   par(new=TRUE)
   lines(xm,fm,col='blue')
@@ -508,7 +511,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
   lgnd <- c('Mod')
   clr <- c('blue')
   # Plot series
-  plot(mod,col='blue',type='l',xlab='Month since starting date',ylab=c('Temperature (?C)','Precipitation (mm)')[var+1],main=paste(c('Temperature','Precipitation')[var+1],'time series'))
+  plot(mod,col='blue',type='l',xlab='Month since starting date',ylab=c('Temperature (°C)','Precipitation (mm)')[var+1],main=paste(c('Temperature','Precipitation')[var+1],'time series'), ylim=c(series_mn,series_mx))
   grid()
   if ('QM' %in% fun){
     par(new=TRUE)
