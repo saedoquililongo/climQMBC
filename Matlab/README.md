@@ -5,7 +5,7 @@ Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzale
 
 (1) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile, Santiago, Chile.\
 (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez, Santiago, Chile. \
-(3) Department of Hydraulics and Environmental Engineering, Pontificia Universidad Catolica de Chile, Santiago, Chile. \
+(3) Department of Hydraulics and Environmental Engineering, Pontificia Universidad Catolica de Chile, Santiago, Chile. 
 
 *Maintainer contact: slaedo@uc.cl\
 Version: 0.1.0, updated Jul 2022\
