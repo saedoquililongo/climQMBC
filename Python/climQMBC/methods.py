@@ -155,7 +155,8 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     #    function of the climQMBC package). Equation 1 of Cannon et al. (2015).
     QM_series = getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs)
     QM_series = QM_series.reshape(-1,order='F')
-    QM_series[QM_series<pp_threshold] = 0
+    if var==1:
+        QM_series[QM_series<pp_threshold] = 0
 
     return QM_series
 
@@ -324,7 +325,8 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     mod_h = mod_series[:,:y_obs].reshape(-1,order='F')
     QM_series = QM(obs,mod_h,var,frq)
     DQM_series = np.hstack([QM_series,DQM])
-    DQM_series[DQM_series<pp_threshold] = 0
+    if var==1:
+        DQM_series[DQM_series<pp_threshold] = 0
     
     return DQM_series
 
@@ -514,7 +516,8 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     mod_h = mod_series[:,:y_obs].reshape(-1,order='F')
     QM_series = QM(obs,mod_h,var,frq)
     QDM_series = np.hstack([QM_series,QDM])
-    QDM_series[QDM_series<pp_threshold] = 0
+    if var==1:
+        QDM_series[QDM_series<pp_threshold] = 0
     
     return QDM_series
 
@@ -729,7 +732,8 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     mod_h = mod_series[:,:y_obs].reshape(-1,order='F')
     QM_series = QM(obs,mod_h,var,frq)
     UQM_series = np.hstack([QM_series,UQM])
-    UQM_series[UQM_series<pp_threshold] = 0
+    if var==1:
+        UQM_series[UQM_series<pp_threshold] = 0
     
     return UQM_series
 
@@ -1069,6 +1073,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     SDM_h = SDM_h.reshape(-1,order='F')
     SDM = SDM.reshape(-1,order='F')
     SDM_series = np.hstack([SDM_h,SDM])
-    SDM_series[SDM_series<pp_threshold] = 0
+    if var==1:
+        SDM_series[SDM_series<pp_threshold] = 0
 
     return SDM_series

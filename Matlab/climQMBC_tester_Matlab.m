@@ -57,7 +57,7 @@ var_name = {'tmax','pp'};
 % Load observed and model data. Remember that for temperature, var = 0, and
 % for precipitation, var = 1.
 var = 1;
-obs = csvread(strcat('../Sample_data/obs_',char(var_name(var+1)),'.csv'));
+obs = csvread(strcat('../Sample_data/obs_',char(var_name(var+1)),'.csv')) - 10;
 mod = csvread(strcat('../Sample_data/mod_',char(var_name(var+1)),'.csv'));
 
 %% Example 1

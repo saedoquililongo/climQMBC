@@ -23,7 +23,7 @@ Revision: 1, updated Jul 2022
 import scipy.stats as stat
 import numpy as np
 
-def formatQM(obs, mod, var, frq, pp_threshold, pp_factor):
+def formatQM(obs_, mod_, var, frq, pp_threshold, pp_factor):
     """
     This function formats the inputs and gets basic statistics for the 
     different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available in
@@ -154,6 +154,10 @@ def formatQM(obs, mod, var, frq, pp_threshold, pp_factor):
                         data of the historical period(float).
 
     """
+    # Prevents modyfing the original input passed by reference
+    ## Must look for a mor elegant way to skip this step
+    obs = obs_.copy()
+    mod = mod_.copy()
     
     # 0) Check if annually or monthly data is specified.
     if frq == 'A':
