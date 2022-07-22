@@ -70,7 +70,9 @@ QM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
   #    function of the climQMBC package). Equation 1 of Cannon et al. (2015).
   QM_series <- getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs)
   QM_series <- matrix(QM_series)
-  QM_series[QM_series<pp_threshold] <- 0
+  if (var == 1){
+    QM_series[QM_series<pp_threshold] <- 0
+  }
 
   return(QM_series)
 }
@@ -189,7 +191,9 @@ DQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
   mod_h <- matrix(mod_h)
   QM_series <- QM(obs,mod_h,var,frq)
   DQM_series <- c(QM_series,DQM)
-  DQM_series[DQM_series<pp_threshold] <- 0
+  if (var == 1){
+    DQM_series[DQM_series<pp_threshold] <- 0
+  }
 
   return(DQM_series)
 }
@@ -324,8 +328,9 @@ QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor,rel_change_th,inv_mod_th)
   mod_h <- matrix(mod_h)
   QM_series <- QM(obs,mod_h,var,frq)
   QDM_series <- c(QM_series,QDM)
-  QDM_series[QDM_series<pp_threshold] <- 0
-
+  if (var == 1){
+    QDM_series[QDM_series<pp_threshold] <- 0
+  }
   return(QDM_series)
 }
 
@@ -495,8 +500,9 @@ UQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
   mod_h <- matrix(mod_h)
   QM_series <- QM(obs,mod_h,var,frq)
   UQM_series <- c(QM_series,UQM)
-  UQM_series[UQM_series<pp_threshold] <- 0
-
+  if (var == 1){
+    UQM_series[UQM_series<pp_threshold] <- 0
+  }
   return(UQM_series)
 }
 
@@ -738,7 +744,9 @@ SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
   SDM <- matrix(SDM)
   SDM_h <- matrix(SDM_h)
   SDM_series <- c(SDM_h,SDM)
-  SDM_series[SDM_series<pp_threshold] <- 0
+  if (var == 1){
+    SDM_series[SDM_series<pp_threshold] <- 0
+  }
 
   return(SDM_series)
 }
