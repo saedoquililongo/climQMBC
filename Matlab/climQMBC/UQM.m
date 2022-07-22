@@ -237,5 +237,7 @@ mod_h = mod_series(:,1:y_obs);
 mod_h = mod_h(:);
 QM_series = QM(obs,mod_h,var,frq);
 UQM_series = [QM_series' UQM']';
-UQM_series(UQM_series<pp_threshold) = 0;
+if var==1
+    UQM_series(UQM_series<pp_threshold) = 0;
+end
 end

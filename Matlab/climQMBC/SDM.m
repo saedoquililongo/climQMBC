@@ -359,5 +359,7 @@ end
 SDM = SDM(:);
 SDM_h = SDM_h(:);
 SDM_series = [SDM_h' SDM']';
-SDM_series(SDM_series<pp_threshold) = 0;
+if var==1
+    SDM_series(SDM_series<pp_threshold) = 0;
+end
 end

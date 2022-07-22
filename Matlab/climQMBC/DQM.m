@@ -193,5 +193,7 @@ mod_h = mod_series(:,1:y_obs);
 mod_h = mod_h(:);
 QM_series = QM(obs,mod_h,var,frq);
 DQM_series = [QM_series' DQM']';
-DQM_series(DQM_series<pp_threshold) = 0;
-end  
+if var==1
+    DQM_series(DQM_series<pp_threshold) = 0;
+end
+end

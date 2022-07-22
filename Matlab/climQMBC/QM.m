@@ -138,5 +138,7 @@ Taot = getCDF(PDF_mod,mod_series,mu_mod,std_mod,skew_mod,skewy_mod);
 QM_series = getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs);
 
 QM_series=QM_series(:);
-QM_series(QM_series<pp_threshold) = 0;
+if var==1
+    QM_series(QM_series<pp_threshold) = 0;
+end
 end
