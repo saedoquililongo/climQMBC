@@ -48,7 +48,7 @@
 
 # If the package is not installed, save the .tar.gz file in the same directory
 # as this script. The following lines will install the package and import it.
-install.packages(paste(getwd(),'/','climQMBC_0.1.0.tar.gz',sep=''),repos=NULL,type='source')
+install.packages(paste(getwd(),'/','climQMBC_0.1.1.tar.gz',sep=''),repos=NULL,type='source')
 
 library(climQMBC)
 
@@ -59,9 +59,9 @@ var <- 1
 
 if (var==1){
   agg <- sum
-  var_txt <- 'pp'
+  var_txt <- 'pp' 
 } else {
-  var_txt <- 'tmax'
+  var_txt <- 'tmax' 
   agg <- mean
 }
 
@@ -106,7 +106,7 @@ SDM_series <- rep_series[[5]]
 #   Example 3 shows how each bias correction method available in the
 #   climQMBC package should be called. The outputs of each function are
 #   columns vector with monthly corrected data.
-#
+#  
 # frq <- 'M' #'M' for monthly data; 'A' for annually data
 # QM_series <- QM(obs,mod,var,frq)
 # DQM_series <- DQM(obs,mod,var,frq)
