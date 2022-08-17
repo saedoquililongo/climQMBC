@@ -4,12 +4,14 @@
 \alias{formatQM}
 \title{formatQM}
 \usage{
-formatQM(obs, mod, frq, pp_threshold, pp_factor)
+formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
 }
 \arguments{
 \item{obs}{A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_obs, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_obs, 1].}
 
 \item{mod}{A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].}
+
+\item{var}{A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1}
 
 \item{frq}{A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'}
 
@@ -44,5 +46,5 @@ skewy_mod:      If monthly frequency is specified, a column vector of monthly sk
 This function formats the inputs and gets basic statistics for the different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available in the climQMBC package. If monthly data is specified, the input series will be reshaped to a matrix of 12 rows and several columns equal to the number of years of each series. If annual data is specified, the input is reshaped to a row vector with same entries as the input series. For precipitation, physically null values (values below pp_threshold) are replaced by random positive values below pp_factor.
 }
 \examples{
-formatQM(obs,mod,frq,pp_threshold,pp_factor)
+formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
 }

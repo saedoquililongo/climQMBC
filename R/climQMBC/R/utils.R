@@ -4,6 +4,7 @@
 #'
 #' @param obs A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_obs, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_obs, 1].
 #' @param mod A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].
+#' @param var A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1
 #' @param frq A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'
 #' @param pp_threshold A float indicating the threshold to consider physically null precipitation values.
 #' @param pp_factor A float indicating the maximum value of the random values that replace physically null precipitation values.
@@ -21,8 +22,8 @@
 #' @return skewy_mod:      If monthly frequency is specified, a column vector of monthly skewness of the logarithm of modeled data of the historical period [12,1]. If annual frequency is specified, the skewness of the logarithm of the modeled data of the historical period(float).
 #' @export
 #'
-#' @examples formatQM(obs,mod,frq,pp_threshold,pp_factor)
-formatQM <- function(obs,mod,frq,pp_threshold,pp_factor){
+#' @examples formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
+formatQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 
   # 0) Check if annually or monthly data is specified.
   if (frq == 'A') {

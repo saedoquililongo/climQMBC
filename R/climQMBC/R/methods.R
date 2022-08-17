@@ -37,7 +37,7 @@ QM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,frq,pp_threshold,pp_factor)
+  format_list <- formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
 
   y_obs       <- format_list[[1]]
   obs_series  <- format_list[[2]]
@@ -116,7 +116,7 @@ DQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,frq,pp_threshold,pp_factor)
+  format_list <- formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
 
   y_obs       <- format_list[[1]]
   obs_series  <- format_list[[2]]
@@ -250,7 +250,7 @@ QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor,rel_change_th,inv_mod_th)
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,frq,pp_threshold,pp_factor)
+  format_list <- formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
 
   y_obs       <- format_list[[1]]
   obs_series  <- format_list[[2]]
@@ -373,7 +373,7 @@ UQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,frq,pp_threshold,pp_factor)
+  format_list <- formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
 
   y_obs       <- format_list[[1]]
   obs_series  <- format_list[[2]]
@@ -549,7 +549,7 @@ SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,frq,pp_threshold,pp_factor)
+  format_list <- formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
 
   y_obs       <- format_list[[1]]
   obs_series  <- format_list[[2]]
