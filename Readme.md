@@ -59,7 +59,7 @@ Additionally, the [Example_notebook.ipynb](https://github.com/saedoquililongo/cl
 [Cannon, A. J., S. R. Sobie, and T. Q. Murdock. (2015). Bias correction of GCM precipitation by quantile mapping: How well do methods preserve changes in quantiles and extremes? J. Climate, 28(17), 6938-6959, https://doi.org/10.1175/JCLI-D-14-00754.1](https://doi.org/10.1175/JCLI-D-14-00754.1)
 
 #### UQM:
-Chadwick, C., Gironás, J., González-Leiva, F., and Aedo, S. (In revision). Bias-Correction to Preserve the Changes in Variability: The Unbiased Mapping of GCM Changes to Local Stations.
+[Chadwick, C., Gironás, J., González-Leiva, F., and Aedo, S. (2023). Bias adjustment to preserve changes in variability: the unbiased mapping of GCM changes. Hydrological Sciences Journal, https://doi.org/10.1080/02626667.2023.2201450](https://doi.org/10.1080/02626667.2023.2201450)
 
 [Chadwick, C., Gironás, J., González-Leiva, F., and Aedo, S. (2021). Bias Correction and the Importance of Preserving the Changes in Variability: Unbiased Quantile Mapping (UQM) a Novel Bias Correction. American Geophysical Union fall meeting, 2021.](https://agu2021fallmeeting-agu.ipostersessions.com/default.aspx?s=48-67-54-07-35-60-D9-5B-8D-0C-9C-6C-1C-1A-92-EE)
 
