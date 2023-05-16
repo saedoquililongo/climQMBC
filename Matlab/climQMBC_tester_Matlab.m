@@ -86,6 +86,7 @@ mod = csvread(strcat('../Sample_data/mod_',char(var_name(var+1)),'.csv'));
 %   climQMBC package should be called. The outputs of each function are
 %   columns vector with monthly corrected data.
 
+% frq = 'M'; % 'M' for monthly data; 'A' for annual data
 % QM_series = QM(obs,mod,var,frq);
 % DQM_series = DQM(obs,mod,var,frq);
 % QDM_series = QDM(obs,mod,var,frq);
