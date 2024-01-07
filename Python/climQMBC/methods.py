@@ -73,7 +73,7 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
 
         3) Apply the inverse cumulative distribution function of the observed 
            data, evaluated with the statistics of the observed data in the 
-           historical period, to the probabilities obtained from 3).
+           historical period, to the probabilities obtained from 2).
 
     Inputs:
         obs:    A column vector of monthly or annual observed data (temperature
@@ -150,7 +150,7 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
     # 3) Apply the inverse cumulative distribution function of the observed
     #    data, evaluated with the statistics of the observed data in the
-    #    historical period, to the probabilities obtained from 3) (getCDFinv
+    #    historical period, to the probabilities obtained from 2) (getCDFinv
     #    function of the climQMBC package). Equation 1 of Cannon et al. (2015).
     QM_series = getCDFinv(PDF_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
     QM_series = QM_series.reshape(-1, order='F')
@@ -198,9 +198,9 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
         
         5) Apply the inverse cumulative distribution function of the observed 
            data, evaluated with the statistics of the observed data in the 
-           historical period, to the probabilities obtained from 5).
+           historical period, to the probabilities obtained from 4).
         
-        6) Reimpose the trend to the values obtained in 6).
+        6) Reimpose the trend to the values obtained in 5).
     
         End) Perform QM for the historical period.
 
@@ -301,11 +301,11 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
     # 5) Apply the inverse cumulative distribution function of the observed
     #    data, evaluated with the statistics of the observed data in the
-    #    historical period, to the probabilities obtained from 5) (getCDFinv
+    #    historical period, to the probabilities obtained from 4) (getCDFinv
     #    function of the climQMBC package). Equation 2 of Cannon et al. (2015).
     DQM_LS = getCDFinv(PDF_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
     
-    # 6) Reimpose the trend to the values obtained in 6). Equation 2 of Cannon
+    # 6) Reimpose the trend to the values obtained in 5). Equation 2 of Cannon
     #    et al. (2015).
     if var==1: # Precipitation
         DQM = DQM_LS*xbarmp/np.tile(xbarmh,(y_mod-y_obs, 1)).T
@@ -359,13 +359,13 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
         3) Apply the inverse cumulative distribution function:
             a) Of the observed data, evaluated with the statistics of the 
                observed data in the historical period, to the probabilities
-               obtained from 3b).
+               obtained from 2b).
             b) Of the modeled data, evaluated with the statistics of the 
                observed data in the historical period, to the probabilities
-               obtained from 3b).
+               obtained from 2b).
 
         4) Get the delta factor or relative change and apply it to the value
-           obtained in 4b).
+           obtained in 3b).
     
         End) Perform QM for the historical period.
 
@@ -478,18 +478,18 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     # 3) Apply the inverse cumulative distribution function:
     #    a) Of the observed data, evaluated with the statistics of the observed
     #       data in the historical period, to the probabilities obtained from 
-    #       3b) (getCDFinv function of the climQMBC package). Equation 5 of 
+    #       2b) (getCDFinv function of the climQMBC package). Equation 5 of 
     #       Cannon et al. (2015).
     inv_obs = getCDFinv(PDF_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
     
     #    b) Of the modeled data, evaluated with the statistics of the observed
     #       data in the historical period, to the probabilities obtained from 
-    #       3b) (getCDFinv function of the climQMBC package). Equations 4 of 
+    #       2b) (getCDFinv function of the climQMBC package). Equations 4 of 
     #       Cannon et al. (2015).
     inv_mod = getCDFinv(PDF_mod, Taot, mu_mod, std_mod, skew_mod, skewy_mod)
     
     # 4) Get the delta factor or relative change and apply it to the value
-    #    obtained in 4b). Equation 4 and 6 of Cannon et al. (2015).
+    #    obtained in 3b). Equation 4 and 6 of Cannon et al. (2015).
     if var==1:
         DM = mod_series[:,y_obs:]/inv_mod
         DM[(DM>rel_change_th) & (inv_mod<inv_mod_th)] = rel_change_th
@@ -548,7 +548,7 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
 
         4) Apply the inverse cumulative distribution function of the observed
            data, evaluated with the time dependent statistics, to the values
-           obtained in 4b).
+           obtained in 3b).
     
         End) Perform QM for the historical period.
 
@@ -620,7 +620,7 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
     # 2) For each projected period, get the delta factor (delta) and time
     #    dependent (aster) statistics (mean, standard deviation, skewness, and
-    #    log skewness). Equations X to X in Chadwick et al. (2021).
+    #    log skewness). Equations 13 to 14 in Chadwick et al. (2023).
     xbarmt = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
     xhatmt = np.zeros(xbarmt.shape)
     skwmt = np.zeros(xbarmt.shape)
@@ -701,13 +701,13 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
         # b) Apply the cumulative distribution function of the projected
         #    period, evaluated with the statistics of this period, to the last
         #    data of the period (getCDF function of the climQMBC package).
-        #    Equation 3 of Cannon et al. (2015).
+        #    Equation in Chadwick et al. (2023).
         Taot[:,j] = getCDF(PDF_win[:,j], mod_series[:,y_obs+j:y_obs+j+1], mux, sigmax, skewx, skewy)[:,0]
         
     # 4) Apply the inverse cumulative distribution function of the observed
     #    data, evaluated with the time dependent statistics, to the values
-    #    obtained in 4b) (getCDFinv function of the climQMBC package). Equation
-    #    X of Chadwick et al. (2021).
+    #    obtained in 3b) (getCDFinv function of the climQMBC package). Equation
+    #    15 in Chadwick et al. (2023).
     for yr in range(Taot.shape[1]):
         UQM[:,yr] = getCDFinv(PDF_obs, Taot[:,yr:yr+1], muAster[:,yr], sigmaAster[:,yr], skwAster[:,yr], LskwAster[:,yr])[:,0]
     
@@ -739,30 +739,28 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     series.
     
     Description:
-        0) Check if annual or monthly data is specified.
-    
-        1) Format inputs and get statistics of the observed and modeled series
+        0) Format inputs and get statistics of the observed and modeled series
            of the historical period.
            
-        2) Historical period:
-        a) [Switanek et al. (2017), step 1)]
-            For temperature, get the detrended modeled and observed series in
-            the historical period.
-            For precipitation, get the rainday values and its frequency for the
-            modeled and observed series in the historical period.
-        b) [Switanek et al. (2017), step 2)]
-            For temperature, fit normal probability distribution to the
-            detrended observed and modeled series in the historical period.
-            For precipitation, fit gamma distribution parameters by maximum 
-            likelihood to the rainday values of the observed and modeled series
-            in the historical period.
-            Using these fitted distributions, get the corresponding cumulative
-            distribution values. Tail probabilities are set to (0 + threshold)
-            for temperature and to (1 - threshold) for temperature and
-            precipitation. Threshold is set in the first lines of this function.
-            Default is CDF_th = 10^-3.
+        1) Historical period:
+            a) [Switanek et al. (2017), step 1)]
+                For temperature, get the detrended modeled and observed series in
+                the historical period.
+                For precipitation, get the rainday values and its frequency for the
+                modeled and observed series in the historical period.
+            b) [Switanek et al. (2017), step 2)]
+                For temperature, fit normal probability distribution to the
+                detrended observed and modeled series in the historical period.
+                For precipitation, fit gamma distribution parameters by maximum 
+                likelihood to the rainday values of the observed and modeled series
+                in the historical period.
+                Using these fitted distributions, get the corresponding cumulative
+                distribution values. Tail probabilities are set to (0 + threshold)
+                for temperature and to (1 - threshold) for temperature and
+                precipitation. Threshold is set in the first lines of this function.
+                Default is CDF_th = 10^-3.
         
-        3) Projected periods:
+        2) Projected periods:
             c) Initialize correction array.
             d) Define projected window.
             e) [Switanek et al. (2017), step 1)]
@@ -862,18 +860,14 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     lower_lim = pp_threshold
     CDF_th = 1e-3
     
-    # 0) Check if annually or monthly data is specified.
-    if frq != 'A':
-        frq = 'M'
-    
-    # 1) Format inputs and get statistics of the observed and modeled series of
+    # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
     y_obs,obs_series,mod_series = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)[:3]
     
-    SDM = np.zeros((mod_series.shape[0],mod_series.shape[1] - y_obs))    
+    SDM = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))    
     SDM_h = np.zeros((obs_series.shape[0], y_obs))    
     for m in range(mod_series.shape[0]):
-        # 2) Historical period:
+        # 1) Historical period:
 
         # a) [Switanek et al. (2017), step 1)]
         #     For temperature, get the detrended modeled and observed series in
@@ -909,28 +903,28 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             mu_obsD = np.nanmean(D_obs)
             mu_modD = np.nanmean(D_mod)
             
-            sigma_obsD = np.nanstd(D_obs,0,ddof=0)
-            sigma_modD = np.nanstd(D_mod,0,ddof=0)
+            sigma_obsD = np.nanstd(D_obs, 0, ddof=0)
+            sigma_modD = np.nanstd(D_mod, 0, ddof=0)
             
-            CDF_obs = stat.norm.cdf(np.sort(D_obs),*(mu_obsD,sigma_obsD))
-            CDF_mod = stat.norm.cdf(np.sort(D_mod),*(mu_modD,sigma_modD))
+            CDF_obs = stat.norm.cdf(np.sort(D_obs), *(mu_obsD,sigma_obsD))
+            CDF_mod = stat.norm.cdf(np.sort(D_mod), *(mu_modD,sigma_modD))
             
             CDF_obs[CDF_obs<CDF_th] = CDF_th
             CDF_mod[CDF_mod<CDF_th] = CDF_th
-            CDF_obs[CDF_obs>1-CDF_th] = 1-CDF_th
-            CDF_mod[CDF_mod>1-CDF_th] = 1-CDF_th
+            CDF_obs[CDF_obs>1-CDF_th] = 1 - CDF_th
+            CDF_mod[CDF_mod>1-CDF_th] = 1 - CDF_th
             
         else: # Precipitation
-            fit_obs = stat.gamma.fit(D_obs,floc=0)
-            fit_mod = stat.gamma.fit(D_mod,floc=0)
+            fit_obs = stat.gamma.fit(D_obs, floc=0)
+            fit_mod = stat.gamma.fit(D_mod, floc=0)
             
-            CDF_obs = stat.gamma.cdf(D_obs,*fit_obs)
-            CDF_mod = stat.gamma.cdf(D_mod,*fit_mod)
-            CDF_obs[CDF_obs>1-CDF_th] = 1-CDF_th
-            CDF_mod[CDF_mod>1-CDF_th] = 1-CDF_th
+            CDF_obs = stat.gamma.cdf(D_obs, *fit_obs)
+            CDF_mod = stat.gamma.cdf(D_mod, *fit_mod)
+            CDF_obs[CDF_obs>1-CDF_th] = 1 - CDF_th
+            CDF_mod[CDF_mod>1-CDF_th] = 1 - CDF_th
             
-        # 3) Projected periods:
-        for j in range(-1,mod_series.shape[1]-y_obs):
+        # 2) Projected periods:
+        for j in range(-1, mod_series.shape[1]-y_obs):
             # c) Initialize correction array.
             corr_temp = np.zeros(y_obs)
         
@@ -943,7 +937,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             #    For precipitation, get the rainday values, its frequency, and
             #    expected raindays for the projected period.
             #    Get the index of the sorted detrended or rainday values.
-            if var == 0: # Temperature
+            if var==0: # Temperature
                 D_win = detrend(win_series)
                 exp_D = win_series.shape[0]
                 win_argsort = np.argsort(D_win)
@@ -951,7 +945,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
                 mu_win = np.nanmean(win_series)
             else: # Precipitation
                 D_win = np.sort(win_series[win_series>lower_lim])
-                exp_D = min(round(D_win.shape[0]*freq_obs/freq_mod),win_series.shape[0])
+                exp_D = min(round(D_win.shape[0]*freq_obs/freq_mod), win_series.shape[0])
                 win_argsort = np.argsort(win_series)
     
             # f) [Switanek et al. (2017), step 2)]
@@ -965,28 +959,28 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             #    (0 + threshold) for temperature and to (1 - threshold) for
             #    temperature and precipitation. Threshold is set in the first
             #    lines of this function. Default is CDF_th = 10^-3.
-            if var == 0: # Temperature
+            if var==0: # Temperature
                 mu_winD = np.nanmean(D_win)
-                sigma_winD = np.nanstd(D_win,0,ddof=0)
+                sigma_winD = np.nanstd(D_win, 0, ddof=0)
                 
                 diff_win = win_series - D_win
                 
-                CDF_win = stat.norm.cdf(np.sort(D_win),*(mu_winD,sigma_winD))
+                CDF_win = stat.norm.cdf(np.sort(D_win), *(mu_winD,sigma_winD))
                 CDF_win[CDF_win<CDF_th] = CDF_th
-                CDF_win[CDF_win>1-CDF_th] = 1-CDF_th
+                CDF_win[CDF_win>1-CDF_th] = 1 - CDF_th
             
             else: #Precipitation
-                fit_win = stat.gamma.fit(D_win,floc=0)
-                CDF_win = stat.gamma.cdf(D_win,*fit_win)    
-                CDF_win[CDF_win>1-CDF_th] = 1-CDF_th
+                fit_win = stat.gamma.fit(D_win, floc=0)
+                CDF_win = stat.gamma.cdf(D_win, *fit_win)    
+                CDF_win[CDF_win>1-CDF_th] = 1 - CDF_th
 
             # g) [Switanek et al. (2017), step 3)]
             #    Get the scaling between the model projected period and
             #    historical period distributions.
-            if var == 0: # Temperature
-                SF = (sigma_obsD/sigma_modD)*(stat.norm.ppf(CDF_win,*(mu_winD,sigma_winD)) - stat.norm.ppf(CDF_win,*(mu_modD,sigma_modD)))
+            if var==0: # Temperature
+                SF = (sigma_obsD/sigma_modD)*(stat.norm.ppf(CDF_win, *(mu_winD,sigma_winD)) - stat.norm.ppf(CDF_win, *(mu_modD,sigma_modD)))
             else: # Precipitation
-                SF = stat.gamma.ppf(CDF_win,*fit_win)/stat.gamma.ppf(CDF_win,*fit_mod)
+                SF = stat.gamma.ppf(CDF_win, *fit_win)/stat.gamma.ppf(CDF_win, *fit_mod)
     
             # h) Interpolate observed and modeled CDF of the historical period
             #    to the length of the projected period.
@@ -1011,31 +1005,31 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
                 CDF_scaled[CDF_scaled<0] = CDF_scaled[CDF_scaled<0] + 1
                 
                 CDF_scaled[CDF_scaled<CDF_th] = CDF_th
-                CDF_scaled[CDF_scaled>1-CDF_th] = 1-CDF_th
+                CDF_scaled[CDF_scaled>1-CDF_th] = 1 - CDF_th
             else: # Precipitation
-                RI_obs = 1/(1-obs_cdf_intpol)
-                RI_mod = 1/(1-mod_cdf_intpol)
-                RI_win = 1/(1-CDF_win)
+                RI_obs = 1/(1 - obs_cdf_intpol)
+                RI_mod = 1/(1 - mod_cdf_intpol)
+                RI_win = 1/(1 - CDF_win)
                 RI_scaled = RI_obs*RI_win/RI_mod
                 RI_scaled[RI_scaled<1] = 1
                 
-                CDF_scaled = np.sort(1 - 1/(RI_scaled))
+                CDF_scaled = np.sort(1 - 1/RI_scaled)
                 
             # j) [Switanek et al. (2017), step 6)]
             #    Get the initial bias corrected values. For precipitation,
             #    these values are interpolated to the length of the expected
             #    raindays.
             if var == 0: # Temperature
-                xvals = stat.norm.ppf(np.sort(CDF_scaled),*(mu_obsD,sigma_obsD)) + SF
+                xvals = stat.norm.ppf(np.sort(CDF_scaled), *(mu_obsD,sigma_obsD)) + SF
                 xvals = xvals - np.mean(xvals) + mu_obs + (mu_win - mu_mod)
             else:
-                xvals = stat.gamma.ppf(CDF_scaled,*fit_obs)*SF
+                xvals = stat.gamma.ppf(CDF_scaled, *fit_obs)*SF
                 if D_win.shape[0] > exp_D:
                     xvals = np.interp(np.linspace(1, len(D_win), exp_D),
                                       np.linspace(1, len(D_win), len(D_win)),
                                       xvals)
                 else:
-                    xvals = np.hstack([np.zeros(exp_D - D_win.shape[0]),xvals])
+                    xvals = np.hstack([np.zeros(exp_D-D_win.shape[0]), xvals])
     
             # k) [Switanek et al. (2017), step 7)]
             #    Bias corrected values are placed back matching the higher bias
@@ -1043,21 +1037,21 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             #    For temperature, the trend of the projected period is added
             #    back.
             corr_temp[win_argsort[-exp_D:]] = xvals
-            if var == 0:
+            if var==0:
                 corr_temp = corr_temp + diff_win - mu_win
                 
             # l) If the projected period is the historical period (period 0,
             #    j=0) save the complete bias corrected series.
             #    If the projected period is not the historical period (j>0),
             #    save the value of the last year.
-            if j == -1:
+            if j==-1:
                 SDM_h[m] = corr_temp
             else:
                 SDM[m,j] = corr_temp[-1]
             
-    SDM_h = SDM_h.reshape(-1,order='F')
-    SDM = SDM.reshape(-1,order='F')
-    SDM_series = np.hstack([SDM_h,SDM])
+    SDM_h = SDM_h.reshape(-1, order='F')
+    SDM = SDM.reshape(-1, order='F')
+    SDM_series = np.hstack([SDM_h, SDM])
     if var==1:
         SDM_series[SDM_series<pp_threshold] = 0
 
