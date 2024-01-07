@@ -9,7 +9,7 @@ Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzale
 (4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile, Santiago, Chile. 
 
 *Maintainer contact: sebastian.aedo.q@gmail.com\
-Version: 0.1.1, updated Aug 2022
+Version: 0.1.0, updated Jun 2022\
 Written in Python version 3.7.9
 
 ## Dependencies

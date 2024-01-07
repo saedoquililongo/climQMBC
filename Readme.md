@@ -27,6 +27,7 @@ For each period, the package selects the most appropiate probability ditribution
 - Gamma 2 parameters distribution
 - Gamma 3 parameters distribution
 - Log-Gamma distribution
+- Gumbel distribution
 - Exponential distribution
 
 For precipitation values, only strictly positive distributions are considered. For temperature values, strictly positive distributions are discarded if there are negative values in the analyzed period.
