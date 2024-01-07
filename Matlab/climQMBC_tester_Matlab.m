@@ -34,16 +34,18 @@
 % Written by Sebastian Aedo Quililongo (1*)
 %            Cristian Chadwick         (2)
 %            Fernando Gonzalez-Leiva   (3)
-%            Jorge Gironas             (3)
+%            Jorge Gironas             (3, 4)
 %            
-%   (1) Centro de CAmbio Global UC, Pontificia Universidad Catolica de 
-%       Chile, Santiago, Chile
+%   (1) Stockholm Environment Institute, Latin America Centre, Bogotá,
+%       Colombia
 %   (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
 %       Santiago, Chile
 %   (3) Department of Hydraulics and Environmental Engineering, Pontificia
 %       Universidad Catolica de Chile, Santiago, Chile
+%   (4) Centro de CAmbio Global UC, Pontificia Universidad Catolica de 
+%       Chile, Santiago, Chile
 %       
-%   *Maintainer contact: slaedo@uc.cl
+%   *Maintainer contact: sebastian.aedo.q@gmail.com
 % Revision: 1, updated Jul 2022
 
 %% Set path to the climQMBC package and import datasets
