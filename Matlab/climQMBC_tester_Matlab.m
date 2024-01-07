@@ -36,7 +36,7 @@
 %            Fernando Gonzalez-Leiva   (3)
 %            Jorge Gironas             (3, 4)
 %            
-%   (1) Stockholm Environment Institute, Latin America Centre, Bogotá,
+%   (1) Stockholm Environment Institute, Latin America Centre, Bogota,
 %       Colombia
 %   (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
 %       Santiago, Chile

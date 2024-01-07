@@ -17,22 +17,26 @@ References:
     Hydrology &amp; Earth System Sciences, 21, 2649-2666,
     https://doi.org/10.5194/hess-21-2649-2017.
     
-    Chadwick et al. (2022) [under revision]
+    Chadwick, C., Gironás, J., González-Leiva, F., and Aedo, S. (2023). Bias 
+    adjustment to preserve changes in variability: the unbiased mapping of GCM 
+    changes. Hydrological Sciences Journal,
+    https://doi.org/10.1080/02626667.2023.2201450
 
 
 Written by Sebastian Aedo Quililongo (1*)
            Cristian Chadwick         (2)
            Fernando Gonzalez-Leiva   (3)
-           Jorge Gironas             (3)
+           Jorge Gironas             (3, 4)
            
-  (1) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
-      Santiago, Chile
+  (1) Stockholm Environment Institute, Latin America Centre, Bogota, Colombia
   (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez, Santiago,
       Chile
   (3) Department of Hydraulics and Environmental Engineering, Pontificia
       Universidad Catolica de Chile, Santiago, Chile
+  (4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
+      Santiago, Chile
       
-*Maintainer contact: slaedo@uc.cl
+*Maintainer contact: sebastian.aedo.q@gmail.com
 Revision: 1, updated Jul 2022
 """
 
@@ -40,6 +44,7 @@ from .utils import formatQM, getDist, getCDF, getCDFinv
 from scipy.signal import detrend
 import scipy.stats as stat
 import numpy as np
+
 
 def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     """
@@ -128,28 +133,24 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
 
     """
     
-    # 0) Check if annually or monthly data is specified.
-    if frq != 'A':
-        frq = 'M'
-        
-    # 1) Format inputs and get statistics of the observed and modeled series of
+    # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series, mod_series, mu_obs, std_obs, skew_obs, skewy_obs, mu_mod, std_mod, skew_mod, skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
     
-    # 2) Assign a probability distribution function to each month for the
+    # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
     PDF_obs = getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var)
     PDF_mod = getDist(mod_series[:,:y_obs],mu_mod,std_mod,skew_mod,skewy_mod,var)
 
-    # 3) Apply the cumulative distribution function of the modeled data,
+    # 2) Apply the cumulative distribution function of the modeled data,
     #    evaluated with the statistics of the modeled data in the historical
     #    period, to the modeled data (getCDF function of the climQMBC package).
     #    Equation 1 of Cannon et al. (2015).
     Taot = getCDF(PDF_mod,mod_series,mu_mod,std_mod,skew_mod,skewy_mod)
     
-    # 4) Apply the inverse cumulative distribution function of the observed
+    # 3) Apply the inverse cumulative distribution function of the observed
     #    data, evaluated with the statistics of the observed data in the
     #    historical period, to the probabilities obtained from 3) (getCDFinv
     #    function of the climQMBC package). Equation 1 of Cannon et al. (2015).
@@ -263,22 +264,18 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
     """
     
-    # 0) Check if annually or monthly data is specified.
-    if frq != 'A':
-        frq = 'M'
-    
-    # 1) Format inputs and get statistics of the observed and modeled series of
+    # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
     y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
     
-    # 2) Assign a probability distribution function to each month for the
+    # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
     PDF_obs = getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var)
     PDF_mod = getDist(mod_series[:,:y_obs],mu_mod,std_mod,skew_mod,skewy_mod,var)    
         
-    # 3) Extract the long-term trend from the modeled data:
+    # 2) Extract the long-term trend from the modeled data:
     #    a) Get the monthly mean of the historical period. If annually
     #       frequency is specified, this is applied to the complete period).
     xbarmh = np.nanmean(mod_series[:,:y_obs],1)
@@ -290,7 +287,7 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     for j in range(y_mod-y_obs):
         xbarmp[:,j] = np.nanmean(mod_series[:,j+1:y_obs+j+1],1)
     
-    # 4)Compute the linear scaled values (value in square brackets in equation
+    # 3)Compute the linear scaled values (value in square brackets in equation
     #   2 of Cannon et al. (2015)).
     LS = np.zeros(xbarmp.shape)
     if var == 1: # Precipitacion
@@ -300,19 +297,19 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
         for m in range(mod_series.shape[0]):
             LS[m,:] = mod_series[m,y_obs:] + xbarmh[m] - xbarmp[m]
     
-    # 5) Apply the cumulative distribution function of the modeled data,
+    # 4) Apply the cumulative distribution function of the modeled data,
     #    evaluated with the statistics of the modeled period, to the future
     #    modeled data (getCDF function of the climQMBC package). Equation 2 of
     #    Cannon et al. (2015).
     Taot = getCDF(PDF_mod,LS,mu_mod,std_mod,skew_mod,skewy_mod)
     
-    # 6) Apply the inverse cumulative distribution function of the observed
+    # 5) Apply the inverse cumulative distribution function of the observed
     #    data, evaluated with the statistics of the observed data in the
     #    historical period, to the probabilities obtained from 5) (getCDFinv
     #    function of the climQMBC package). Equation 2 of Cannon et al. (2015).
     DQM_LS = getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs)
     
-    # 7) Reimpose the trend to the values obtained in 6). Equation 2 of Cannon
+    # 6) Reimpose the trend to the values obtained in 6). Equation 2 of Cannon
     #    et al. (2015).
     if var == 1: # Precipitation
         DQM = DQM_LS*xbarmp/np.tile(xbarmh,(y_mod-y_obs,1)).T
@@ -321,7 +318,7 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
     DQM = DQM.reshape(-1,order='F')
     
-    # 8) Perform QM for the historical period.
+    # 7) Perform QM for the historical period.
     mod_h = mod_series[:,:y_obs].reshape(-1,order='F')
     QM_series = QM(obs,mod_h,var,frq)
     DQM_series = np.hstack([QM_series,DQM])

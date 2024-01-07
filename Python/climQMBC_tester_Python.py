@@ -35,7 +35,7 @@ Written by Sebastian Aedo Quililongo (1*)
            Fernando Gonzalez-Leiva   (3)
            Jorge Gironas             (3, 4)
            
-  (1) Stockholm Environment Institute, Latin America Centre, Bogotá, Colombia
+  (1) Stockholm Environment Institute, Latin America Centre, Bogota, Colombia
   (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez, Santiago,
       Chile
   (3) Department of Hydraulics and Environmental Engineering, Pontificia
