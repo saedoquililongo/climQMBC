@@ -1,16 +1,16 @@
 # climQMBC for Python
 A package with multiple bias correction methods for climatic variables, including the QM, DQM, QDM, UQM, and SDM methods.
 
-Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzalez-Leiva (3), and Jorge Gironas (3,4)
+Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzalez-Leiva (3), and Jorge Gironas (3, 4)
 
 (1) Stockholm Environment Institute, Latin America Centre, Bogota, Colombia.\
 (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez, Santiago, Chile. \
 (3) Department of Hydraulics and Environmental Engineering, Pontificia Universidad Catolica de Chile, Santiago, Chile.\
 (4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile, Santiago, Chile. 
 
-*Maintainer contact: slaedo@uc.cl\
-Version: 0.1.2, updated Jan 2024\
-Written in Python version 3.9.13
+*Maintainer contact: sebastian.aedo.q@gmail.com\
+Version: 0.1.1, updated Aug 2022
+Written in Python version 3.7.9
 
 ## Dependencies
 Imports needed:
