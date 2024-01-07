@@ -59,21 +59,19 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     historical period and ends in the analyzed year.
     
     Description:
-        0) Check if annual or monthly data is specified.
-    
-        1) Format inputs and get statistics of the observed and modeled series
+        0) Format inputs and get statistics of the observed and modeled series
            of the historical period.
            
-        2) Assign a probability distribution function to each month for the 
+        1) Assign a probability distribution function to each month for the 
            observed and modeled data in the historical period. If annual 
            frequency is specified, this is applied to the complete historical 
            period.
            
-        3) Apply the cumulative distribution function of the modeled data, 
+        2) Apply the cumulative distribution function of the modeled data, 
            evaluated with the statistics of the modeled data in the historical 
            period, to the modeled data.
 
-        4) Apply the inverse cumulative distribution function of the observed 
+        3) Apply the inverse cumulative distribution function of the observed 
            data, evaluated with the statistics of the observed data in the 
            historical period, to the probabilities obtained from 3).
 
@@ -141,21 +139,21 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
-    PDF_obs = getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var)
-    PDF_mod = getDist(mod_series[:,:y_obs],mu_mod,std_mod,skew_mod,skewy_mod,var)
+    PDF_obs = getDist(obs_series, mu_obs, std_obs, skew_obs, skewy_obs, var)
+    PDF_mod = getDist(mod_series[:,:y_obs], mu_mod, std_mod, skew_mod, skewy_mod, var)
 
     # 2) Apply the cumulative distribution function of the modeled data,
     #    evaluated with the statistics of the modeled data in the historical
     #    period, to the modeled data (getCDF function of the climQMBC package).
     #    Equation 1 of Cannon et al. (2015).
-    Taot = getCDF(PDF_mod,mod_series,mu_mod,std_mod,skew_mod,skewy_mod)
+    Taot = getCDF(PDF_mod, mod_series, mu_mod, std_mod, skew_mod, skewy_mod)
     
     # 3) Apply the inverse cumulative distribution function of the observed
     #    data, evaluated with the statistics of the observed data in the
     #    historical period, to the probabilities obtained from 3) (getCDFinv
     #    function of the climQMBC package). Equation 1 of Cannon et al. (2015).
-    QM_series = getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs)
-    QM_series = QM_series.reshape(-1,order='F')
+    QM_series = getCDFinv(PDF_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
+    QM_series = QM_series.reshape(-1, order='F')
     if var==1:
         QM_series[QM_series<pp_threshold] = 0
 
@@ -178,33 +176,31 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     (QM) method, as described by Cannon et al. (2015).
     
     Description:
-        0) Check if annual or monthly data is specified.
-    
-        1) Format inputs and get statistics of the observed and modeled series
+        0) Format inputs and get statistics of the observed and modeled series
            of the historical period.
            
-        2) Assign a probability distribution function to each month for the 
+        1) Assign a probability distribution function to each month for the 
            observed and modeled data in the historical period. If annual 
            frequency is specified, this is applied to the complete historical 
            period.
            
-        3) Extract the long-term trend from the modeled data:
+        2) Extract the long-term trend from the modeled data:
             a) Get the monthly mean of the historical period. If annual 
                frequency is specified, this is applied to the complete period.
             b) Get the monthly mean of each projected period. If annual 
               frequency is specified, this is applied to the complete period.
             
-        4) Compute the linear scaled values.
+        3) Compute the linear scaled values.
         
-        5) Apply the cumulative distribution function of the modeled data, 
+        4) Apply the cumulative distribution function of the modeled data, 
            evaluated with the statistics of the modeled period, to the future 
            modeled data.
         
-        6) Apply the inverse cumulative distribution function of the observed 
+        5) Apply the inverse cumulative distribution function of the observed 
            data, evaluated with the statistics of the observed data in the 
            historical period, to the probabilities obtained from 5).
         
-        7) Reimpose the trend to the values obtained in 6).
+        6) Reimpose the trend to the values obtained in 6).
     
         End) Perform QM for the historical period.
 
@@ -266,31 +262,31 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series, mod_series, mu_obs, std_obs, skew_obs, skewy_obs, mu_mod, std_mod, skew_mod, skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
     
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
-    PDF_obs = getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var)
-    PDF_mod = getDist(mod_series[:,:y_obs],mu_mod,std_mod,skew_mod,skewy_mod,var)    
+    PDF_obs = getDist(obs_series, mu_obs, std_obs, skew_obs, skewy_obs, var)
+    PDF_mod = getDist(mod_series[:,:y_obs], mu_mod, std_mod, skew_mod, skewy_mod, var)    
         
     # 2) Extract the long-term trend from the modeled data:
     #    a) Get the monthly mean of the historical period. If annually
     #       frequency is specified, this is applied to the complete period).
-    xbarmh = np.nanmean(mod_series[:,:y_obs],1)
+    xbarmh = np.nanmean(mod_series[:,:y_obs], 1)
     
     #    b) Get the monthly mean of each projected period. If annually
     #       frequency is specified, this is applied to the complete period).
     y_mod = mod_series.shape[1]
-    xbarmp = np.zeros((mod_series.shape[0],y_mod-y_obs))
+    xbarmp = np.zeros((mod_series.shape[0], y_mod-y_obs))
     for j in range(y_mod-y_obs):
-        xbarmp[:,j] = np.nanmean(mod_series[:,j+1:y_obs+j+1],1)
+        xbarmp[:,j] = np.nanmean(mod_series[:,j+1:y_obs+j+1], 1)
     
     # 3)Compute the linear scaled values (value in square brackets in equation
     #   2 of Cannon et al. (2015)).
     LS = np.zeros(xbarmp.shape)
-    if var == 1: # Precipitacion
+    if var==1: # Precipitacion
         for m in range(mod_series.shape[0]):
             LS[m,:] = mod_series[m,y_obs:]*xbarmh[m]/xbarmp[m]
     else:        # Temperature
@@ -301,27 +297,27 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     #    evaluated with the statistics of the modeled period, to the future
     #    modeled data (getCDF function of the climQMBC package). Equation 2 of
     #    Cannon et al. (2015).
-    Taot = getCDF(PDF_mod,LS,mu_mod,std_mod,skew_mod,skewy_mod)
+    Taot = getCDF(PDF_mod, LS, mu_mod, std_mod, skew_mod, skewy_mod)
     
     # 5) Apply the inverse cumulative distribution function of the observed
     #    data, evaluated with the statistics of the observed data in the
     #    historical period, to the probabilities obtained from 5) (getCDFinv
     #    function of the climQMBC package). Equation 2 of Cannon et al. (2015).
-    DQM_LS = getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs)
+    DQM_LS = getCDFinv(PDF_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
     
     # 6) Reimpose the trend to the values obtained in 6). Equation 2 of Cannon
     #    et al. (2015).
-    if var == 1: # Precipitation
-        DQM = DQM_LS*xbarmp/np.tile(xbarmh,(y_mod-y_obs,1)).T
+    if var==1: # Precipitation
+        DQM = DQM_LS*xbarmp/np.tile(xbarmh,(y_mod-y_obs, 1)).T
     else: # Temperature
-        DQM = DQM_LS + xbarmp - np.tile(xbarmh,(y_mod-y_obs,1)).T
+        DQM = DQM_LS + xbarmp - np.tile(xbarmh,(y_mod-y_obs, 1)).T
     
-    DQM = DQM.reshape(-1,order='F')
+    DQM = DQM.reshape(-1, order='F')
     
     # 7) Perform QM for the historical period.
-    mod_h = mod_series[:,:y_obs].reshape(-1,order='F')
-    QM_series = QM(obs,mod_h,var,frq)
-    DQM_series = np.hstack([QM_series,DQM])
+    mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
+    QM_series = QM(obs, mod_h, var, frq)
+    DQM_series = np.hstack([QM_series, DQM])
     if var==1:
         DQM_series[DQM_series<pp_threshold] = 0
     
@@ -344,17 +340,15 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     (QM) method, as described by Cannon et al. (2015).
     
     Description:
-        0) Check if annual or monthly data is specified.
-    
-        1) Format inputs and get statistics of the observed and modeled series
+        0) Format inputs and get statistics of the observed and modeled series
            of the historical period.
            
-        2) Assign a probability distribution function to each month for the 
+        1) Assign a probability distribution function to each month for the 
            observed and modeled data in the historical period. If annual 
            frequency is specified, this is applied to the complete historical 
            period.
            
-        3) For each projected period:
+        2) For each projected period:
             a) Assign a probability distribution function to each month. 
                If annual frequency is specified, this is applied to the 
                complete period.
@@ -362,7 +356,7 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
                period, evaluated with the statistics of this period, to the 
                last data of the period.
 
-        4) Apply the inverse cumulative distribution function:
+        3) Apply the inverse cumulative distribution function:
             a) Of the observed data, evaluated with the statistics of the 
                observed data in the historical period, to the probabilities
                obtained from 3b).
@@ -370,7 +364,7 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
                observed data in the historical period, to the probabilities
                obtained from 3b).
 
-        5) Get the delta factor or relative change and apply it to the value
+        4) Get the delta factor or relative change and apply it to the value
            obtained in 4b).
     
         End) Perform QM for the historical period.
@@ -440,66 +434,63 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
         https://doi.org/10.1175/JCLI-D-14-00754.1
 
     """
+    
     if inv_mod_th is None:
         inv_mod_th = pp_threshold
     
-    # 0) Check if annually or monthly data is specified.
-    if frq != 'A':
-        frq = 'M'
-    
-    # 1) Format inputs and get statistics of the observed and modeled series of
+    # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series, mod_series, mu_obs, std_obs, skew_obs, skewy_obs, mu_mod, std_mod, skew_mod, skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
     
-    # 2) Assign a probability distribution function to each month for the
+    # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
-    PDF_obs = getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var)
-    PDF_mod = getDist(mod_series[:,:y_obs],mu_mod,std_mod,skew_mod,skewy_mod,var)  
+    PDF_obs = getDist(obs_series, mu_obs, std_obs, skew_obs, skewy_obs, var)
+    PDF_mod = getDist(mod_series[:,:y_obs], mu_mod, std_mod, skew_mod, skewy_mod, var)  
 
-    # 3) For each projected period:
+    # 2) For each projected period:
     PDF_win = np.zeros((mod_series.shape[0],mod_series.shape[1]-y_obs))
     Taot = np.zeros((mod_series.shape[0],mod_series.shape[1]-y_obs))
     for j in range(Taot.shape[1]):
         win_series = mod_series[:,j+1:y_obs+j+1]
         
-        mux  = np.nanmean(win_series,1)
-        sigmax = np.nanstd(win_series,1,ddof=1)
-        skewx = stat.skew(obs_series,1,bias=False)
+        mux = np.nanmean(win_series, 1)
+        sigmax = np.nanstd(win_series, 1, ddof=1)
+        skewx = stat.skew(obs_series, 1, bias=False)
         with np.errstate(divide = 'ignore'):
             Ln_win  = np.log(win_series)
-        Ln_win[np.imag(Ln_win)!=0]= 0
+        Ln_win[np.imag(Ln_win)!=0] = 0
         Ln_win[np.isinf(Ln_win)] = np.log(0.01)
-        skewy = stat.skew(Ln_win,1,bias=False)
+        skewy = stat.skew(Ln_win, 1, bias=False)
                 
         # a) Assign a probability distribution function to each month. If
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
-        PDF_win[:,j] = getDist(win_series,mux,sigmax,skewx,skewy,var)
+        PDF_win[:,j] = getDist(win_series, mux, sigmax, skewx, skewy, var)
         
         # b) Apply the cumulative distribution function of the projected
         #    period, evaluated with the statistics of this period, to the last
         #    data of the period (getCDF function of the climQMBC package).
         #    Equation 3 of Cannon et al. (2015).
-        Taot[:,j] = getCDF(PDF_win[:,j],mod_series[:,y_obs+j:y_obs+j+1],mux,sigmax,skewx,skewy)[:,0]
+        Taot[:,j] = getCDF(PDF_win[:,j], mod_series[:,y_obs+j:y_obs+j+1], mux, sigmax, skewx, skewy)[:,0]
     
-    # 4) Apply the inverse cumulative distribution function:
+    # 3) Apply the inverse cumulative distribution function:
     #    a) Of the observed data, evaluated with the statistics of the observed
     #       data in the historical period, to the probabilities obtained from 
     #       3b) (getCDFinv function of the climQMBC package). Equation 5 of 
     #       Cannon et al. (2015).
-    inv_obs = getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs)
+    inv_obs = getCDFinv(PDF_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
     
     #    b) Of the modeled data, evaluated with the statistics of the observed
     #       data in the historical period, to the probabilities obtained from 
     #       3b) (getCDFinv function of the climQMBC package). Equations 4 of 
     #       Cannon et al. (2015).
-    inv_mod = getCDFinv(PDF_mod,Taot,mu_mod,std_mod,skew_mod,skewy_mod)
+    inv_mod = getCDFinv(PDF_mod, Taot, mu_mod, std_mod, skew_mod, skewy_mod)
     
-    # 5) Get the delta factor or relative change and apply it to the value
+    # 4) Get the delta factor or relative change and apply it to the value
     #    obtained in 4b). Equation 4 and 6 of Cannon et al. (2015).
-    if var == 1:
+    if var==1:
         DM = mod_series[:,y_obs:]/inv_mod
         DM[(DM>rel_change_th) & (inv_mod<inv_mod_th)] = rel_change_th
         QDM = inv_obs*DM
@@ -509,10 +500,10 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     
     QDM = QDM.reshape(-1,order='F')
     
-    # 6) Perform QM for the historical period.
-    mod_h = mod_series[:,:y_obs].reshape(-1,order='F')
-    QM_series = QM(obs,mod_h,var,frq)
-    QDM_series = np.hstack([QM_series,QDM])
+    # 5) Perform QM for the historical period.
+    mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
+    QM_series = QM(obs, mod_h, var, frq)
+    QDM_series = np.hstack([QM_series, QDM])
     if var==1:
         QDM_series[QDM_series<pp_threshold] = 0
     
@@ -523,7 +514,7 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     """
     This function performs bias correction of modeled series based on observed
     data by the Unbiased Quantile Mapping (UQM) method, as described by 
-    Chadwick et al. (2022). Correction is performed to monthly or annual
+    Chadwick et al. (2023). Correction is performed to monthly or annual
     precipitation or temperature data in a single location. An independent
     probability distribution function is assigned to each month and to each
     projected period based on the Kolmogorov-Smirnov test. If annual frequency
@@ -535,21 +526,19 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     (QM) method, as described by Cannon et al. (2015).
     
     Description:
-        0) Check if annual or monthly data is specified.
-    
-        1) Format inputs and get statistics of the observed and modeled series
+        0) Format inputs and get statistics of the observed and modeled series
            of the historical period.
            
-        2) Assign a probability distribution function to each month for the 
+        1) Assign a probability distribution function to each month for the 
            observed and modeled data in the historical period. If annual 
            frequency is specified, this is applied to the complete historical 
            period.
            
-       3) For each projected period, get the delta factor (delta) and time
-          dependent (aster) statistics (mean, standard deviation, skewness, 
-          and log skewness).
+        2) For each projected period, get the delta factor (delta) and time
+           dependent (aster) statistics (mean, standard deviation, skewness, 
+           and log skewness).
 
-        4) For each projected period:
+        3) For each projected period:
             a) Assign a probability distribution function to each month.
                If annual frequency is specified, this is applied to the 
                complete period.
@@ -557,7 +546,7 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
                period, evaluated with the statistics of this period, to the 
                last data of the period.
 
-        5) Apply the inverse cumulative distribution function of the observed
+        4) Apply the inverse cumulative distribution function of the observed
            data, evaluated with the time dependent statistics, to the values
            obtained in 4b).
     
@@ -612,28 +601,27 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
                     years [y_mod, 1].
     
     References:
-        Chadwick et al. (2022) [under revision]
+        Chadwick, C., Gironás, J., González-Leiva, F., and Aedo, S. (2023). Bias 
+        adjustment to preserve changes in variability: the unbiased mapping of GCM 
+        changes. Hydrological Sciences Journal,
+        https://doi.org/10.1080/02626667.2023.2201450
   
     """
     
-    # 0) Check if annually or monthly data is specified.
-    if frq != 'A':
-        frq = 'M'
-    
-    # 1) Format inputs and get statistics of the observed and modeled series of
+    # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series, mod_series, mu_obs, std_obs, skew_obs, skewy_obs, mu_mod, std_mod, skew_mod, skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
     
-    # 2) Assign a probability distribution function to each month for the
+    # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
-    PDF_obs = getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var)
+    PDF_obs = getDist(obs_series, mu_obs, std_obs, skew_obs, skewy_obs, var)
     
-    # 3) For each projected period, get the delta factor (delta) and time
+    # 2) For each projected period, get the delta factor (delta) and time
     #    dependent (aster) statistics (mean, standard deviation, skewness, and
     #    log skewness). Equations X to X in Chadwick et al. (2021).
-    xbarmt = np.zeros((mod_series.shape[0],mod_series.shape[1]-y_obs))
+    xbarmt = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
     xhatmt = np.zeros(xbarmt.shape)
     skwmt = np.zeros(xbarmt.shape)
     Lskwmt = np.zeros(xbarmt.shape)
@@ -648,87 +636,87 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     skwAster = np.zeros(xbarmt.shape)
     LskwAster = np.zeros(xbarmt.shape)
     
-    if var == 1:  # Precipitation
+    if var==1:  # Precipitation
         for i in range(xbarmt.shape[0]):
             for j in range(xbarmt.shape[1]):
-                xbarmt[i,j] = np.nanmean(mod_series[i,j+1:y_obs+j+1],0)
-                xhatmt[i,j] = np.nanstd(mod_series[i,j+1:y_obs+j+1],0,ddof=1)
+                xbarmt[i,j] = np.nanmean(mod_series[i,j+1:y_obs+j+1], 0)
+                xhatmt[i,j] = np.nanstd(mod_series[i,j+1:y_obs+j+1], 0, ddof=1)
                 
-                skwmt[i,j]  = stat.skew(mod_series[i,j+1:y_obs+j+1],0,bias=False)
-                Lnskwmt     = np.log(mod_series[i,j+1:y_obs+j+1])
+                skwmt[i,j] = stat.skew(mod_series[i,j+1:y_obs+j+1], 0, bias=False)
+                Lnskwmt = np.log(mod_series[i,j+1:y_obs+j+1])
                 Lnskwmt[np.isinf(Lnskwmt)]= np.log(0.01)
                 Lskwmt[i,j] = stat.skew(Lnskwmt,0,bias=False)    
     
-                Dmu[i,j]    = (xbarmt[i,j]- mu_mod[i])/ mu_mod[i]
-                Dsigma[i,j] = (xhatmt[i,j]- std_mod[i])/ std_mod[i]
-                Dskw[i,j]   = (skwmt[i,j] - skew_mod[i])/ skew_mod[i]
-                DLskw[i,j]  = (Lskwmt[i,j]- skewy_mod[i])/ skewy_mod[i]
+                Dmu[i,j] = (xbarmt[i,j]- mu_mod[i])/mu_mod[i]
+                Dsigma[i,j] = (xhatmt[i,j]- std_mod[i])/std_mod[i]
+                Dskw[i,j] = (skwmt[i,j] - skew_mod[i])/skew_mod[i]
+                DLskw[i,j] = (Lskwmt[i,j]- skewy_mod[i])/skewy_mod[i]
                 
-                muAster[i,j]= mu_obs[i]*(1+ Dmu[i,j])
-                sigmaAster[i,j]= std_obs[i]*(1+ Dsigma[i,j])
-                skwAster[i,j]  = skew_obs[i]*(1+ Dskw[i,j])
-                LskwAster[i,j] = skewy_obs[i]*(1+ DLskw[i,j])
+                muAster[i,j] = mu_obs[i]*(1 + Dmu[i,j])
+                sigmaAster[i,j] = std_obs[i]*(1 + Dsigma[i,j])
+                skwAster[i,j] = skew_obs[i]*(1 + Dskw[i,j])
+                LskwAster[i,j] = skewy_obs[i]*(1 + DLskw[i,j])
     else:  # Temperature
         for i in range(xbarmt.shape[0]):
             for j in range(xbarmt.shape[1]):
-                xbarmt[i,j] = np.nanmean(mod_series[i,j+1:y_obs+j+1],0)
-                xhatmt[i,j] = np.nanstd(mod_series[i,j+1:y_obs+j+1],0,ddof=1)
+                xbarmt[i,j] = np.nanmean(mod_series[i,j+1:y_obs+j+1], 0)
+                xhatmt[i,j] = np.nanstd(mod_series[i,j+1:y_obs+j+1], 0, ddof=1)
                 
-                skwmt[i,j]  = stat.skew(mod_series[i,j+1:y_obs+j+1],0,bias=False)
-                Lnskwmt     = np.log(mod_series[i,j+1:y_obs+j+1])
-                Lnskwmt[np.isinf(Lnskwmt)]= np.log(0.01)
-                Lskwmt[i,j] = stat.skew(Lnskwmt,0,bias=False)    
+                skwmt[i,j] = stat.skew(mod_series[i,j+1:y_obs+j+1], 0, bias=False)
+                Lnskwmt = np.log(mod_series[i,j+1:y_obs+j+1])
+                Lnskwmt[np.isinf(Lnskwmt)] = np.log(0.01)
+                Lskwmt[i,j] = stat.skew(Lnskwmt, 0, bias=False)    
     
-                Dmu[i,j]    = xbarmt[i,j]- mu_mod[i]
-                Dsigma[i,j] = xhatmt[i,j]- std_mod[i]
-                Dskw[i,j]   = skwmt[i,j] - skew_mod[i]
-                DLskw[i,j]  = Lskwmt[i,j]- skewy_mod[i]
+                Dmu[i,j] = xbarmt[i,j] - mu_mod[i]
+                Dsigma[i,j] = xhatmt[i,j] - std_mod[i]
+                Dskw[i,j] = skwmt[i,j] - skew_mod[i]
+                DLskw[i,j] = Lskwmt[i,j] - skewy_mod[i]
                 
-                muAster[i,j]= mu_obs[i] + Dmu[i,j]
-                sigmaAster[i,j]= std_obs[i] + Dsigma[i,j]
-                skwAster[i,j]  = skew_obs[i] + Dskw[i,j]
+                muAster[i,j] = mu_obs[i] + Dmu[i,j]
+                sigmaAster[i,j] = std_obs[i] + Dsigma[i,j]
+                skwAster[i,j] = skew_obs[i] + Dskw[i,j]
                 LskwAster[i,j] = skewy_obs[i] + DLskw[i,j]
 
-    # 4) For each projected period:
-    PDF_win = np.zeros((mod_series.shape[0],mod_series.shape[1]-y_obs))
-    Taot = np.zeros((mod_series.shape[0],mod_series.shape[1]-y_obs))
-    UQM = np.zeros((mod_series.shape[0],mod_series.shape[1]-y_obs))
+    # 3) For each projected period:
+    PDF_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
+    Taot = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
+    UQM = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
     for j in range(Taot.shape[1]):
         win_series = mod_series[:,j+1:y_obs+j+1]
         
-        mux  = np.nanmean(win_series,1)
-        sigmax = np.nanstd(win_series,1,ddof=1)
-        skewx = stat.skew(obs_series,1,bias=False)
-        with np.errstate(divide = 'ignore'):
+        mux  = np.nanmean(win_series, 1)
+        sigmax = np.nanstd(win_series, 1, ddof=1)
+        skewx = stat.skew(obs_series,1 , bias=False)
+        with np.errstate(divide='ignore'):
             Ln_win  = np.log(win_series)
-        Ln_win[np.imag(Ln_win)!=0]= 0
+        Ln_win[np.imag(Ln_win)!=0] = 0
         Ln_win[np.isinf(Ln_win)] = np.log(0.01)
-        skewy = stat.skew(Ln_win,1,bias=False)
+        skewy = stat.skew(Ln_win, 1, bias=False)
                 
         # a) Assign a probability distribution function to each month. If
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
-        PDF_win[:,j] = getDist(win_series,mux,sigmax,skewx,skewy,var)
+        PDF_win[:,j] = getDist(win_series, mux, sigmax, skewx, skewy, var)
         
         # b) Apply the cumulative distribution function of the projected
         #    period, evaluated with the statistics of this period, to the last
         #    data of the period (getCDF function of the climQMBC package).
         #    Equation 3 of Cannon et al. (2015).
-        Taot[:,j] = getCDF(PDF_win[:,j],mod_series[:,y_obs+j:y_obs+j+1],mux,sigmax,skewx,skewy)[:,0]
+        Taot[:,j] = getCDF(PDF_win[:,j], mod_series[:,y_obs+j:y_obs+j+1], mux, sigmax, skewx, skewy)[:,0]
         
-    # 5) Apply the inverse cumulative distribution function of the observed
+    # 4) Apply the inverse cumulative distribution function of the observed
     #    data, evaluated with the time dependent statistics, to the values
     #    obtained in 4b) (getCDFinv function of the climQMBC package). Equation
     #    X of Chadwick et al. (2021).
     for yr in range(Taot.shape[1]):
-        UQM[:,yr] = getCDFinv(PDF_obs,Taot[:,yr:yr+1],muAster[:,yr],sigmaAster[:,yr],skwAster[:,yr],LskwAster[:,yr])[:,0]
+        UQM[:,yr] = getCDFinv(PDF_obs, Taot[:,yr:yr+1], muAster[:,yr], sigmaAster[:,yr], skwAster[:,yr], LskwAster[:,yr])[:,0]
     
-    UQM = UQM.reshape(-1,order='F')
+    UQM = UQM.reshape(-1, order='F')
     
-    # 6) Perform QM for the historical period.
-    mod_h = mod_series[:,:y_obs].reshape(-1,order='F')
-    QM_series = QM(obs,mod_h,var,frq)
-    UQM_series = np.hstack([QM_series,UQM])
+    # 5) Perform QM for the historical period.
+    mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
+    QM_series = QM(obs, mod_h, var, frq)
+    UQM_series = np.hstack([QM_series, UQM])
     if var==1:
         UQM_series[UQM_series<pp_threshold] = 0
     
