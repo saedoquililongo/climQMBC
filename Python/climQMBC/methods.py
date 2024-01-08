@@ -6,13 +6,13 @@ package, including the Quantile Mapping (QM), the Detrended Quantile Mapping
 and the Scaled Distribution Mapping (SDM).
 
 References:
-    Cannon, A. J., S. R. Sobie, and T. Q. Murdock, 2015: Bias correction of 
+    Cannon, A. J., S. R. Sobie, and T. Q. Murdock. (2015). Bias correction of 
     GCM precipitation by quantile mapping: How well do methods preserve changes
     in quantiles and extremes? J. Climate, 28(17), 6938-6959, 
     https://doi.org/10.1175/JCLI-D-14-00754.1
     
     Switanek, B. M., Troch, P., Castro, L. C., Leuprecht, A., Chang, H. I., 
-    Mukherjee, R., and Demaria, M. C. E. (2017) Scaled distribution mapping: A 
+    Mukherjee, R., and Demaria, M. C. E. (2017). Scaled distribution mapping: A 
     bias correction method that preserves raw climate model projected changes.
     Hydrology &amp; Earth System Sciences, 21, 2649-2666,
     https://doi.org/10.5194/hess-21-2649-2017.
@@ -37,8 +37,9 @@ Written by Sebastian Aedo Quililongo (1*)
       Santiago, Chile
       
 *Maintainer contact: sebastian.aedo.q@gmail.com
-Revision: 1, updated Jul 2022
+Revision: 2, updated Jan 2024
 """
+
 
 from .utils import formatQM, getDist, getCDF, getCDFinv
 from scipy.signal import detrend
@@ -60,7 +61,7 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
     Description:
         0) Format inputs and get statistics of the observed and modeled series
-           of the historical period.
+           in the historical period.
            
         1) Assign a probability distribution function to each month for the 
            observed and modeled data in the historical period. If annual 
@@ -124,14 +125,13 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
                     years [y_mod, 1].
     
     References:
-        Cannon, A. J., S. R. Sobie, and T. Q. Murdock, 2015: Bias correction of 
-        GCM precipitation by quantile mapping: How well do methods preserve 
-        changes in quantiles and extremes? J. Climate, 28(17), 6938-6959, 
+        Cannon, A. J., S. R. Sobie, and T. Q. Murdock. (2015). Bias correction of 
+        GCM precipitation by quantile mapping: How well do methods preserve changes
+        in quantiles and extremes? J. Climate, 28(17), 6938-6959, 
         https://doi.org/10.1175/JCLI-D-14-00754.1
-
     """
     
-    # 0) Format inputs and get statistics of the observed and modeled series of
+    # 0) Format inputs and get statistics of the observed and modeled series in
     #    the historical period (formatQM function of the climQMBC package).
     y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
     y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
@@ -145,7 +145,7 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
 
     # 2) Apply the cumulative distribution function of the modeled data,
     #    evaluated with the statistics of the modeled data in the historical
-    #    period, to the modeled data (getCDF function of the climQMBC package).
+    #    period and the modeled data (getCDF function of the climQMBC package).
     #    Equation 1 of Cannon et al. (2015).
     Taot = getCDF(PDF_mod, mod_series, mu_mod, std_mod, skew_mod, skewy_mod)
     
@@ -155,6 +155,7 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     #    function of the climQMBC package). Equation 1 of Cannon et al. (2015).
     QM_series = getCDFinv(PDF_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
     QM_series = QM_series.reshape(-1, order='F')
+    
     if var==1:
         QM_series[QM_series<pp_threshold] = 0
 
@@ -254,11 +255,10 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
                     years [y_mod, 1].
     
     References:
-        Cannon, A. J., S. R. Sobie, and T. Q. Murdock, 2015: Bias correction of 
-        GCM precipitation by quantile mapping: How well do methods preserve
-        changes in quantiles and extremes? J. Climate, 28(17), 6938-6959, 
+        Cannon, A. J., S. R. Sobie, and T. Q. Murdock. (2015). Bias correction of 
+        GCM precipitation by quantile mapping: How well do methods preserve changes
+        in quantiles and extremes? J. Climate, 28(17), 6938-6959, 
         https://doi.org/10.1175/JCLI-D-14-00754.1
-    
     """
     
     # 0) Format inputs and get statistics of the observed and modeled series of
@@ -273,53 +273,50 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     PDF_obs, mu_obs, std_obs, skew_obs, skewy_obs = getDist(obs_series, var)
     PDF_mod, mu_mod, std_mod, skew_mod, skewy_mod = getDist(mod_series[:,:y_obs], var)
 
-    # 2) Extract the long-term trend from the modeled data:
-    #    a) Get the monthly mean of the historical period. If annually
-    #       frequency is specified, this is applied to the complete period).
-    xbarmh = np.nanmean(mod_series[:,:y_obs], 1)
-    
-    #    b) Get the monthly mean of each projected period. If annually
-    #       frequency is specified, this is applied to the complete period).
-    y_mod = mod_series.shape[1]
-    xbarmp = np.zeros((mod_series.shape[0], y_mod-y_obs))
+    # 2) Get the monthly mean of each projected period or window. If annual 
+    #    frequency is specified, this is applied to the complete period).
+    mu_win = np.zeros((mod_series.shape[0], y_mod-y_obs))
     for j in range(y_mod-y_obs):
-        xbarmp[:,j] = np.nanmean(mod_series[:,j+1:y_obs+j+1], 1)
-    
+        win_series = mod_series[:,j+1:y_obs+j+1]
+        mu_win[:,j] = np.nanmean(win_series, 1)
+        
+    # 3) Scaling factor (model series))
     # 3)Compute the linear scaled values (value in square brackets in equation
     #   2 of Cannon et al. (2015)).
-    LS = np.zeros(xbarmp.shape)
-    if var==1: # Precipitacion
-        for m in range(mod_series.shape[0]):
-            LS[m,:] = mod_series[m,y_obs:]*xbarmh[m]/xbarmp[m]
-    else:        # Temperature
-        for m in range(mod_series.shape[0]):
-            LS[m,:] = mod_series[m,y_obs:] + xbarmh[m] - xbarmp[m]
-    
+    mu_mod_repeated = np.tile(mu_mod, (y_mod-y_obs, 1)).T
+    if var==1: # Precipitation
+        scaling_factor = mu_win/mu_mod_repeated
+        detrended_series  = mod_series[:,y_obs:]/scaling_factor
+    else: # Temperature
+        scaling_factor = mu_win - mu_mod_repeated
+        detrended_series  = mod_series[:,y_obs:] - scaling_factor
+
     # 4) Apply the cumulative distribution function of the modeled data,
     #    evaluated with the statistics of the modeled period, to the future
     #    modeled data (getCDF function of the climQMBC package). Equation 2 of
     #    Cannon et al. (2015).
-    Taot = getCDF(PDF_mod, LS, mu_mod, std_mod, skew_mod, skewy_mod)
+    Taot = getCDF(PDF_mod, detrended_series, mu_mod, std_mod, skew_mod, skewy_mod)
     
     # 5) Apply the inverse cumulative distribution function of the observed
     #    data, evaluated with the statistics of the observed data in the
     #    historical period, to the probabilities obtained from 4) (getCDFinv
     #    function of the climQMBC package). Equation 2 of Cannon et al. (2015).
-    DQM_LS = getCDFinv(PDF_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
+    DQM_unscaled = getCDFinv(PDF_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
     
     # 6) Reimpose the trend to the values obtained in 5). Equation 2 of Cannon
     #    et al. (2015).
     if var==1: # Precipitation
-        DQM = DQM_LS*xbarmp/np.tile(xbarmh,(y_mod-y_obs, 1)).T
+        DQM_series = DQM_unscaled*scaling_factor
     else: # Temperature
-        DQM = DQM_LS + xbarmp - np.tile(xbarmh,(y_mod-y_obs, 1)).T
+        DQM_series = DQM_unscaled + scaling_factor
     
-    DQM = DQM.reshape(-1, order='F')
+    DQM_series = DQM_series.reshape(-1, order='F')
     
     # 7) Perform QM for the historical period.
     mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
     QM_series = QM(obs, mod_h, var, frq)
-    DQM_series = np.hstack([QM_series, DQM])
+    DQM_series = np.hstack([QM_series, DQM_series])
+    
     if var==1:
         DQM_series[DQM_series<pp_threshold] = 0
     
@@ -430,11 +427,10 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
                     years [y_mod, 1].
     
     References:
-        Cannon, A. J., S. R. Sobie, and T. Q. Murdock, 2015: Bias correction of 
-        GCM precipitation by quantile mapping: How well do methods preserve
-        changes in quantiles and extremes? J. Climate, 28(17), 6938-6959, 
+        Cannon, A. J., S. R. Sobie, and T. Q. Murdock. (2015). Bias correction of 
+        GCM precipitation by quantile mapping: How well do methods preserve changes
+        in quantiles and extremes? J. Climate, 28(17), 6938-6959, 
         https://doi.org/10.1175/JCLI-D-14-00754.1
-
     """
     
     if inv_mod_th is None:
@@ -453,21 +449,21 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     PDF_mod, mu_mod, std_mod, skew_mod, skewy_mod = getDist(mod_series[:,:y_obs], var)
 
     # 2) For each projected period:
-    PDF_win = np.zeros((mod_series.shape[0],mod_series.shape[1]-y_obs))
-    Taot = np.zeros((mod_series.shape[0],mod_series.shape[1]-y_obs))
+    PDF_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
+    Taot = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
     for j in range(Taot.shape[1]):
         win_series = mod_series[:,j+1:y_obs+j+1]
 
         # a) Assign a probability distribution function to each month. If
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
-        PDF_win[:,j], mux, sigmax, skewx, skewy = getDist(win_series, var)
+        PDF_win[:,j], mu_win, std_win, skew_win, skewy_win = getDist(win_series, var)
         
         # b) Apply the cumulative distribution function of the projected
         #    period, evaluated with the statistics of this period, to the last
         #    data of the period (getCDF function of the climQMBC package).
         #    Equation 3 of Cannon et al. (2015).
-        Taot[:,j] = getCDF(PDF_win[:,j], mod_series[:,y_obs+j:y_obs+j+1], mux, sigmax, skewx, skewy)[:,0]
+        Taot[:,j] = getCDF(PDF_win[:,j], win_series[:,-1:], mu_win, std_win, skew_win, skewy_win)[:,0]
     
     # 3) Apply the inverse cumulative distribution function:
     #    a) Of the observed data, evaluated with the statistics of the observed
@@ -485,19 +481,21 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     # 4) Get the delta factor or relative change and apply it to the value
     #    obtained in 3b). Equation 4 and 6 of Cannon et al. (2015).
     if var==1:
-        DM = mod_series[:,y_obs:]/inv_mod
-        DM[(DM>rel_change_th) & (inv_mod<inv_mod_th)] = rel_change_th
-        QDM = inv_obs*DM
+        delta_quantile = mod_series[:,y_obs:]/inv_mod
+        bool_undefined = (delta_quantile>rel_change_th) & (inv_mod<inv_mod_th)
+        delta_quantile[bool_undefined] = rel_change_th
+        QDM_series = inv_obs*delta_quantile
     else:
-        DM = mod_series[:,y_obs:] - inv_mod
-        QDM = inv_obs + DM
+        delta_quantile = mod_series[:,y_obs:] - inv_mod
+        QDM_series = inv_obs + delta_quantile
     
-    QDM = QDM.reshape(-1,order='F')
+    QDM_series = QDM_series.reshape(-1,order='F')
     
     # 5) Perform QM for the historical period.
     mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
     QM_series = QM(obs, mod_h, var, frq)
-    QDM_series = np.hstack([QM_series, QDM])
+    QDM_series = np.hstack([QM_series, QDM_series])
+    
     if var==1:
         QDM_series[QDM_series<pp_threshold] = 0
     
@@ -617,85 +615,85 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     # 2) For each projected period, get the delta factor (delta) and time
     #    dependent (aster) statistics (mean, standard deviation, skewness, and
     #    log skewness). Equations 13 to 14 in Chadwick et al. (2023).
-    xbarmt = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
-    xhatmt = np.zeros(xbarmt.shape)
-    skwmt = np.zeros(xbarmt.shape)
-    Lskwmt = np.zeros(xbarmt.shape)
+    mu_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
+    std_win = np.zeros(mu_win.shape)
+    skew_win = np.zeros(mu_win.shape)
+    skewy_win = np.zeros(mu_win.shape)
     
-    Dmu = np.zeros(xbarmt.shape)
-    Dsigma = np.zeros(xbarmt.shape)
-    Dskw = np.zeros(xbarmt.shape)
-    DLskw = np.zeros(xbarmt.shape)
+    delta_mu = np.zeros(mu_win.shape)
+    delta_sigma = np.zeros(mu_win.shape)
+    delta_skew = np.zeros(mu_win.shape)
+    delta_skewy = np.zeros(mu_win.shape)
     
-    muAster = np.zeros(xbarmt.shape)
-    sigmaAster = np.zeros(xbarmt.shape)
-    skwAster = np.zeros(xbarmt.shape)
-    LskwAster = np.zeros(xbarmt.shape)
+    mu_projected = np.zeros(mu_win.shape)
+    sigma_projected = np.zeros(mu_win.shape)
+    skew_projected = np.zeros(mu_win.shape)
+    skewy_projected = np.zeros(mu_win.shape)
 
-    for j in range(xbarmt.shape[1]):
+    for j in range(mu_win.shape[1]):
         win_series = mod_series[:,j+1:y_obs+j+1]
         
-        xbarmt[:,j] = np.nanmean(win_series, 1)
-        xhatmt[:,j] = np.nanstd(win_series, 1, ddof=1)
+        mu_win[:,j] = np.nanmean(win_series, 1)
+        std_win[:,j] = np.nanstd(win_series, 1, ddof=1)
         
-        skwmt[:,j] = stat.skew(win_series, 1, bias=False)
-        Lnskwmt = np.log(win_series)
-        Lnskwmt[np.isinf(Lnskwmt)]= np.log(0.01)
-        Lskwmt[:,j] = stat.skew(Lnskwmt,1,bias=False)    
+        skew_win[:,j] = stat.skew(win_series, 1, bias=False)
+        win_series_log = np.log(win_series)
+        win_series_log[np.isinf(win_series_log)]= np.log(0.01)
+        skewy_win[:,j] = stat.skew(win_series_log,1,bias=False)    
         
         if var==1:  # Precipitation
-            Dmu[:,j] = (xbarmt[:,j] - mu_mod)/mu_mod
-            Dsigma[:,j] = (xhatmt[:,j] - std_mod)/std_mod
-            Dskw[:,j] = (skwmt[:,j] - skew_mod)/skew_mod
-            DLskw[:,j] = (Lskwmt[:,j]- skewy_mod)/skewy_mod
+            delta_mu[:,j] = (mu_win[:,j] - mu_mod)/mu_mod
+            delta_sigma[:,j] = (std_win[:,j] - std_mod)/std_mod
+            delta_skew[:,j] = (skew_win[:,j] - skew_mod)/skew_mod
+            delta_skewy[:,j] = (skewy_win[:,j]- skewy_mod)/skewy_mod
             
-            muAster[:,j] = mu_obs*(1 + Dmu[:,j])
-            sigmaAster[:,j] = std_obs*(1 + Dsigma[:,j])
-            skwAster[:,j] = skew_obs*(1 + Dskw[:,j])
-            LskwAster[:,j] = skewy_obs*(1 + DLskw[:,j])
+            mu_projected[:,j] = mu_obs*(1 + delta_mu[:,j])
+            sigma_projected[:,j] = std_obs*(1 + delta_sigma[:,j])
+            skew_projected[:,j] = skew_obs*(1 + delta_skew[:,j])
+            skewy_projected[:,j] = skewy_obs*(1 + delta_skewy[:,j])
             
         else:  # Temperature
-            Dmu[:,j] = xbarmt[:,j] - mu_mod
-            Dsigma[:,j] = xhatmt[:,j] - std_mod
-            Dskw[:,j] = skwmt[:,j] - skew_mod
-            DLskw[:,j] = Lskwmt[:,j] - skewy_mod
+            delta_mu[:,j] = mu_win[:,j] - mu_mod
+            delta_sigma[:,j] = std_win[:,j] - std_mod
+            delta_skew[:,j] = skew_win[:,j] - skew_mod
+            delta_skewy[:,j] = skewy_win[:,j]- skewy_mod
             
-            muAster[:,j] = mu_obs + Dmu[:,j]
-            sigmaAster[:,j] = std_obs + Dsigma[:,j]
-            skwAster[:,j] = skew_obs + Dskw[:,j]
-            LskwAster[:,j] = skewy_obs + DLskw[:,j]
+            mu_projected[:,j] = mu_obs + delta_mu[:,j]
+            sigma_projected[:,j] = std_obs + delta_sigma[:,j]
+            skew_projected[:,j] = skew_obs + delta_skew[:,j]
+            skewy_projected[:,j] = skewy_obs + delta_skewy[:,j]
 
     # 3) For each projected period:
     PDF_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
     Taot = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
-    UQM = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
+    UQM_series = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
     for j in range(Taot.shape[1]):
         win_series = mod_series[:,j+1:y_obs+j+1]
 
         # a) Assign a probability distribution function to each month. If
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
-        PDF_win[:,j], mux, sigmax, skewx, skewy = getDist(win_series, var)
+        PDF_win[:,j], mu_win, std_win, skew_win, skewy_win = getDist(win_series, var)
         
         # b) Apply the cumulative distribution function of the projected
         #    period, evaluated with the statistics of this period, to the last
         #    data of the period (getCDF function of the climQMBC package).
         #    Equation in Chadwick et al. (2023).
-        Taot[:,j] = getCDF(PDF_win[:,j], mod_series[:,y_obs+j:y_obs+j+1], mux, sigmax, skewx, skewy)[:,0]
+        Taot[:,j] = getCDF(PDF_win[:,j], win_series[:,-1:], mu_win, std_win, skew_win, skewy_win)[:,0]
         
-    # 4) Apply the inverse cumulative distribution function of the observed
-    #    data, evaluated with the time dependent statistics, to the values
-    #    obtained in 3b) (getCDFinv function of the climQMBC package). Equation
-    #    15 in Chadwick et al. (2023).
-    for yr in range(Taot.shape[1]):
-        UQM[:,yr] = getCDFinv(PDF_obs, Taot[:,yr:yr+1], muAster[:,yr], sigmaAster[:,yr], skwAster[:,yr], LskwAster[:,yr])[:,0]
+        # 4) Apply the inverse cumulative distribution function of the observed
+        #    data, evaluated with the time dependent statistics, to the values
+        #    obtained in 3b) (getCDFinv function of the climQMBC package). Equation
+        #    15 in Chadwick et al. (2023).
+        UQM_series[:,j] = getCDFinv(PDF_obs, Taot[:,j:j+1], mu_projected[:,j], sigma_projected[:,j], skew_projected[:,j], skewy_projected[:,j])[:,0]
     
-    UQM = UQM.reshape(-1, order='F')
+    UQM_series = UQM_series.reshape(-1, order='F')
     
     # 5) Perform QM for the historical period.
     mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
     QM_series = QM(obs, mod_h, var, frq)
-    UQM_series = np.hstack([QM_series, UQM])
+    UQM_series = np.hstack([QM_series, UQM_series])
+    
     if var==1:
         UQM_series[UQM_series<pp_threshold] = 0
     
@@ -844,8 +842,8 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
     y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
     
-    SDM = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))    
-    SDM_h = np.zeros((obs_series.shape[0], y_obs))    
+    SDM_series = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))    
+    SDM_h_series = np.zeros((obs_series.shape[0], y_obs))    
     for m in range(mod_series.shape[0]):
         # 1) Historical period:
 
@@ -1025,13 +1023,13 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             #    If the projected period is not the historical period (j>0),
             #    save the value of the last year.
             if j==-1:
-                SDM_h[m] = corr_temp
+                SDM_h_series[m] = corr_temp
             else:
-                SDM[m,j] = corr_temp[-1]
+                SDM_series[m,j] = corr_temp[-1]
             
-    SDM_h = SDM_h.reshape(-1, order='F')
-    SDM = SDM.reshape(-1, order='F')
-    SDM_series = np.hstack([SDM_h, SDM])
+    SDM_h_series = SDM_h_series.reshape(-1, order='F')
+    SDM_series = SDM_series.reshape(-1, order='F')
+    SDM_series = np.hstack([SDM_h_series, SDM_series])
     if var==1:
         SDM_series[SDM_series<pp_threshold] = 0
 

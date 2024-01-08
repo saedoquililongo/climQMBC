@@ -284,7 +284,9 @@ def getDist(series, var):
     mu  = np.nanmean(series, 1)     # Mean
     sigma = np.nanstd(series, 1, ddof=1)    # Standard deviation
     skew = stat.skew(series, 1, bias=False)     # Skewness
-    skewy = np.zeros(n)
+    series_log  = np.log(series)
+    series_log[np.isinf(series_log)] = np.log(0.01)
+    skewy = stat.skew(series_log, 1, bias=False)
     
     # 3) Perform the Kolmogorov-Smirnov test for each row.
     for m in range(n):
@@ -333,9 +335,6 @@ def getDist(series, var):
             KSLpIII = 1
         else:
             sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
-            series_log  = np.log(series_sub)
-            series_log[np.isinf(series_log)] = np.log(0.01)
-            skewy[m] = stat.skew(series_log, bias=False)
             Bety = (2/skewy[m])**2
             Alpy = sigmay/np.sqrt(Bety)
             Gamy = muy-(Alpy*Bety)
@@ -367,7 +366,7 @@ def getDist(series, var):
             KSexponential = 1
         
         # d) The distribution with lower KS value is considered for each month.
-        bestPDF= np.argmin([KSnormal, KSlognormal, KSgammaII, KSgammaIII, KSLpIII, KSgumbel, KSexponential])
+        bestPDF = np.argmin([KSnormal, KSlognormal, KSgammaII, KSgammaIII, KSLpIII, KSgumbel, KSexponential])
     
         PDF[m] = bestPDF
         
