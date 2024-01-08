@@ -853,7 +853,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
         #     For precipitation, get the rainday values and its frequency for
         #     the modeled and observed series in the historical period.
          
-        if var == 0: # Temperature
+        if var==0: # Temperature
             D_obs = detrend(obs_series[m])
             D_mod = detrend(mod_series[m,:y_obs])
             
@@ -865,6 +865,9 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             
             freq_obs = D_obs.shape[0]/obs_series.shape[1]
             freq_mod = D_mod.shape[0]/mod_series[m,:y_obs].shape[0]
+            
+            if freq_mod==0:
+                freq_mod = 1/(365*y_obs)
     
         # b) [Switanek et al. (2017), step 2)]
         #    For temperature, fit normal probability distribution to the
@@ -877,7 +880,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
         #    for temperature and to (1 - threshold) for temperature and
         #    precipitation. Threshold is set in the first lines of this
         #    function. Default is CDF_th = 10^-3.
-        if var == 0: # Temperature
+        if var==0: # Temperature
             mu_obsD = np.nanmean(D_obs)
             mu_modD = np.nanmean(D_mod)
             
@@ -907,7 +910,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             corr_temp = np.zeros(y_obs)
         
             # d) Define projected window.
-            win_series  = mod_series[m,j+1:y_obs+j+1]
+            win_series = mod_series[m,j+1:y_obs+j+1]
             
             # e) [Switanek et al. (2017), step 1)]
             #    For temperature, get the detrended series of the projected
@@ -962,12 +965,19 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
             # h) Interpolate observed and modeled CDF of the historical period
             #    to the length of the projected period.
-            obs_cdf_intpol = np.interp(np.linspace(1, len(D_obs), len(D_win)),
-                                       np.linspace(1, len(D_obs), len(D_obs)),
-                                       CDF_obs)
-            mod_cdf_intpol = np.interp(np.linspace(1, len(D_mod), len(D_win)),
-                                       np.linspace(1, len(D_mod), len(D_mod)),
-                                       CDF_mod)
+            if len(D_obs)>0:
+                obs_cdf_intpol = np.interp(np.linspace(1, len(D_obs), len(D_win)),
+                                           np.linspace(1, len(D_obs), len(D_obs)),
+                                           CDF_obs)
+            else:
+                obs_cdf_intpol = np.linspace(CDF_th, 1-CDF_th, len(D_win))
+                
+            if len(D_mod)>0:
+                mod_cdf_intpol = np.interp(np.linspace(1, len(D_mod), len(D_win)),
+                                           np.linspace(1, len(D_mod), len(D_mod)),
+                                           CDF_mod)
+            else:
+                mod_cdf_intpol = np.linspace(CDF_th, 1-CDF_th, len(D_win))
 
             # i) [Switanek et al. (2017), steps 4 and 5)]
             #    Get recurrence intervals and its scaled version for the
@@ -1014,7 +1024,9 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             #    corrected values with the higher rainday or detrended values.
             #    For temperature, the trend of the projected period is added
             #    back.
-            corr_temp[win_argsort[-exp_D:]] = xvals
+            if exp_D>0: # if exp_D==0 -> corr_temp stays a a zero vector
+                corr_temp[win_argsort[-exp_D:]] = xvals
+                
             if var==0:
                 corr_temp = corr_temp + diff_win - mu_win
                 
