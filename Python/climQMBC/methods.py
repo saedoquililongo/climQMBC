@@ -283,11 +283,10 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
 
     # 2) Get the monthly mean of each projected period or window. If annual 
     #    frequency is specified, this is applied to the complete period).
-    mu_win = np.zeros((mod_series.shape[0], y_mod-y_obs))
-    for j in range(y_mod-y_obs):
-        win_series = mod_series[:,j+1:y_obs+j+1]
-        mu_win[:,j] = np.nanmean(win_series, 1)
-        
+    win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
+    win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
+    mu_win = win_series.mean(1)
+
     # 3) Scaling factor (model series))
     # 3)Compute the linear scaled values (value in square brackets in equation
     #   2 of Cannon et al. (2015)).
@@ -461,18 +460,26 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
 
     # 2) For each projected period:
+    win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
+    win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-(y_obs)]
+    
+    mu_win = np.nanmean(win_series, 1)
+    std_win = np.nanstd(win_series, 1, ddof=1)
+    skew_win = stat.skew(win_series, 1, bias=False)
+    win_series_log = np.log(win_series)
+    win_series_log[np.isinf(win_series_log)] = np.log(0.01)
+    skewy_win = stat.skew(win_series_log,1,bias=False)
+    
+    
+    
     pdf_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
     Taot = np.zeros((mod_series.shape[0], y_mod-y_obs))
     for j in range(Taot.shape[1]):
-        win_series = mod_series[:,j+1:y_obs+j+1]
-        
-        mu_win, std_win, skew_win, skewy_win = getStats(win_series)
-
         # a) Assign a probability distribution function to each month. If
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
         if user_pdf==False:
-            pdf_win[:,j] = getDist(win_series, allow_negatives, mu_win, std_win, skew_win, skewy_win)
+            pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
         else:
             pdf_win[:,j] = pdf_mod
         
@@ -480,8 +487,8 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         #    period, evaluated with the statistics of this period, to the last
         #    data of the period (getCDF function of the climQMBC package).
         #    Equation 3 of Cannon et al. (2015).
-        Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:], mu_win, std_win, skew_win, skewy_win)[:,0]
-    
+        Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
+
     # 3) Apply the inverse cumulative distribution function:
     #    a) Of the observed data, evaluated with the statistics of the observed
     #       data in the historical period, to the probabilities obtained from 
@@ -635,76 +642,56 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     # 2) For each projected period, get the delta factor (delta) and time
     #    dependent (aster) statistics (mean, standard deviation, skewness, and
     #    log skewness). Equations 13 to 14 in Chadwick et al. (2023).
-    mu_win = np.zeros((mod_series.shape[0], y_mod-y_obs))
-    std_win = np.zeros(mu_win.shape)
-    skew_win = np.zeros(mu_win.shape)
-    skewy_win = np.zeros(mu_win.shape)
+    win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
+    win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-(y_obs)]
     
-    delta_mu = np.zeros(mu_win.shape)
-    delta_sigma = np.zeros(mu_win.shape)
-    delta_skew = np.zeros(mu_win.shape)
-    delta_skewy = np.zeros(mu_win.shape)
+    mu_win = np.nanmean(win_series, 1)
+    std_win = np.nanstd(win_series, 1, ddof=1)
+    skew_win = stat.skew(win_series, 1, bias=False)
+    win_series_log = np.log(win_series)
+    win_series_log[np.isinf(win_series_log)] = np.log(0.01)
+    skewy_win = stat.skew(win_series_log,1,bias=False)
     
-    mu_projected = np.zeros(mu_win.shape)
-    sigma_projected = np.zeros(mu_win.shape)
-    skew_projected = np.zeros(mu_win.shape)
-    skewy_projected = np.zeros(mu_win.shape)
+    if mult_change:  # Precipitation
+        delta_mu = mu_win/np.tile(mu_mod,(y_mod-y_obs,1)).T
+        delta_sigma = std_win/np.tile(std_mod,(y_mod-y_obs,1)).T
+        delta_skew = skew_win/np.tile(skew_mod,(y_mod-y_obs,1)).T
+        delta_skewy = skewy_win/np.tile(skewy_mod,(y_mod-y_obs,1)).T
+        
+        mu_projected = np.tile(mu_obs,(y_mod-y_obs,1)).T*delta_mu
+        sigma_projected = np.tile(std_obs,(y_mod-y_obs,1)).T*delta_sigma
+        skew_projected = np.tile(skew_obs,(y_mod-y_obs,1)).T*delta_skew
+        skewy_projected = np.tile(skewy_obs,(y_mod-y_obs,1)).T*delta_skewy
+    else:
+        delta_mu = mu_win - np.tile(mu_mod,(y_mod-y_obs,1)).T
+        delta_sigma = std_win - np.tile(std_mod,(y_mod-y_obs,1)).T
+        delta_skew = skew_win - np.tile(skew_mod,(y_mod-y_obs,1)).T
+        delta_skewy = skewy_win- np.tile(skewy_mod,(y_mod-y_obs,1)).T
+    
+        mu_projected = np.tile(mu_obs,(y_mod-y_obs,1)).T + delta_mu
+        sigma_projected = np.tile(std_obs,(y_mod-y_obs,1)).T + delta_sigma
+        skew_projected = np.tile(skew_obs,(y_mod-y_obs,1)).T + delta_skew
+        skewy_projected = np.tile(skewy_obs,(y_mod-y_obs,1)).T + delta_skewy
 
-    for j in range(mu_win.shape[1]):
-        win_series = mod_series[:,j+1:y_obs+j+1]
-        
-        mu_win[:,j] = np.nanmean(win_series, 1)
-        std_win[:,j] = np.nanstd(win_series, 1, ddof=1)
-        
-        skew_win[:,j] = stat.skew(win_series, 1, bias=False)
-        win_series_log = np.log(win_series)
-        win_series_log[np.isinf(win_series_log)] = np.log(0.01)
-        skewy_win[:,j] = stat.skew(win_series_log,1,bias=False)    
-        
-        if mult_change:  # Precipitation
-            delta_mu[:,j] = (mu_win[:,j] - mu_mod)/mu_mod
-            delta_sigma[:,j] = (std_win[:,j] - std_mod)/std_mod
-            delta_skew[:,j] = (skew_win[:,j] - skew_mod)/skew_mod
-            delta_skewy[:,j] = (skewy_win[:,j]- skewy_mod)/skewy_mod
-            
-            mu_projected[:,j] = mu_obs*(1 + delta_mu[:,j])
-            sigma_projected[:,j] = std_obs*(1 + delta_sigma[:,j])
-            skew_projected[:,j] = skew_obs*(1 + delta_skew[:,j])
-            skewy_projected[:,j] = skewy_obs*(1 + delta_skewy[:,j])
-            
-        else:  # Temperature
-            delta_mu[:,j] = mu_win[:,j] - mu_mod
-            delta_sigma[:,j] = std_win[:,j] - std_mod
-            delta_skew[:,j] = skew_win[:,j] - skew_mod
-            delta_skewy[:,j] = skewy_win[:,j]- skewy_mod
-            
-            mu_projected[:,j] = mu_obs + delta_mu[:,j]
-            sigma_projected[:,j] = std_obs + delta_sigma[:,j]
-            skew_projected[:,j] = skew_obs + delta_skew[:,j]
-            skewy_projected[:,j] = skewy_obs + delta_skewy[:,j]
-
+    
     # 3) For each projected period:
     pdf_win = np.zeros((mod_series.shape[0], y_mod-y_obs))
     Taot = np.zeros((mod_series.shape[0], y_mod-y_obs))
     UQM_series = np.zeros((mod_series.shape[0], y_mod-y_obs))
     for j in range(Taot.shape[1]):
-        win_series = mod_series[:,j+1:y_obs+j+1]
-        
-        mu_win, std_win, skew_win, skewy_win = getStats(win_series)
-
         # a) Assign a probability distribution function to each month. If
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
         if user_pdf==False:
-            pdf_win[:,j] = getDist(win_series, allow_negatives, mu_win, std_win, skew_win, skewy_win)
+            pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
         else:
             pdf_win[:,j] = pdf_mod
         
         # b) Apply the cumulative distribution function of the projected
         #    period, evaluated with the statistics of this period, to the last
         #    data of the period (getCDF function of the climQMBC package).
-        #    Equation in Chadwick et al. (2023).
-        Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:], mu_win, std_win, skew_win, skewy_win)[:,0]
+        #    Equation 3 in Chadwick et al. (2023).
+        Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
         
         # 4) Apply the inverse cumulative distribution function of the observed
         #    data, evaluated with the time dependent statistics, to the values

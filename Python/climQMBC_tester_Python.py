@@ -76,6 +76,7 @@ mod = np.array(pd.read_csv('../Sample_data/mod_'+variable+'.csv',header=None))
 
 QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
 
+DQM_series = DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives)
 
 # Example 2
 # Example 2 shows how to use the report function for specific bias
