@@ -631,41 +631,39 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     sigmaAster = np.zeros(xbarmt.shape)
     skwAster = np.zeros(xbarmt.shape)
     LskwAster = np.zeros(xbarmt.shape)
-    
-    
-    for i in range(xbarmt.shape[0]):
-        for j in range(xbarmt.shape[1]):
-            win_series = mod_series[i,j+1:y_obs+j+1]
+
+    for j in range(xbarmt.shape[1]):
+        win_series = mod_series[:,j+1:y_obs+j+1]
+        
+        xbarmt[:,j] = np.nanmean(win_series, 1)
+        xhatmt[:,j] = np.nanstd(win_series, 1, ddof=1)
+        
+        skwmt[:,j] = stat.skew(win_series, 1, bias=False)
+        Lnskwmt = np.log(win_series)
+        Lnskwmt[np.isinf(Lnskwmt)]= np.log(0.01)
+        Lskwmt[:,j] = stat.skew(Lnskwmt,1,bias=False)    
+        
+        if var==1:  # Precipitation
+            Dmu[:,j] = (xbarmt[:,j] - mu_mod)/mu_mod
+            Dsigma[:,j] = (xhatmt[:,j] - std_mod)/std_mod
+            Dskw[:,j] = (skwmt[:,j] - skew_mod)/skew_mod
+            DLskw[:,j] = (Lskwmt[:,j]- skewy_mod)/skewy_mod
             
-            xbarmt[i,j] = np.nanmean(win_series, 0)
-            xhatmt[i,j] = np.nanstd(win_series, 0, ddof=1)
+            muAster[:,j] = mu_obs*(1 + Dmu[:,j])
+            sigmaAster[:,j] = std_obs*(1 + Dsigma[:,j])
+            skwAster[:,j] = skew_obs*(1 + Dskw[:,j])
+            LskwAster[:,j] = skewy_obs*(1 + DLskw[:,j])
             
-            skwmt[i,j] = stat.skew(win_series, 0, bias=False)
-            Lnskwmt = np.log(win_series)
-            Lnskwmt[np.isinf(Lnskwmt)]= np.log(0.01)
-            Lskwmt[i,j] = stat.skew(Lnskwmt,0,bias=False)    
+        else:  # Temperature
+            Dmu[:,j] = xbarmt[:,j] - mu_mod
+            Dsigma[:,j] = xhatmt[:,j] - std_mod
+            Dskw[:,j] = skwmt[:,j] - skew_mod
+            DLskw[:,j] = Lskwmt[:,j] - skewy_mod
             
-            if var==1:  # Precipitation
-                Dmu[i,j] = (xbarmt[i,j] - mu_mod[i])/mu_mod[i]
-                Dsigma[i,j] = (xhatmt[i,j] - std_mod[i])/std_mod[i]
-                Dskw[i,j] = (skwmt[i,j] - skew_mod[i])/skew_mod[i]
-                DLskw[i,j] = (Lskwmt[i,j]- skewy_mod[i])/skewy_mod[i]
-                
-                muAster[i,j] = mu_obs[i]*(1 + Dmu[i,j])
-                sigmaAster[i,j] = std_obs[i]*(1 + Dsigma[i,j])
-                skwAster[i,j] = skew_obs[i]*(1 + Dskw[i,j])
-                LskwAster[i,j] = skewy_obs[i]*(1 + DLskw[i,j])
-                
-            else:  # Temperature
-                Dmu[i,j] = xbarmt[i,j] - mu_mod[i]
-                Dsigma[i,j] = xhatmt[i,j] - std_mod[i]
-                Dskw[i,j] = skwmt[i,j] - skew_mod[i]
-                DLskw[i,j] = Lskwmt[i,j] - skewy_mod[i]
-                
-                muAster[i,j] = mu_obs[i] + Dmu[i,j]
-                sigmaAster[i,j] = std_obs[i] + Dsigma[i,j]
-                skwAster[i,j] = skew_obs[i] + Dskw[i,j]
-                LskwAster[i,j] = skewy_obs[i] + DLskw[i,j]
+            muAster[:,j] = mu_obs + Dmu[:,j]
+            sigmaAster[:,j] = std_obs + Dsigma[:,j]
+            skwAster[:,j] = skew_obs + Dskw[:,j]
+            LskwAster[:,j] = skewy_obs + DLskw[:,j]
 
     # 3) For each projected period:
     PDF_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
