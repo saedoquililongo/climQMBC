@@ -47,7 +47,7 @@ import scipy.stats as stat
 import numpy as np
 
 
-def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def QM(obs, mod, allow_negatives=1, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Quantile Mapping (QM) method, as described by Cannon et al. 
@@ -133,8 +133,8 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, 
     
     # 0) Format inputs and get statistics of the observed and modeled series in
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
-    y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
     
     mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
     mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
@@ -144,8 +144,8 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, 
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
     if user_pdf==False:
-        pdf_obs = getDist(obs_series, var, mu_obs, std_obs, skew_obs, skewy_obs)
-        pdf_mod = getDist(mod_series[:,:y_obs], var, mu_mod, std_mod, skew_mod, skewy_mod)
+        pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+        pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
 
     # 2) Apply the cumulative distribution function of the modeled data,
     #    evaluated with the statistics of the modeled data in the historical
@@ -160,13 +160,13 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, 
     QM_series = getCDFinv(pdf_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
     QM_series = QM_series.reshape(-1, order='F')
     
-    if var==1:
+    if not allow_negatives:
         QM_series[QM_series<pp_threshold] = 0
 
     return QM_series
 
 
-def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def DQM(obs, mod, allow_negatives=1, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Detrended Quantile Mapping (DQM) method, as described by Cannon
@@ -267,8 +267,8 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False,
     
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
-    y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
     
     mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
     mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
@@ -278,8 +278,8 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False,
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
     if user_pdf==False:
-        pdf_obs = getDist(obs_series, var,  mu_obs, std_obs, skew_obs, skewy_obs)
-        pdf_mod = getDist(mod_series[:,:y_obs], var, mu_mod, std_mod, skew_mod, skewy_mod)
+        pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+        pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
 
     # 2) Get the monthly mean of each projected period or window. If annual 
     #    frequency is specified, this is applied to the complete period).
@@ -292,7 +292,7 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False,
     # 3)Compute the linear scaled values (value in square brackets in equation
     #   2 of Cannon et al. (2015)).
     mu_mod_repeated = np.tile(mu_mod, (y_mod-y_obs, 1)).T
-    if var==1: # Precipitation
+    if not allow_negatives: # Precipitation
         scaling_factor = mu_win/mu_mod_repeated
         detrended_series  = mod_series[:,y_obs:]/scaling_factor
     else: # Temperature
@@ -313,7 +313,7 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False,
     
     # 6) Reimpose the trend to the values obtained in 5). Equation 2 of Cannon
     #    et al. (2015).
-    if var==1: # Precipitation
+    if not allow_negatives: # Precipitation
         DQM_series = DQM_unscaled*scaling_factor
     else: # Temperature
         DQM_series = DQM_unscaled + scaling_factor
@@ -322,16 +322,16 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False,
     
     # 7) Perform QM for the historical period.
     mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
-    QM_series = QM(obs, mod_h, var, frq)
+    QM_series = QM(obs, mod_h, allow_negatives, frq)
     DQM_series = np.hstack([QM_series, DQM_series])
     
-    if var==1:
+    if not allow_negatives:
         DQM_series[DQM_series<pp_threshold] = 0
     
     return DQM_series
 
 
-def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2, inv_mod_th=None, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def QDM(obs, mod, allow_negatives, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2, inv_mod_th=None, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Quantile Delta Mapping (QDM) method, as described by Cannon
@@ -446,8 +446,8 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
-    y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
     
     mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
     mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
@@ -457,8 +457,8 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
     if user_pdf==False:
-        pdf_obs = getDist(obs_series, var,  mu_obs, std_obs, skew_obs, skewy_obs)
-        pdf_mod = getDist(mod_series[:,:y_obs], var, mu_mod, std_mod, skew_mod, skewy_mod)
+        pdf_obs = getDist(obs_series, allow_negatives,  mu_obs, std_obs, skew_obs, skewy_obs)
+        pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
 
     # 2) For each projected period:
     pdf_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
@@ -472,7 +472,7 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
         if user_pdf==False:
-            pdf_win[:,j] = getDist(win_series, var, mu_win, std_win, skew_win, skewy_win)
+            pdf_win[:,j] = getDist(win_series, allow_negatives, mu_win, std_win, skew_win, skewy_win)
         else:
             pdf_win[:,j] = pdf_mod
         
@@ -497,7 +497,7 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     
     # 4) Get the delta factor or relative change and apply it to the value
     #    obtained in 3b). Equation 4 and 6 of Cannon et al. (2015).
-    if var==1:
+    if not allow_negatives:
         delta_quantile = mod_series[:,y_obs:]/inv_mod
         bool_undefined = (delta_quantile>rel_change_th) & (inv_mod<inv_mod_th)
         delta_quantile[bool_undefined] = rel_change_th
@@ -510,16 +510,16 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     
     # 5) Perform QM for the historical period.
     mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
-    QM_series = QM(obs, mod_h, var, frq)
+    QM_series = QM(obs, mod_h, allow_negatives, frq)
     QDM_series = np.hstack([QM_series, QDM_series])
     
-    if var==1:
+    if not allow_negatives:
         QDM_series[QDM_series<pp_threshold] = 0
     
     return QDM_series
 
 
-def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def UQM(obs, mod, allow_negatives, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Unbiased Quantile Mapping (UQM) method, as described by 
@@ -619,8 +619,8 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False,
     
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
-    y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
     
     mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
     mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
@@ -630,7 +630,7 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False,
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
     if user_pdf==False:
-        pdf_obs = getDist(obs_series, var,  mu_obs, std_obs, skew_obs, skewy_obs)
+        pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
     
     # 2) For each projected period, get the delta factor (delta) and time
     #    dependent (aster) statistics (mean, standard deviation, skewness, and
@@ -661,7 +661,7 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False,
         win_series_log[np.isinf(win_series_log)] = np.log(0.01)
         skewy_win[:,j] = stat.skew(win_series_log,1,bias=False)    
         
-        if var==1:  # Precipitation
+        if not allow_negatives:  # Precipitation
             delta_mu[:,j] = (mu_win[:,j] - mu_mod)/mu_mod
             delta_sigma[:,j] = (std_win[:,j] - std_mod)/std_mod
             delta_skew[:,j] = (skew_win[:,j] - skew_mod)/skew_mod
@@ -696,7 +696,7 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False,
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
         if user_pdf==False:
-            pdf_win[:,j] = getDist(win_series, var, mu_win, std_win, skew_win, skewy_win)
+            pdf_win[:,j] = getDist(win_series, allow_negatives, mu_win, std_win, skew_win, skewy_win)
         else:
             pdf_win[:,j] = pdf_mod
         
@@ -716,10 +716,10 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False,
     
     # 5) Perform QM for the historical period.
     mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
-    QM_series = QM(obs, mod_h, var, frq)
+    QM_series = QM(obs, mod_h, allow_negatives, frq)
     UQM_series = np.hstack([QM_series, UQM_series])
     
-    if var==1:
+    if not allow_negatives:
         UQM_series[UQM_series<pp_threshold] = 0
     
     return UQM_series

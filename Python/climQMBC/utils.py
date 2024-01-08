@@ -25,7 +25,7 @@ import scipy.stats as stat
 import numpy as np
 
 
-def formatQM(series_, var, frq, pp_threshold, pp_factor):
+def formatQM(series_, nonegatives, frq, pp_threshold, pp_factor):
     """
     This function formats the inputs and gets basic statistics for the 
     different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available in
@@ -172,7 +172,7 @@ def formatQM(series_, var, frq, pp_threshold, pp_factor):
         I = 1
         
     # 1) If variable is precipitation, replace low values with random values.
-    if var==1:
+    if nonegatives:
         bool_low = series<pp_threshold
         series[bool_low] = np.random.rand(bool_low.sum())*pp_factor
     
@@ -207,7 +207,7 @@ def getStats(series):
     return mu, sigma, skew, skewy
 
 
-def getDist(series, var, mu, sigma, skew, skewy):
+def getDist(series, nonegatives, mu, sigma, skew, skewy):
     """
     This function assigns an independent probability distribution function to
     each row of the input series by comparing the empirical probability
@@ -294,6 +294,7 @@ def getDist(series, var, mu, sigma, skew, skewy):
     # 2) Initialize column vectors for the statistics needed for the available
     #    probability distribution functions.
     PDF = np.zeros(n)
+    ks_fail = 0
     
     # 3) Perform the Kolmogorov-Smirnov test for each row.
     for m in range(n):
@@ -366,7 +367,7 @@ def getDist(series, var, mu, sigma, skew, skewy):
         
         # c) If variable is precipitation, set KS=1 to distributions that allow
         #    negative values (this will discard those distributions).
-        if var==1:
+        if nonegatives==1:
             KSnormal = 1
             KSgammaIII = 1
             KSgumbel = 1
@@ -375,8 +376,15 @@ def getDist(series, var, mu, sigma, skew, skewy):
         # d) The distribution with lower KS value is considered for each month.
         KS_vals = [KSnormal, KSlognormal, KSgammaII, KSgammaIII, KSLpIII, KSgumbel, KSexponential]
         bestPDF = np.argmin(KS_vals)
-    
+        
+        ks_crit = stat.ksone.ppf(1-0.05/2, y_series)
+        ks_fail = ks_fail + (np.sign(min(KS_vals)-ks_crit)+1)/2
+
         PDF[m] = bestPDF
+    
+    # Check if ks-test failures
+    if ks_fail>0:
+        print(f'KS-Test failed: {int(ks_fail)} times out of {int(n)}')
         
     return PDF
 
