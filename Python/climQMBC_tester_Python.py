@@ -61,9 +61,6 @@ var = 1
 obs = np.array(pd.read_csv('../Sample_data/obs_'+var_name[var]+'.csv',header=None))
 mod = np.array(pd.read_csv('../Sample_data/mod_'+var_name[var]+'.csv',header=None))
 
-# mod[::12][1:] = 0
-mod[::12] = 0
-obs[::12] = 0
 
 # Example 1
 # Example 1 shows how to use the report function with the minimum number

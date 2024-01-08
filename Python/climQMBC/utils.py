@@ -366,7 +366,8 @@ def getDist(series, var):
             KSexponential = 1
         
         # d) The distribution with lower KS value is considered for each month.
-        bestPDF = np.argmin([KSnormal, KSlognormal, KSgammaII, KSgammaIII, KSLpIII, KSgumbel, KSexponential])
+        KS_vals = [KSnormal, KSlognormal, KSgammaII, KSgammaIII, KSLpIII, KSgumbel, KSexponential]
+        bestPDF = np.argmin(KS_vals)
     
         PDF[m] = bestPDF
         
