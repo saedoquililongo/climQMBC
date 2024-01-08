@@ -53,13 +53,17 @@ from climQMBC.report import report
 import pandas as pd
 import numpy as np
 
-var_name = ['tmax','pp']
-var = 1
+# Avaiable variables: 'tmax','pp'
+variable = 'tmax'
+
+mult_change = 0
+allow_negatives = 1
+SDM_var = 0
 
 # Load observed and model data. Remember that for temperature, var = 0, and
 # for precipitation, var = 1.
-obs = np.array(pd.read_csv('../Sample_data/obs_'+var_name[var]+'.csv',header=None))
-mod = np.array(pd.read_csv('../Sample_data/mod_'+var_name[var]+'.csv',header=None))
+obs = np.array(pd.read_csv('../Sample_data/obs_'+variable+'.csv',header=None))
+mod = np.array(pd.read_csv('../Sample_data/mod_'+variable+'.csv',header=None))
 
 
 # Example 1
@@ -70,7 +74,7 @@ mod = np.array(pd.read_csv('../Sample_data/mod_'+var_name[var]+'.csv',header=Non
 # of the modeled period. Remember that the projected periods length is
 # equal to the length of the historical period.
 
-QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, var)
+QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
 
 
 # Example 2

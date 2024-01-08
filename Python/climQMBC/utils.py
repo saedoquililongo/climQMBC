@@ -25,7 +25,7 @@ import scipy.stats as stat
 import numpy as np
 
 
-def formatQM(series_, nonegatives, frq, pp_threshold, pp_factor):
+def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
     """
     This function formats the inputs and gets basic statistics for the 
     different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available in
@@ -172,7 +172,7 @@ def formatQM(series_, nonegatives, frq, pp_threshold, pp_factor):
         I = 1
         
     # 1) If variable is precipitation, replace low values with random values.
-    if nonegatives:
+    if not allow_negatives:
         bool_low = series<pp_threshold
         series[bool_low] = np.random.rand(bool_low.sum())*pp_factor
     
@@ -207,7 +207,7 @@ def getStats(series):
     return mu, sigma, skew, skewy
 
 
-def getDist(series, nonegatives, mu, sigma, skew, skewy):
+def getDist(series, allow_negatives, mu, sigma, skew, skewy):
     """
     This function assigns an independent probability distribution function to
     each row of the input series by comparing the empirical probability
@@ -367,7 +367,7 @@ def getDist(series, nonegatives, mu, sigma, skew, skewy):
         
         # c) If variable is precipitation, set KS=1 to distributions that allow
         #    negative values (this will discard those distributions).
-        if nonegatives==1:
+        if not allow_negatives:
             KSnormal = 1
             KSgammaIII = 1
             KSgumbel = 1

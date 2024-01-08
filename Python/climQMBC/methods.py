@@ -47,7 +47,7 @@ import scipy.stats as stat
 import numpy as np
 
 
-def QM(obs, mod, allow_negatives=1, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Quantile Mapping (QM) method, as described by Cannon et al. 
@@ -166,7 +166,7 @@ def QM(obs, mod, allow_negatives=1, frq='M', pp_threshold=1, pp_factor=1/100, us
     return QM_series
 
 
-def DQM(obs, mod, allow_negatives=1, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Detrended Quantile Mapping (DQM) method, as described by Cannon
@@ -292,7 +292,7 @@ def DQM(obs, mod, allow_negatives=1, frq='M', pp_threshold=1, pp_factor=1/100, u
     # 3)Compute the linear scaled values (value in square brackets in equation
     #   2 of Cannon et al. (2015)).
     mu_mod_repeated = np.tile(mu_mod, (y_mod-y_obs, 1)).T
-    if not allow_negatives: # Precipitation
+    if mult_change: # Precipitation
         scaling_factor = mu_win/mu_mod_repeated
         detrended_series  = mod_series[:,y_obs:]/scaling_factor
     else: # Temperature
@@ -313,7 +313,7 @@ def DQM(obs, mod, allow_negatives=1, frq='M', pp_threshold=1, pp_factor=1/100, u
     
     # 6) Reimpose the trend to the values obtained in 5). Equation 2 of Cannon
     #    et al. (2015).
-    if not allow_negatives: # Precipitation
+    if mult_change: # Precipitation
         DQM_series = DQM_unscaled*scaling_factor
     else: # Temperature
         DQM_series = DQM_unscaled + scaling_factor
@@ -331,7 +331,7 @@ def DQM(obs, mod, allow_negatives=1, frq='M', pp_threshold=1, pp_factor=1/100, u
     return DQM_series
 
 
-def QDM(obs, mod, allow_negatives, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2, inv_mod_th=None, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, rel_change_th=2, inv_mod_th=None, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Quantile Delta Mapping (QDM) method, as described by Cannon
@@ -497,7 +497,7 @@ def QDM(obs, mod, allow_negatives, frq='M', pp_threshold=1, pp_factor=1/100, rel
     
     # 4) Get the delta factor or relative change and apply it to the value
     #    obtained in 3b). Equation 4 and 6 of Cannon et al. (2015).
-    if not allow_negatives:
+    if mult_change:
         delta_quantile = mod_series[:,y_obs:]/inv_mod
         bool_undefined = (delta_quantile>rel_change_th) & (inv_mod<inv_mod_th)
         delta_quantile[bool_undefined] = rel_change_th
@@ -519,7 +519,7 @@ def QDM(obs, mod, allow_negatives, frq='M', pp_threshold=1, pp_factor=1/100, rel
     return QDM_series
 
 
-def UQM(obs, mod, allow_negatives, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Unbiased Quantile Mapping (UQM) method, as described by 
@@ -661,7 +661,7 @@ def UQM(obs, mod, allow_negatives, frq='M', pp_threshold=1, pp_factor=1/100, use
         win_series_log[np.isinf(win_series_log)] = np.log(0.01)
         skewy_win[:,j] = stat.skew(win_series_log,1,bias=False)    
         
-        if not allow_negatives:  # Precipitation
+        if mult_change:  # Precipitation
             delta_mu[:,j] = (mu_win[:,j] - mu_mod)/mu_mod
             delta_sigma[:,j] = (std_win[:,j] - std_mod)/std_mod
             delta_skew[:,j] = (skew_win[:,j] - skew_mod)/skew_mod
@@ -725,7 +725,7 @@ def UQM(obs, mod, allow_negatives, frq='M', pp_threshold=1, pp_factor=1/100, use
     return UQM_series
 
 
-def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
+def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100):
     """
     This function performs bias correction of modeled series based on observed
     data by the Scaled Distribution Mapping (SDM) method, as described by 
@@ -864,8 +864,8 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
-    y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series = formatQM(obs, SDM_var, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, SDM_var, frq, pp_threshold, pp_factor)
     
     SDM_series = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))    
     SDM_h_series = np.zeros((obs_series.shape[0], y_obs))    
@@ -878,7 +878,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
         #     For precipitation, get the rainday values and its frequency for
         #     the modeled and observed series in the historical period.
          
-        if var==0: # Temperature
+        if SDM_var==0: # Temperature
             D_obs = detrend(obs_series[m])
             D_mod = detrend(mod_series[m,:y_obs])
             
@@ -905,7 +905,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
         #    for temperature and to (1 - threshold) for temperature and
         #    precipitation. Threshold is set in the first lines of this
         #    function. Default is CDF_th = 10^-3.
-        if var==0: # Temperature
+        if SDM_var==0: # Temperature
             mu_obsD = np.nanmean(D_obs)
             mu_modD = np.nanmean(D_mod)
             
@@ -943,7 +943,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             #    For precipitation, get the rainday values, its frequency, and
             #    expected raindays for the projected period.
             #    Get the index of the sorted detrended or rainday values.
-            if var==0: # Temperature
+            if SDM_var==0: # Temperature
                 D_win = detrend(win_series)
                 exp_D = win_series.shape[0]
                 win_argsort = np.argsort(D_win)
@@ -965,7 +965,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             #    (0 + threshold) for temperature and to (1 - threshold) for
             #    temperature and precipitation. Threshold is set in the first
             #    lines of this function. Default is CDF_th = 10^-3.
-            if var==0: # Temperature
+            if SDM_var==0: # Temperature
                 mu_winD = np.nanmean(D_win)
                 sigma_winD = np.nanstd(D_win, 0, ddof=0)
                 
@@ -983,7 +983,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             # g) [Switanek et al. (2017), step 3)]
             #    Get the scaling between the model projected period and
             #    historical period distributions.
-            if var==0: # Temperature
+            if SDM_var==0: # Temperature
                 SF = (sigma_obsD/sigma_modD)*(stat.norm.ppf(CDF_win, *(mu_winD,sigma_winD)) - stat.norm.ppf(CDF_win, *(mu_modD,sigma_modD)))
             else: # Precipitation
                 SF = stat.gamma.ppf(CDF_win, *fit_win)/stat.gamma.ppf(CDF_win, *fit_mod)
@@ -1008,7 +1008,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             #    Get recurrence intervals and its scaled version for the
             #    observed, historical modeled and projected period modeled
             #    CDFs.
-            if var==0: # Temperature
+            if SDM_var==0: # Temperature
                 RI_obs = 1/(0.5 - np.abs(obs_cdf_intpol - 0.5))
                 RI_mod = 1/(0.5 - np.abs(mod_cdf_intpol - 0.5))
                 RI_win = 1/(0.5 - np.abs(CDF_win - 0.5))
@@ -1032,7 +1032,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             #    Get the initial bias corrected values. For precipitation,
             #    these values are interpolated to the length of the expected
             #    raindays.
-            if var==0: # Temperature
+            if SDM_var==0: # Temperature
                 xvals = stat.norm.ppf(np.sort(CDF_scaled), *(mu_obsD,sigma_obsD)) + SF
                 xvals = xvals - np.mean(xvals) + mu_obs + (mu_win - mu_mod)
             else:
@@ -1052,7 +1052,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             if exp_D>0: # if exp_D==0 -> corr_temp stays a a zero vector
                 corr_temp[win_argsort[-exp_D:]] = xvals
                 
-            if var==0:
+            if SDM_var==0:
                 corr_temp = corr_temp + diff_win - mu_win
                 
             # l) If the projected period is the historical period (period 0,
@@ -1067,7 +1067,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     SDM_h_series = SDM_h_series.reshape(-1, order='F')
     SDM_series = SDM_series.reshape(-1, order='F')
     SDM_series = np.hstack([SDM_h_series, SDM_series])
-    if var==1:
+    if SDM_var==1:
         SDM_series[SDM_series<pp_threshold] = 0
 
     return SDM_series

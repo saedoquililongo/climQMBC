@@ -3,7 +3,7 @@ import matplotlib.pylab as plt
 import pandas as pd
 import numpy as np
 
-def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function generates two report of the performance of the different
     methods (QM, DQM, QDM, UQM and SDM) available in the climQMBC package.
@@ -161,6 +161,8 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
     Revision: 0, updated Dec 2021
     """
     
+    var=mult_change
+    
     from .methods import QM, DQM, QDM, UQM, SDM
     
     
@@ -198,11 +200,11 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
     fun = ['Modeled']+fun
     
     # 2) Apply QM methods
-    QM_series = QM(obs, mod, var, user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
-    DQM_series = DQM(obs, mod, var, user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
-    QDM_series = QDM(obs, mod, var, user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
-    UQM_series = UQM(obs, mod, var, user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
-    SDM_series = SDM(obs, mod, var)
+    QM_series = QM(obs, mod, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+    DQM_series = DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+    QDM_series = QDM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+    UQM_series = UQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+    SDM_series = SDM(obs, mod, SDM_var=SDM_var, frq='M')
     
     # 3) Get observed, modeled and bias corrected statistics
     # a) Get obs, mod, and QMs as [12 x n] matrix
