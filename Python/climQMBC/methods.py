@@ -133,14 +133,15 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs, obs_series, mod_series, mu_obs, std_obs, skew_obs, skewy_obs, mu_mod, std_mod, skew_mod, skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
     
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
-    PDF_obs = getDist(obs_series, mu_obs, std_obs, skew_obs, skewy_obs, var)
-    PDF_mod = getDist(mod_series[:,:y_obs], mu_mod, std_mod, skew_mod, skewy_mod, var)
+    PDF_obs, mu_obs, std_obs, skew_obs, skewy_obs = getDist(obs_series, var)
+    PDF_mod, mu_mod, std_mod, skew_mod, skewy_mod = getDist(mod_series[:,:y_obs], var)
 
     # 2) Apply the cumulative distribution function of the modeled data,
     #    evaluated with the statistics of the modeled data in the historical
@@ -262,15 +263,16 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs, obs_series, mod_series, mu_obs, std_obs, skew_obs, skewy_obs, mu_mod, std_mod, skew_mod, skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
     
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
-    PDF_obs = getDist(obs_series, mu_obs, std_obs, skew_obs, skewy_obs, var)
-    PDF_mod = getDist(mod_series[:,:y_obs], mu_mod, std_mod, skew_mod, skewy_mod, var)    
-        
+    PDF_obs, mu_obs, std_obs, skew_obs, skewy_obs = getDist(obs_series, var)
+    PDF_mod, mu_mod, std_mod, skew_mod, skewy_mod = getDist(mod_series[:,:y_obs], var)
+
     # 2) Extract the long-term trend from the modeled data:
     #    a) Get the monthly mean of the historical period. If annually
     #       frequency is specified, this is applied to the complete period).
@@ -440,34 +442,26 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs, obs_series, mod_series, mu_obs, std_obs, skew_obs, skewy_obs, mu_mod, std_mod, skew_mod, skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
     
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
-    PDF_obs = getDist(obs_series, mu_obs, std_obs, skew_obs, skewy_obs, var)
-    PDF_mod = getDist(mod_series[:,:y_obs], mu_mod, std_mod, skew_mod, skewy_mod, var)  
+    PDF_obs, mu_obs, std_obs, skew_obs, skewy_obs = getDist(obs_series, var)
+    PDF_mod, mu_mod, std_mod, skew_mod, skewy_mod = getDist(mod_series[:,:y_obs], var)
 
     # 2) For each projected period:
     PDF_win = np.zeros((mod_series.shape[0],mod_series.shape[1]-y_obs))
     Taot = np.zeros((mod_series.shape[0],mod_series.shape[1]-y_obs))
     for j in range(Taot.shape[1]):
         win_series = mod_series[:,j+1:y_obs+j+1]
-        
-        mux = np.nanmean(win_series, 1)
-        sigmax = np.nanstd(win_series, 1, ddof=1)
-        skewx = stat.skew(obs_series, 1, bias=False)
-        with np.errstate(divide = 'ignore'):
-            Ln_win  = np.log(win_series)
-        Ln_win[np.imag(Ln_win)!=0] = 0
-        Ln_win[np.isinf(Ln_win)] = np.log(0.01)
-        skewy = stat.skew(Ln_win, 1, bias=False)
-                
+
         # a) Assign a probability distribution function to each month. If
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
-        PDF_win[:,j] = getDist(win_series, mux, sigmax, skewx, skewy, var)
+        PDF_win[:,j], mux, sigmax, skewx, skewy = getDist(win_series, var)
         
         # b) Apply the cumulative distribution function of the projected
         #    period, evaluated with the statistics of this period, to the last
@@ -610,13 +604,15 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs, obs_series, mod_series, mu_obs, std_obs, skew_obs, skewy_obs, mu_mod, std_mod, skew_mod, skewy_mod = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
+    y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
     
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
-    PDF_obs = getDist(obs_series, mu_obs, std_obs, skew_obs, skewy_obs, var)
+    PDF_obs, mu_obs, std_obs, skew_obs, skewy_obs = getDist(obs_series, var)
+    PDF_mod, mu_mod, std_mod, skew_mod, skewy_mod = getDist(mod_series[:,:y_obs], var)
     
     # 2) For each projected period, get the delta factor (delta) and time
     #    dependent (aster) statistics (mean, standard deviation, skewness, and
@@ -683,20 +679,11 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     UQM = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
     for j in range(Taot.shape[1]):
         win_series = mod_series[:,j+1:y_obs+j+1]
-        
-        mux  = np.nanmean(win_series, 1)
-        sigmax = np.nanstd(win_series, 1, ddof=1)
-        skewx = stat.skew(obs_series,1 , bias=False)
-        with np.errstate(divide='ignore'):
-            Ln_win  = np.log(win_series)
-        Ln_win[np.imag(Ln_win)!=0] = 0
-        Ln_win[np.isinf(Ln_win)] = np.log(0.01)
-        skewy = stat.skew(Ln_win, 1, bias=False)
-                
+
         # a) Assign a probability distribution function to each month. If
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
-        PDF_win[:,j] = getDist(win_series, mux, sigmax, skewx, skewy, var)
+        PDF_win[:,j], mux, sigmax, skewx, skewy = getDist(win_series, var)
         
         # b) Apply the cumulative distribution function of the projected
         #    period, evaluated with the statistics of this period, to the last
@@ -862,7 +849,8 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
-    y_obs,obs_series,mod_series = formatQM(obs, mod, var, frq, pp_threshold, pp_factor)[:3]
+    y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
     
     SDM = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))    
     SDM_h = np.zeros((obs_series.shape[0], y_obs))    

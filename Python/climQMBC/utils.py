@@ -18,14 +18,14 @@ Written by Sebastian Aedo Quililongo (1*)
       Santiago, Chile
       
 *Maintainer contact: sebastian.aedo.q@gmail.com
-Revision: 1, updated Jul 2022
+Revision: 2, updated Jan 2024
 """
 
 import scipy.stats as stat
 import numpy as np
 
 
-def formatQM(obs_, mod_, var, frq, pp_threshold, pp_factor):
+def formatQM(series_, var, frq, pp_threshold, pp_factor):
     """
     This function formats the inputs and gets basic statistics for the 
     different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available in
@@ -37,7 +37,7 @@ def formatQM(obs_, mod_, var, frq, pp_threshold, pp_factor):
     positive values below pp_factor.
 
     Description:
-        0) Check if annual or monthly data is specified.
+        0) Check frequency.
         
         1) If variable is precipitation, replace low values with random values.
 
@@ -156,61 +156,39 @@ def formatQM(obs_, mod_, var, frq, pp_threshold, pp_factor):
                         data of the historical period(float).
 
     """
+    
     # Prevents modyfing the original input passed by reference
     ## Must look for a mor elegant way to skip this step
-    obs = obs_.copy()
-    mod = mod_.copy()
+    series = series_.copy()
     
-    # 0) Check if annually or monthly data is specified.
-    if frq=='A':
+    # 0) Check frequency.
+    if frq=='D':
+        I = 365
+    elif frq=='M':
+        I = 12
+    elif frq=='A':
         I = 1
     else:
-        I = 12
+        I = 1
         
     # 1) If variable is precipitation, replace low values with random values.
     if var==1:
-        bool_low_obs = obs<pp_threshold
-        bool_low_mod = mod<pp_threshold
-        obs[bool_low_obs] = np.random.rand(bool_low_obs.sum())*pp_factor
-        mod[bool_low_mod] = np.random.rand(bool_low_mod.sum())*pp_factor
+        bool_low = series<pp_threshold
+        series[bool_low] = np.random.rand(bool_low.sum())*pp_factor
     
-    # 2) Get number of years of the observed period.
-    y_obs = int(obs.shape[0]/I)
+    # 2) Get number of years of the series.
+    y_series = int(series.shape[0]/I)
     
-    # 3) If monthly data is specified, reshape the input series to a matrix of
-    #    12 rows and several columns equal to the number of years of each 
-    #    series. If annually data is specified, reshape the input to a row 
-    #    vector with same entries as the input series.
-    obs_series = obs.reshape((I, int(obs.shape[0]/I)), order='F')
-    mod_series = mod.reshape((I, int(mod.shape[0]/I)), order='F')
-        
-    # 4) If monthly data is specified, get monthly mean, standard deviation, 
-    #    skewness, and log-skewness for the historical period of the observed
-    #    and modeled series. If annually data is specified, get monthly mean,
-    #    standard deviation, skewness, and log-skewness for the historical
-    #    period of the observed and modeled series.
-    mu_obs  = np.nanmean(obs_series, 1)     # Mean
-    sigma_obs = np.nanstd(obs_series, 1, ddof=1)    # Standard deviation
-    skew_obs = stat.skew(obs_series, 1, bias=False)     # Skewness
-    with np.errstate(divide='ignore'):
-        Ln_obs  = np.log(obs_series)
-    Ln_obs[np.imag(Ln_obs)!=0] = 0
-    Ln_obs[np.isinf(Ln_obs)] = np.log(0.01)
-    skewy_obs = stat.skew(Ln_obs, 1, bias=False)        # Log-skewness    
-    
-    mu_mod  = np.nanmean(mod_series[:,:y_obs], 1)     # Mean
-    sigma_mod = np.nanstd(mod_series[:,:y_obs], 1, ddof=1)    # Standard deviation
-    skew_mod = stat.skew(mod_series[:,:y_obs], 1, bias=False)     # Skewness
-    with np.errstate(divide='ignore'):
-        Ln_mod  = np.log(mod_series[:,:y_obs])
-    Ln_mod[np.imag(Ln_mod)!=0] = 0
-    Ln_mod[np.isinf(Ln_mod)] = np.log(0.01)
-    skewy_mod = stat.skew(Ln_mod, 1, bias=False)        # Log-skewness    
+    # 3) If sub-annual data is specified, reshape the input series to a matrix 
+    #    of if 12 or 365 rows and several columns equal to the number of years.
+    #    If annual frequency is specified, reshape the input to a row vector 
+    #    with same entries as the input series.
+    series = series.reshape((I, int(series.shape[0]/I)), order='F')
 
-    return y_obs, obs_series, mod_series, mu_obs, sigma_obs, skew_obs, skewy_obs, mu_mod, sigma_mod, skew_mod, skewy_mod
+    return y_series, series
 
 
-def getDist(series, mu, sigma, skew, skewy, var):
+def getDist(series, var):
     """
     This function assigns an independent probability distribution function to
     each row of the input series by comparing the empirical probability
@@ -297,76 +275,81 @@ def getDist(series, mu, sigma, skew, skewy, var):
     # 2) Initialize column vectors for the statistics needed for the available
     #    probability distribution functions.
     PDF = np.zeros(n)
-    sigmay = np.zeros(n)
-    muy = np.zeros(n)
-    A = np.zeros(n)
-    B = np.zeros(n)
-    Alp = np.zeros(n)
-    Bet = np.zeros(n)
-    Gam = np.zeros(n)
-    Alpy = np.zeros(n)
-    Bety = np.zeros(n)
-    Gamy = np.zeros(n)
-    a = np.zeros(n)
-    u = np.zeros(n)
+    
+    # 4) If monthly data is specified, get monthly mean, standard deviation and 
+    #    skewness for the historical period of the observed
+    #    and modeled series. If annually data is specified, get monthly mean,
+    #    standard deviation, skewness, and log-skewness for the historical
+    #    period of the observed and modeled series.
+    mu  = np.nanmean(series, 1)     # Mean
+    sigma = np.nanstd(series, 1, ddof=1)    # Standard deviation
+    skew = stat.skew(series, 1, bias=False)     # Skewness
+    skewy = np.zeros(n)
     
     # 3) Perform the Kolmogorov-Smirnov test for each row.
     for m in range(n):
+        series_sub = series[m,:]
         
         # a) Get empirical distribution.
-        sortdata = np.sort(series[m,:]) 
-        probEmp = np.arange(1/(y_series+1), y_series/(y_series+1) + 1/(y_series+1), 1/(y_series+1))
-    
+        sortdata = np.sort(series_sub) 
+        probEmp = np.arange(1/(y_series+1),
+                            y_series/(y_series+1) + 1/(y_series+1),
+                            1/(y_series+1))
+
         # b) Compare distributions.
         # i) Normal distribution.
-        normal = stat.norm.cdf(sortdata,mu[m], sigma[m])
+        normal = stat.norm.cdf(sortdata, mu[m], sigma[m])
         KSnormal = max(abs(normal-probEmp))
-    
+
         # ii) Log Normal distribution.
-        if (series[m,:]<0).any():
+        if (series_sub<0).any():
             KSlognormal = 1
         else:
-            sigmay[m]= np.sqrt(np.log(1+(sigma[m]/mu[m])**2))
-            muy[m] = np.log(mu[m]) - (sigmay[m]**2)/2                            
-            lognormal = stat.lognorm.cdf(sortdata, scale=np.exp(muy[m]), s=sigmay[m])
+            sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
+            muy = np.log(mu[m]) - (sigmay**2)/2
+            lognormal = stat.lognorm.cdf(sortdata, scale=np.exp(muy), s=sigmay)
             KSlognormal = max(abs(lognormal-probEmp))
         
         # iii) Gamma 2 parameters distribution.
-        if (series[m,:]<0).any():
+        if (series_sub<0).any():
             KSgammaII = 1
         else:
-            A[m] = (sigma[m]**2)/mu[m] 
-            B[m] = (mu[m]/sigma[m])**2
-            GammaII = stat.gamma.cdf(sortdata, a=B[m], scale=A[m])
+            A = (sigma[m]**2)/mu[m] 
+            B = (mu[m]/sigma[m])**2
+            GammaII = stat.gamma.cdf(sortdata, a=B, scale=A)
             KSgammaII = max(abs(GammaII-probEmp))
     
         # iv) Gamma 3 parameters distribution.
         #     (Pearson 3 parameters distribution)
-        Bet[m] = (2/skew[m])**2
-        Alp[m] = sigma[m]/np.sqrt(Bet[m])
-        Gam[m] = mu[m] - (Alp[m]*Bet[m])
-        GammaIII = stat.gamma.cdf(sortdata-Gam[m], a=Bet[m], scale=Alp[m])
+        Bet = (2/skew[m])**2
+        Alp = sigma[m]/np.sqrt(Bet)
+        Gam = mu[m] - (Alp*Bet)
+        GammaIII = stat.gamma.cdf(sortdata-Gam, a=Bet, scale=Alp)
         KSgammaIII = max(abs(GammaIII-probEmp))
     
         # v) Log-Gamma 3 parameters distribution.
         #    (Log-Pearson 3 parameters distribution)
-        if (series[m,:]<0).any():
+        if (series_sub<0).any():
             KSLpIII = 1
         else:
-            Bety[m] = (2/skewy[m])**2
-            Alpy[m] = sigmay[m]/np.sqrt(Bety[m])
-            Gamy[m] = muy[m]-(Alpy[m]*Bety[m])
-            Lnsortdata = np.log(sortdata)
-            Lnsortdata[np.isinf(Lnsortdata)] = np.log(0.01)
-            LpIII = stat.gamma.cdf(Lnsortdata-Gamy[m], a=Bety[m], scale=Alpy[m])
+            sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
+            series_log  = np.log(series_sub)
+            series_log[np.isinf(series_log)] = np.log(0.01)
+            skewy[m] = stat.skew(series_log, bias=False)
+            Bety = (2/skewy[m])**2
+            Alpy = sigmay/np.sqrt(Bety)
+            Gamy = muy-(Alpy*Bety)
+            sortdata_log = np.log(sortdata)
+            # Lnsortdata[np.isinf(Lnsortdata)] = np.log(0.01)
+            LpIII = stat.gamma.cdf(sortdata_log-Gamy, a=Bety, scale=Alpy)
             KSLpIII = max(abs(LpIII-probEmp))
 
         # vi) Gumbel distribution.
         Sn = np.pi/np.sqrt(6)
         yn = 0.5772
-        a[m] = Sn/sigma[m]
-        u[m] = mu[m] - (yn/a[m])
-        gumbel = np.exp(-np.exp(-a[m]*(sortdata - u[m])))
+        a = Sn/sigma[m]
+        u = mu[m] - (yn/a)
+        gumbel = np.exp(-np.exp(-a*(sortdata - u)))
         KSgumbel = max(abs(gumbel-probEmp))
     
         # vii) Exponential distribution.
@@ -388,7 +371,7 @@ def getDist(series, mu, sigma, skew, skewy, var):
     
         PDF[m] = bestPDF
         
-    return PDF
+    return PDF, mu, sigma, skew, skewy
 
 
 def getCDF(PDF, series, mu, sigma, skew, skewy):
@@ -463,32 +446,35 @@ def getCDF(PDF, series, mu, sigma, skew, skewy):
     #    climQMBC package.
     Taot = np.zeros((n_m,n_y))
     for m in range (n_m):
+        series_sub = series[m,:]
+        
         if PDF[m]==0: # i) Normal distribution.
-            Taot[m,:] = stat.norm.cdf(series[m,:],mu[m],sigma[m])
+            Taot[m,:] = stat.norm.cdf(series_sub, mu[m], sigma[m])
             
         elif PDF[m]==1: # ii) Log-Normal distribution.
-            sigmay= np.sqrt(np.log(1+(sigma[m]/mu[m])**2))
+            sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
             muy   = np.log(mu[m])-(sigmay**2)/2
-            Taot[m,:] = stat.lognorm.cdf(series[m,:],scale=np.exp(muy),s=sigmay)
+            Taot[m,:] = stat.lognorm.cdf(series_sub, scale=np.exp(muy), s=sigmay)
             
         elif PDF[m]==2: # iii) Gamma 2 parameters distribution.
             A = (sigma[m]**2)/mu[m] 
             B = (mu[m]/sigma[m])**2
-            Taot[m,:] = stat.gamma.cdf(series[m,:], a=B, scale=A)
+            Taot[m,:] = stat.gamma.cdf(series_sub, a=B, scale=A)
             
         elif PDF[m]==3: # iv) Gamma 3 parameters distribution.
             Bet = (2/skew[m])**2
             Alp = sigma[m]/np.sqrt(Bet)
             Gam = mu[m]-(Alp*Bet)
-            Taot[m,:] = stat.gamma.cdf(series[m,:]-Gam, a=Bet, scale=Alp)
+            Taot[m,:] = stat.gamma.cdf(series_sub-Gam, a=Bet, scale=Alp)
             
         elif PDF[m]==4: # v) Log-Gamma 3 parameters distribution.
             sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
+            
             muy = np.log(mu[m]) - (sigmay**2)/2
             Bety = (2/skewy[m])**2
             Alpy = sigmay/np.sqrt(Bety)
             Gamy = muy - (Alpy*Bety)
-            Lnsortdata = np.log(series[m,:])
+            Lnsortdata = np.log(series_sub)
             Lnsortdata[np.isinf(Lnsortdata)] = np.log(0.01)
             Lnsortdata[np.imag(Lnsortdata)!=0] = np.log(0.01)
             Taot[m,:]  = stat.gamma.cdf(Lnsortdata-Gamy,a=Bety,scale=Alpy)
@@ -498,11 +484,11 @@ def getCDF(PDF, series, mu, sigma, skew, skewy):
             yn = 0.5772
             a = Sn/sigma[m]
             u = mu[m]-(yn/a)
-            Taot[m,:] = np.exp(-np.exp(-a*(series[m,:] - u)))
+            Taot[m,:] = np.exp(-np.exp(-a*(series_sub - u)))
     
         elif PDF[m]==6: # vii) Exponential distribution.
             gamexp = mu[m]-sigma[m]
-            exponential = 1-np.exp(-1/sigma[m]*(series[m,:]-gamexp))
+            exponential = 1-np.exp(-1/sigma[m]*(series_sub-gamexp))
             exponential[exponential<0] = 0
             Taot[m,:] = exponential
     
@@ -584,11 +570,12 @@ def getCDFinv(PDF, Taot, mu, sigma, skew, skewy):
     #    climQMBC package.
     xhat = np.zeros((n_m,n_y))
     for m in range (n_m):
+        
         if PDF[m]==0: # i) Normal distribution.
             xhat[m,:] = stat.norm.ppf(Taot[m,:],mu[m],sigma[m])
             
         elif PDF[m]==1: # ii) Log-Normal distribution.
-            sigmay = np.sqrt(np.log(1+(sigma[m]/mu[m])**2))
+            sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
             muy = np.log(mu[m])-(sigmay**2)/2
             xhat[m,:] = stat.lognorm.ppf(Taot[m,:],scale=np.exp(muy),s=sigmay)
             
@@ -604,7 +591,7 @@ def getCDFinv(PDF, Taot, mu, sigma, skew, skewy):
             xhat[m,:] = stat.gamma.ppf(Taot[m,:],a=Bet,scale=Alp) + Gam
             
         elif PDF[m]==4: # v) Log-Gamma 3 parameters distribution.
-            sigmay= np.sqrt(np.log(1+(sigma[m]/mu[m])**2))
+            sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
             muy = np.log(mu[m])-(sigmay**2)/2
             Bety = (2/skewy[m])**2
             Alpy = sigmay/np.sqrt(Bety)

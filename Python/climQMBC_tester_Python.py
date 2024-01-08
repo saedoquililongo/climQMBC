@@ -54,7 +54,7 @@ import pandas as pd
 import numpy as np
 
 var_name = ['tmax','pp']
-var = 0
+var = 1
 
 # Load observed and model data. Remember that for temperature, var = 0, and
 # for precipitation, var = 1.
