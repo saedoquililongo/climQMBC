@@ -642,6 +642,7 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     # 2) For each projected period, get the delta factor (delta) and time
     #    dependent (aster) statistics (mean, standard deviation, skewness, and
     #    log skewness). Equations 13 to 14 in Chadwick et al. (2023).
+    # Matrix [sub-periods, window, periods]
     win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
     win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-(y_obs)]
     
