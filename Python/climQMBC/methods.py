@@ -615,7 +615,7 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     # 2) For each projected period, get the delta factor (delta) and time
     #    dependent (aster) statistics (mean, standard deviation, skewness, and
     #    log skewness). Equations 13 to 14 in Chadwick et al. (2023).
-    mu_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
+    mu_win = np.zeros((mod_series.shape[0], y_mod-y_obs))
     std_win = np.zeros(mu_win.shape)
     skew_win = np.zeros(mu_win.shape)
     skewy_win = np.zeros(mu_win.shape)
@@ -638,7 +638,7 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
         
         skew_win[:,j] = stat.skew(win_series, 1, bias=False)
         win_series_log = np.log(win_series)
-        win_series_log[np.isinf(win_series_log)]= np.log(0.01)
+        win_series_log[np.isinf(win_series_log)] = np.log(0.01)
         skewy_win[:,j] = stat.skew(win_series_log,1,bias=False)    
         
         if var==1:  # Precipitation
@@ -664,9 +664,9 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             skewy_projected[:,j] = skewy_obs + delta_skewy[:,j]
 
     # 3) For each projected period:
-    PDF_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
-    Taot = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
-    UQM_series = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
+    PDF_win = np.zeros((mod_series.shape[0], y_mod-y_obs))
+    Taot = np.zeros((mod_series.shape[0], y_mod-y_obs))
+    UQM_series = np.zeros((mod_series.shape[0], y_mod-y_obs))
     for j in range(Taot.shape[1]):
         win_series = mod_series[:,j+1:y_obs+j+1]
 
