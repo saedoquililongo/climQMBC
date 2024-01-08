@@ -3,7 +3,7 @@ import matplotlib.pylab as plt
 import pandas as pd
 import numpy as np
 
-def report(obs,mod,var,fun=['QM','DQM','QDM','UQM','SDM'],y_init=0,y_wind=0):
+def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0):
     """
     This function generates two report of the performance of the different
     methods (QM, DQM, QDM, UQM and SDM) available in the climQMBC package.
@@ -163,14 +163,16 @@ def report(obs,mod,var,fun=['QM','DQM','QDM','UQM','SDM'],y_init=0,y_wind=0):
     
     from .methods import QM, DQM, QDM, UQM, SDM
     
+    
     def var_op(a,b,var):
-        if var == 0:
+        if var==0:
             return a - b
         else:
             return a/b
     
     def ecdf(x):
         return [(1 + i)/len(x) for i in range(len(x))]
+
 
     # 0) Get the number of observed and modeled years
     n_obs = obs.shape[0]
@@ -181,13 +183,13 @@ def report(obs,mod,var,fun=['QM','DQM','QDM','UQM','SDM'],y_init=0,y_wind=0):
     
     # 1) Set headers and indexes
     df_ind = ['Modeled','QM','DQM','QDM','UQM','SDM']
-    df_m = pd.DataFrame(index = df_ind)
-    df_s = pd.DataFrame(index = df_ind)
+    df_m = pd.DataFrame(index=df_ind)
+    df_s = pd.DataFrame(index=df_ind)
     
-    if y_wind == 0:
+    if y_wind==0:
         y_wind = np.array([int(y_obs+y_obs/2), int(y_mod-y_obs/2)])
         w_label = ['First period', 'Last period']
-        rep_head = ['First','Last']
+        rep_head = ['First', 'Last']
     else:
         w_label = np.array(y_wind)
         rep_head = np.array(y_wind)
@@ -196,21 +198,21 @@ def report(obs,mod,var,fun=['QM','DQM','QDM','UQM','SDM'],y_init=0,y_wind=0):
     fun = ['Modeled']+fun
     
     # 2) Apply QM methods
-    QM_series = QM(obs,mod,var)
-    DQM_series = DQM(obs,mod,var)
-    QDM_series = QDM(obs,mod,var)
-    UQM_series = UQM(obs,mod,var)
-    SDM_series = SDM(obs,mod,var)
+    QM_series = QM(obs, mod, var)
+    DQM_series = DQM(obs, mod, var)
+    QDM_series = QDM(obs, mod, var)
+    UQM_series = UQM(obs, mod, var)
+    SDM_series = SDM(obs, mod, var)
     
     # 3) Get observed, modeled and bias corrected statistics
     # a) Get obs, mod, and QMs as [12 x n] matrix
-    obs_M = obs.reshape((12,y_obs),order='F')
-    mod_M = mod.reshape((12,y_mod),order='F')
-    QM_M = QM_series.reshape((12,y_mod),order='F')
-    DQM_M = DQM_series.reshape((12,y_mod),order='F')
-    QDM_M = QDM_series.reshape((12,y_mod),order='F')
-    UQM_M = UQM_series.reshape((12,y_mod),order='F')
-    SDM_M = SDM_series.reshape((12,y_mod),order='F')
+    obs_M = obs.reshape((12, y_obs), order='F')
+    mod_M = mod.reshape((12, y_mod), order='F')
+    QM_M = QM_series.reshape((12, y_mod), order='F')
+    DQM_M = DQM_series.reshape((12, y_mod), order='F')
+    QDM_M = QDM_series.reshape((12, y_mod), order='F')
+    UQM_M = UQM_series.reshape((12, y_mod), order='F')
+    SDM_M = SDM_series.reshape((12, y_mod), order='F')
     
     ## s: List of historical and future periods
     ## v: List of modeled and bias corrected series
@@ -226,13 +228,13 @@ def report(obs,mod,var,fun=['QM','DQM','QDM','UQM','SDM'],y_init=0,y_wind=0):
         mu.append(np.nanmean(i))
         
         # c) Monthly mean
-        mu_M.append(np.nanmean(i,1))
+        mu_M.append(np.nanmean(i, 1))
         
         # d) Standard deviation
-        std.append(np.nanstd(i,ddof=1))
+        std.append(np.nanstd(i, ddof=1))
         
         # e) Monthly standard deviation
-        std_M.append(np.nanstd(i,1,ddof=1))
+        std_M.append(np.nanstd(i, 1, ddof=1))
         
     # 4) Get observed, modeled and bias corrected statistics of the projected
     #    periods

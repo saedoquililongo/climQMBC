@@ -1,13 +1,14 @@
 # climQMBC for MATLAB
 A package with multiple bias correction methods for climatic variables, including the QM, DQM, QDM, UQM, and SDM methods.
 
-Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzalez-Leiva (3), and Jorge Gironas (3)
+Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzalez-Leiva (3), and Jorge Gironas (3, 4)
 
-(1) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile, Santiago, Chile.\
+(1) Stockholm Environment Institute, Latin America Centre, Bogota, Colombia.\
 (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez, Santiago, Chile. \
-(3) Department of Hydraulics and Environmental Engineering, Pontificia Universidad Catolica de Chile, Santiago, Chile. 
+(3) Department of Hydraulics and Environmental Engineering, Pontificia Universidad Catolica de Chile, Santiago, Chile.\
+(4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile, Santiago, Chile. 
 
-*Maintainer contact: slaedo@uc.cl\
+*Maintainer contact: sebastian.aedo.q@gmail.com\
 Version: 0.1.0, updated Jun 2022\
 Written in MATLAB version R2012b
 

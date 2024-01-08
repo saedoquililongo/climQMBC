@@ -1,11 +1,12 @@
 # climQMBC
 A package with multiple bias correction methods for climatic variables, including the QM, DQM, QDM, UQM, and SDM methods, written in Python, MATLAB, and R.
 
-Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzalez-Leiva (3), and Jorge Gironas (3)
+Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzalez-Leiva (3), and Jorge Gironas (3, 4)
 
-(1) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile, Santiago, Chile.\
+(1) Stockholm Environment Institute, Latin America Centre, Bogota, Colombia.\
 (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez, Santiago, Chile. \
-(3) Department of Hydraulics and Environmental Engineering, Pontificia Universidad Catolica de Chile, Santiago, Chile. 
+(3) Department of Hydraulics and Environmental Engineering, Pontificia Universidad Catolica de Chile, Santiago, Chile.\
+(4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile, Santiago, Chile. 
 
 *Maintainer contact: sebastian.aedo.q@gmail.com\
 Version: 0.1.1, updated Aug 2022
@@ -26,6 +27,7 @@ For each period, the package selects the most appropiate probability ditribution
 - Gamma 2 parameters distribution
 - Gamma 3 parameters distribution
 - Log-Gamma distribution
+- Gumbel distribution
 - Exponential distribution
 
 For precipitation values, only strictly positive distributions are considered. For temperature values, strictly positive distributions are discarded if there are negative values in the analyzed period.
