@@ -41,13 +41,13 @@ Revision: 2, updated Jan 2024
 """
 
 
-from .utils import formatQM, getDist, getCDF, getCDFinv
+from .utils import formatQM, getStats, getDist, getCDF, getCDFinv
 from scipy.signal import detrend
 import scipy.stats as stat
 import numpy as np
 
 
-def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
+def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Quantile Mapping (QM) method, as described by Cannon et al. 
@@ -136,24 +136,28 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
     y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
     
+    mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
+    mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
+    
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
-    PDF_obs, mu_obs, std_obs, skew_obs, skewy_obs = getDist(obs_series, var)
-    PDF_mod, mu_mod, std_mod, skew_mod, skewy_mod = getDist(mod_series[:,:y_obs], var)
+    if user_pdf==False:
+        pdf_obs = getDist(obs_series, var, mu_obs, std_obs, skew_obs, skewy_obs)
+        pdf_mod = getDist(mod_series[:,:y_obs], var, mu_mod, std_mod, skew_mod, skewy_mod)
 
     # 2) Apply the cumulative distribution function of the modeled data,
     #    evaluated with the statistics of the modeled data in the historical
     #    period and the modeled data (getCDF function of the climQMBC package).
     #    Equation 1 of Cannon et al. (2015).
-    Taot = getCDF(PDF_mod, mod_series, mu_mod, std_mod, skew_mod, skewy_mod)
+    Taot = getCDF(pdf_mod, mod_series, mu_mod, std_mod, skew_mod, skewy_mod)
     
     # 3) Apply the inverse cumulative distribution function of the observed
     #    data, evaluated with the statistics of the observed data in the
     #    historical period, to the probabilities obtained from 2) (getCDFinv
     #    function of the climQMBC package). Equation 1 of Cannon et al. (2015).
-    QM_series = getCDFinv(PDF_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
+    QM_series = getCDFinv(pdf_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
     QM_series = QM_series.reshape(-1, order='F')
     
     if var==1:
@@ -162,7 +166,7 @@ def QM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     return QM_series
 
 
-def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
+def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Detrended Quantile Mapping (DQM) method, as described by Cannon
@@ -266,12 +270,16 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
     y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
     
+    mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
+    mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
+    
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
-    PDF_obs, mu_obs, std_obs, skew_obs, skewy_obs = getDist(obs_series, var)
-    PDF_mod, mu_mod, std_mod, skew_mod, skewy_mod = getDist(mod_series[:,:y_obs], var)
+    if user_pdf==False:
+        pdf_obs = getDist(obs_series, var,  mu_obs, std_obs, skew_obs, skewy_obs)
+        pdf_mod = getDist(mod_series[:,:y_obs], var, mu_mod, std_mod, skew_mod, skewy_mod)
 
     # 2) Get the monthly mean of each projected period or window. If annual 
     #    frequency is specified, this is applied to the complete period).
@@ -295,13 +303,13 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     #    evaluated with the statistics of the modeled period, to the future
     #    modeled data (getCDF function of the climQMBC package). Equation 2 of
     #    Cannon et al. (2015).
-    Taot = getCDF(PDF_mod, detrended_series, mu_mod, std_mod, skew_mod, skewy_mod)
+    Taot = getCDF(pdf_mod, detrended_series, mu_mod, std_mod, skew_mod, skewy_mod)
     
     # 5) Apply the inverse cumulative distribution function of the observed
     #    data, evaluated with the statistics of the observed data in the
     #    historical period, to the probabilities obtained from 4) (getCDFinv
     #    function of the climQMBC package). Equation 2 of Cannon et al. (2015).
-    DQM_unscaled = getCDFinv(PDF_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
+    DQM_unscaled = getCDFinv(pdf_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
     
     # 6) Reimpose the trend to the values obtained in 5). Equation 2 of Cannon
     #    et al. (2015).
@@ -323,7 +331,7 @@ def DQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     return DQM_series
 
 
-def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2, inv_mod_th=None):
+def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2, inv_mod_th=None, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Quantile Delta Mapping (QDM) method, as described by Cannon
@@ -441,42 +449,51 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
     y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
     
+    mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
+    mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
+    
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
-    PDF_obs, mu_obs, std_obs, skew_obs, skewy_obs = getDist(obs_series, var)
-    PDF_mod, mu_mod, std_mod, skew_mod, skewy_mod = getDist(mod_series[:,:y_obs], var)
+    if user_pdf==False:
+        pdf_obs = getDist(obs_series, var,  mu_obs, std_obs, skew_obs, skewy_obs)
+        pdf_mod = getDist(mod_series[:,:y_obs], var, mu_mod, std_mod, skew_mod, skewy_mod)
 
     # 2) For each projected period:
-    PDF_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
-    Taot = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
+    pdf_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
+    Taot = np.zeros((mod_series.shape[0], y_mod-y_obs))
     for j in range(Taot.shape[1]):
         win_series = mod_series[:,j+1:y_obs+j+1]
+        
+        mu_win, std_win, skew_win, skewy_win = getStats(win_series)
 
         # a) Assign a probability distribution function to each month. If
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
-        PDF_win[:,j], mu_win, std_win, skew_win, skewy_win = getDist(win_series, var)
+        if user_pdf==False:
+            pdf_win[:,j] = getDist(win_series, var, mu_win, std_win, skew_win, skewy_win)
+        else:
+            pdf_win[:,j] = pdf_mod
         
         # b) Apply the cumulative distribution function of the projected
         #    period, evaluated with the statistics of this period, to the last
         #    data of the period (getCDF function of the climQMBC package).
         #    Equation 3 of Cannon et al. (2015).
-        Taot[:,j] = getCDF(PDF_win[:,j], win_series[:,-1:], mu_win, std_win, skew_win, skewy_win)[:,0]
+        Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:], mu_win, std_win, skew_win, skewy_win)[:,0]
     
     # 3) Apply the inverse cumulative distribution function:
     #    a) Of the observed data, evaluated with the statistics of the observed
     #       data in the historical period, to the probabilities obtained from 
     #       2b) (getCDFinv function of the climQMBC package). Equation 5 of 
     #       Cannon et al. (2015).
-    inv_obs = getCDFinv(PDF_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
+    inv_obs = getCDFinv(pdf_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
     
     #    b) Of the modeled data, evaluated with the statistics of the observed
     #       data in the historical period, to the probabilities obtained from 
     #       2b) (getCDFinv function of the climQMBC package). Equations 4 of 
     #       Cannon et al. (2015).
-    inv_mod = getCDFinv(PDF_mod, Taot, mu_mod, std_mod, skew_mod, skewy_mod)
+    inv_mod = getCDFinv(pdf_mod, Taot, mu_mod, std_mod, skew_mod, skewy_mod)
     
     # 4) Get the delta factor or relative change and apply it to the value
     #    obtained in 3b). Equation 4 and 6 of Cannon et al. (2015).
@@ -502,7 +519,7 @@ def QDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, rel_change_th=2
     return QDM_series
 
 
-def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
+def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Unbiased Quantile Mapping (UQM) method, as described by 
@@ -605,12 +622,15 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     y_obs, obs_series = formatQM(obs, var, frq, pp_threshold, pp_factor)
     y_mod, mod_series = formatQM(mod, var, frq, pp_threshold, pp_factor)
     
+    mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
+    mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
+    
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
-    PDF_obs, mu_obs, std_obs, skew_obs, skewy_obs = getDist(obs_series, var)
-    PDF_mod, mu_mod, std_mod, skew_mod, skewy_mod = getDist(mod_series[:,:y_obs], var)
+    if user_pdf==False:
+        pdf_obs = getDist(obs_series, var,  mu_obs, std_obs, skew_obs, skewy_obs)
     
     # 2) For each projected period, get the delta factor (delta) and time
     #    dependent (aster) statistics (mean, standard deviation, skewness, and
@@ -664,28 +684,33 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             skewy_projected[:,j] = skewy_obs + delta_skewy[:,j]
 
     # 3) For each projected period:
-    PDF_win = np.zeros((mod_series.shape[0], y_mod-y_obs))
+    pdf_win = np.zeros((mod_series.shape[0], y_mod-y_obs))
     Taot = np.zeros((mod_series.shape[0], y_mod-y_obs))
     UQM_series = np.zeros((mod_series.shape[0], y_mod-y_obs))
     for j in range(Taot.shape[1]):
         win_series = mod_series[:,j+1:y_obs+j+1]
+        
+        mu_win, std_win, skew_win, skewy_win = getStats(win_series)
 
         # a) Assign a probability distribution function to each month. If
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
-        PDF_win[:,j], mu_win, std_win, skew_win, skewy_win = getDist(win_series, var)
+        if user_pdf==False:
+            pdf_win[:,j] = getDist(win_series, var, mu_win, std_win, skew_win, skewy_win)
+        else:
+            pdf_win[:,j] = pdf_mod
         
         # b) Apply the cumulative distribution function of the projected
         #    period, evaluated with the statistics of this period, to the last
         #    data of the period (getCDF function of the climQMBC package).
         #    Equation in Chadwick et al. (2023).
-        Taot[:,j] = getCDF(PDF_win[:,j], win_series[:,-1:], mu_win, std_win, skew_win, skewy_win)[:,0]
+        Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:], mu_win, std_win, skew_win, skewy_win)[:,0]
         
         # 4) Apply the inverse cumulative distribution function of the observed
         #    data, evaluated with the time dependent statistics, to the values
         #    obtained in 3b) (getCDFinv function of the climQMBC package). Equation
         #    15 in Chadwick et al. (2023).
-        UQM_series[:,j] = getCDFinv(PDF_obs, Taot[:,j:j+1], mu_projected[:,j], sigma_projected[:,j], skew_projected[:,j], skewy_projected[:,j])[:,0]
+        UQM_series[:,j] = getCDFinv(pdf_obs, Taot[:,j:j+1], mu_projected[:,j], sigma_projected[:,j], skew_projected[:,j], skewy_projected[:,j])[:,0]
     
     UQM_series = UQM_series.reshape(-1, order='F')
     

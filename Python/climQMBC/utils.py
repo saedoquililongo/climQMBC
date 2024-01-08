@@ -188,7 +188,26 @@ def formatQM(series_, var, frq, pp_threshold, pp_factor):
     return y_series, series
 
 
-def getDist(series, var):
+def getStats(series):
+    """
+
+    """
+    # 4) If monthly data is specified, get monthly mean, standard deviation and 
+    #    skewness for the historical period of the observed
+    #    and modeled series. If annually data is specified, get monthly mean,
+    #    standard deviation, skewness, and log-skewness for the historical
+    #    period of the observed and modeled series.
+    mu  = np.nanmean(series, 1)     # Mean
+    sigma = np.nanstd(series, 1, ddof=1)    # Standard deviation
+    skew = stat.skew(series, 1, bias=False)     # Skewness
+    series_log  = np.log(series)
+    series_log[np.isinf(series_log)] = np.log(0.01)
+    skewy = stat.skew(series_log, 1, bias=False)
+
+    return mu, sigma, skew, skewy
+
+
+def getDist(series, var, mu, sigma, skew, skewy):
     """
     This function assigns an independent probability distribution function to
     each row of the input series by comparing the empirical probability
@@ -276,18 +295,6 @@ def getDist(series, var):
     #    probability distribution functions.
     PDF = np.zeros(n)
     
-    # 4) If monthly data is specified, get monthly mean, standard deviation and 
-    #    skewness for the historical period of the observed
-    #    and modeled series. If annually data is specified, get monthly mean,
-    #    standard deviation, skewness, and log-skewness for the historical
-    #    period of the observed and modeled series.
-    mu  = np.nanmean(series, 1)     # Mean
-    sigma = np.nanstd(series, 1, ddof=1)    # Standard deviation
-    skew = stat.skew(series, 1, bias=False)     # Skewness
-    series_log  = np.log(series)
-    series_log[np.isinf(series_log)] = np.log(0.01)
-    skewy = stat.skew(series_log, 1, bias=False)
-    
     # 3) Perform the Kolmogorov-Smirnov test for each row.
     for m in range(n):
         series_sub = series[m,:]
@@ -371,7 +378,7 @@ def getDist(series, var):
     
         PDF[m] = bestPDF
         
-    return PDF, mu, sigma, skew, skewy
+    return PDF
 
 
 def getCDF(PDF, series, mu, sigma, skew, skewy):

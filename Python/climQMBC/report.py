@@ -3,7 +3,7 @@ import matplotlib.pylab as plt
 import pandas as pd
 import numpy as np
 
-def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0):
+def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function generates two report of the performance of the different
     methods (QM, DQM, QDM, UQM and SDM) available in the climQMBC package.
@@ -198,10 +198,10 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
     fun = ['Modeled']+fun
     
     # 2) Apply QM methods
-    QM_series = QM(obs, mod, var)
-    DQM_series = DQM(obs, mod, var)
-    QDM_series = QDM(obs, mod, var)
-    UQM_series = UQM(obs, mod, var)
+    QM_series = QM(obs, mod, var, user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+    DQM_series = DQM(obs, mod, var, user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+    QDM_series = QDM(obs, mod, var, user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+    UQM_series = UQM(obs, mod, var, user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
     SDM_series = SDM(obs, mod, var)
     
     # 3) Get observed, modeled and bias corrected statistics

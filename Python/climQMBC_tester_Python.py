@@ -70,7 +70,9 @@ mod = np.array(pd.read_csv('../Sample_data/mod_'+var_name[var]+'.csv',header=Non
 # of the modeled period. Remember that the projected periods length is
 # equal to the length of the historical period.
 
-QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, var)
+# QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, var)
+
+QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, var, user_pdf=False, pdf_obs=[1]*12, pdf_mod=[1]*12)
 
 
 # Example 2
