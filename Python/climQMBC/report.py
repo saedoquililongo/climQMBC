@@ -161,16 +161,15 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
     Revision: 0, updated Dec 2021
     """
     
-    var=mult_change
-    
+
     from .methods import QM, DQM, QDM, UQM, SDM
     
     
-    def var_op(a,b,var):
-        if var==0:
-            return a - b
-        else:
+    def var_op(a,b,mult_change):
+        if mult_change:
             return a/b
+        else:
+            return a - b
     
     def ecdf(x):
         return [(1 + i)/len(x) for i in range(len(x))]
@@ -265,32 +264,32 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
     # 5) Get delta mean and delta standard deviation
     SF_m = []
     SF_s = []
-    SF_m.append(var_op(mu_M[2],mu_M[1],var))
-    SF_s.append(var_op(std_M[2],std_M[1],var))
+    SF_m.append(var_op(mu_M[2],mu_M[1],mult_change))
+    SF_s.append(var_op(std_M[2],std_M[1],mult_change))
     dm = []
     ds = []
-    dm.append(var_op(mu[3],mu[0],var))
-    dm.append(var_op(mu[4],mu[0],var))
-    dm.append(var_op(mu[2],mu[1],var))
-    ds.append(var_op(std[3],std[0],var))
-    ds.append(var_op(std[4],std[0],var))
-    ds.append(var_op(std[2],std[1],var))
+    dm.append(var_op(mu[3],mu[0],mult_change))
+    dm.append(var_op(mu[4],mu[0],mult_change))
+    dm.append(var_op(mu[2],mu[1],mult_change))
+    ds.append(var_op(std[3],std[0],mult_change))
+    ds.append(var_op(std[4],std[0],mult_change))
+    ds.append(var_op(std[2],std[1],mult_change))
     for i in range(4,len(s)):
-        dm.append(var_op(mu[i],mu[3],var))
-        ds.append(var_op(std[i],std[3],var))
+        dm.append(var_op(mu[i],mu[3],mult_change))
+        ds.append(var_op(std[i],std[3],mult_change))
     
     dm_w = []
     ds_w = []
     for w in range(len(y_wind)):
-        SF_m.append(var_op(mu_Mw[w][0],mu_M[1],var))
-        SF_s.append(var_op(std_Mw[w][0],std_M[1],var))
+        SF_m.append(var_op(mu_Mw[w][0],mu_M[1],mult_change))
+        SF_s.append(var_op(std_Mw[w][0],std_M[1],mult_change))
         dm_w.append([])
         ds_w.append([])
-        dm_w[w].append(var_op(mu_w[w][0],mu[1],var))
-        ds_w[w].append(var_op(std_w[w][0],std[1],var))
+        dm_w[w].append(var_op(mu_w[w][0],mu[1],mult_change))
+        ds_w[w].append(var_op(std_w[w][0],std[1],mult_change))
         for i in range(1,len(v)):
-            dm_w[w].append(var_op(mu_w[w][i],mu[3],var))
-            ds_w[w].append(var_op(std_w[w][i],std[3],var))
+            dm_w[w].append(var_op(mu_w[w][i],mu[3],mult_change))
+            ds_w[w].append(var_op(std_w[w][i],std[3],mult_change))
 
     # 6) Display report
     print('Description of this report:\n')
@@ -345,7 +344,7 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
     plt.figure(figsize=(13,6))
     plt.subplot(1,2,1)
     plt.title('Empirical distribution functions')
-    if var == 0:
+    if mult_change == 0:
         plt.xlabel('Temperature (°C)')
     else:
         plt.xlabel('Precipitation (mm)')
@@ -369,7 +368,7 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
     
     plt.subplot(1,2,2)
     plt.title('Time series')
-    if var == 0:
+    if mult_change == 0:
         plt.ylabel('Temperature (°C)')
     else:
         plt.ylabel('Precipitation (mm)')
@@ -402,7 +401,7 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
     plt.xlim(0,11)
     plt.title('Historical period')
     plt.xlabel('Month')
-    if var == 0:
+    if mult_change == 0:
         plt.ylabel('Temperature (°C)')
     else:
         plt.ylabel('Precipitation (mm)')
@@ -417,7 +416,7 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
     plt.xlim(0,11)
     plt.title('Future period')
     plt.xlabel('Month')
-    if var == 0:
+    if mult_change == 0:
         plt.ylabel('Temperature (°C)')
     else:
         plt.ylabel('Precipitation (mm)')
@@ -432,7 +431,7 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
         plt.plot(mu_M[7],'c',lw=1,label='UQM')
     if 'SDM' in fun:
         plt.plot(mu_M[8],'m',lw=1,label='SDM')
-    if var == 0:
+    if mult_change == 0:
         plt.plot(mu_M[0]+SF_m[0],'r',lw=1,label=r'Obj')
     else:
         plt.plot(mu_M[0]*SF_m[0],'r',lw=1,label=r'Obj')
@@ -444,7 +443,7 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
         plt.grid()
         plt.xlim(0,11)
         plt.title(w_label[w])
-        if var == 0:
+        if mult_change == 0:
             plt.ylabel('Temperature (°C)')
         else:
             plt.ylabel('Precipitation (mm)')
@@ -459,7 +458,7 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
             plt.plot(mu_Mw[w][4],'c',lw=1,label='UQM')
         if 'SDM' in fun:
             plt.plot(mu_Mw[w][5],'m',lw=1,label='SDM')
-        if var == 0:
+        if mult_change == 0:
             plt.plot(mu_M[0]+SF_m[w+1],'r',lw=1,label='Obj')
         else:
             plt.plot(mu_M[0]*SF_m[w+1],'r',lw=1,label='Obj')
@@ -480,7 +479,7 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
     plt.xlim(0,11)
     plt.title('Historical period')
     plt.xlabel('Month')
-    if var == 0:
+    if mult_change == 0:
         plt.ylabel('Temperature (°C)')
     else:
         plt.ylabel('Precipitation (mm)')
@@ -495,7 +494,7 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
     plt.xlim(0,11)
     plt.title('Future period')
     plt.xlabel('Month')
-    if var == 0:
+    if mult_change == 0:
         plt.ylabel('Temperature (°C)')
     else:
         plt.ylabel('Precipitation (mm)')
@@ -510,7 +509,7 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
         plt.plot(std_M[7],'c',lw=1,label='UQM')
     if 'SDM' in fun:
         plt.plot(std_M[8],'m',lw=1,label='SDM')
-    if var == 0:
+    if mult_change == 0:
         plt.plot(std_M[0]+SF_s[0],'r',lw=1,label=r'Obj')
     else:
         plt.plot(std_M[0]*SF_s[0],'r',lw=1,label=r'Obj')
@@ -522,7 +521,7 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
         plt.grid()
         plt.xlim(0,11)
         plt.title(w_label[w])
-        if var == 0:
+        if mult_change == 0:
             plt.ylabel('Temperature (°C)')
         else:
             plt.ylabel('Precipitation (mm)')
@@ -537,7 +536,7 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
             plt.plot(std_Mw[w][4],'c',lw=1,label='UQM')
         if 'SDM' in fun:
             plt.plot(std_Mw[w][5],'m',lw=1,label='SDM')
-        if var == 0:
+        if mult_change == 0:
             plt.plot(std_M[0]+SF_s[w+1],'r',lw=1,label=r'Obj')
         else:
             plt.plot(std_M[0]*SF_s[w+1],'r',lw=1,label=r'Obj')
