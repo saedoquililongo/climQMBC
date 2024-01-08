@@ -632,19 +632,22 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
     skwAster = np.zeros(xbarmt.shape)
     LskwAster = np.zeros(xbarmt.shape)
     
-    if var==1:  # Precipitation
-        for i in range(xbarmt.shape[0]):
-            for j in range(xbarmt.shape[1]):
-                xbarmt[i,j] = np.nanmean(mod_series[i,j+1:y_obs+j+1], 0)
-                xhatmt[i,j] = np.nanstd(mod_series[i,j+1:y_obs+j+1], 0, ddof=1)
-                
-                skwmt[i,j] = stat.skew(mod_series[i,j+1:y_obs+j+1], 0, bias=False)
-                Lnskwmt = np.log(mod_series[i,j+1:y_obs+j+1])
-                Lnskwmt[np.isinf(Lnskwmt)]= np.log(0.01)
-                Lskwmt[i,j] = stat.skew(Lnskwmt,0,bias=False)    
     
-                Dmu[i,j] = (xbarmt[i,j]- mu_mod[i])/mu_mod[i]
-                Dsigma[i,j] = (xhatmt[i,j]- std_mod[i])/std_mod[i]
+    for i in range(xbarmt.shape[0]):
+        for j in range(xbarmt.shape[1]):
+            win_series = mod_series[i,j+1:y_obs+j+1]
+            
+            xbarmt[i,j] = np.nanmean(win_series, 0)
+            xhatmt[i,j] = np.nanstd(win_series, 0, ddof=1)
+            
+            skwmt[i,j] = stat.skew(win_series, 0, bias=False)
+            Lnskwmt = np.log(win_series)
+            Lnskwmt[np.isinf(Lnskwmt)]= np.log(0.01)
+            Lskwmt[i,j] = stat.skew(Lnskwmt,0,bias=False)    
+            
+            if var==1:  # Precipitation
+                Dmu[i,j] = (xbarmt[i,j] - mu_mod[i])/mu_mod[i]
+                Dsigma[i,j] = (xhatmt[i,j] - std_mod[i])/std_mod[i]
                 Dskw[i,j] = (skwmt[i,j] - skew_mod[i])/skew_mod[i]
                 DLskw[i,j] = (Lskwmt[i,j]- skewy_mod[i])/skewy_mod[i]
                 
@@ -652,17 +655,8 @@ def UQM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
                 sigmaAster[i,j] = std_obs[i]*(1 + Dsigma[i,j])
                 skwAster[i,j] = skew_obs[i]*(1 + Dskw[i,j])
                 LskwAster[i,j] = skewy_obs[i]*(1 + DLskw[i,j])
-    else:  # Temperature
-        for i in range(xbarmt.shape[0]):
-            for j in range(xbarmt.shape[1]):
-                xbarmt[i,j] = np.nanmean(mod_series[i,j+1:y_obs+j+1], 0)
-                xhatmt[i,j] = np.nanstd(mod_series[i,j+1:y_obs+j+1], 0, ddof=1)
                 
-                skwmt[i,j] = stat.skew(mod_series[i,j+1:y_obs+j+1], 0, bias=False)
-                Lnskwmt = np.log(mod_series[i,j+1:y_obs+j+1])
-                Lnskwmt[np.isinf(Lnskwmt)] = np.log(0.01)
-                Lskwmt[i,j] = stat.skew(Lnskwmt, 0, bias=False)    
-    
+            else:  # Temperature
                 Dmu[i,j] = xbarmt[i,j] - mu_mod[i]
                 Dsigma[i,j] = xhatmt[i,j] - std_mod[i]
                 Dskw[i,j] = skwmt[i,j] - skew_mod[i]
