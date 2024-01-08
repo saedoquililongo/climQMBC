@@ -983,7 +983,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             #    Get recurrence intervals and its scaled version for the
             #    observed, historical modeled and projected period modeled
             #    CDFs.
-            if var == 0: # Temperature
+            if var==0: # Temperature
                 RI_obs = 1/(0.5 - np.abs(obs_cdf_intpol - 0.5))
                 RI_mod = 1/(0.5 - np.abs(mod_cdf_intpol - 0.5))
                 RI_win = 1/(0.5 - np.abs(CDF_win - 0.5))
@@ -1007,7 +1007,7 @@ def SDM(obs, mod, var, frq='M', pp_threshold=1, pp_factor=1/100):
             #    Get the initial bias corrected values. For precipitation,
             #    these values are interpolated to the length of the expected
             #    raindays.
-            if var == 0: # Temperature
+            if var==0: # Temperature
                 xvals = stat.norm.ppf(np.sort(CDF_scaled), *(mu_obsD,sigma_obsD)) + SF
                 xvals = xvals - np.mean(xvals) + mu_obs + (mu_win - mu_mod)
             else:
