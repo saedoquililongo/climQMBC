@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 This script contains the main functions requiered by the methods implemented in
-the climQMBC package, including the formatQM, the getDist, the getCDF, and the
-getCDFinv functions.
+the climQMBC package, including the formatQM, the getStats, the getDist,
+the getCDF, and the getCDFinv functions.
 
 Written by Sebastian Aedo Quililongo (1*)
            Cristian Chadwick         (2)
@@ -21,146 +21,80 @@ Written by Sebastian Aedo Quililongo (1*)
 Revision: 2, updated Jan 2024
 """
 
+
 import scipy.stats as stat
 import numpy as np
 
 
 def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
     """
-    This function formats the inputs and gets basic statistics for the 
-    different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available in
+    This function formats a time series and gets basic statistics for the 
+    different Quantile Mapping methods (QM, DQM, QDM, UQM and SDM) available in
     the climQMBC package. If monthly data is specified, the input series will 
     be reshaped to a matrix of 12 rows and several columns equal to the number 
-    of years of each series. If annual data is specified, the input is reshaped
+    of years of the series. If annual data is specified, the input is reshaped
     to a row vector with same entries as the input series. For precipitation,
-    physically null values (values below pp_threshold) are replaced by random
-    positive values below pp_factor.
+    determined by allow_negatives=1, physically null values (values below
+    pp_threshold) are replaced by random positive values below pp_factor.
 
     Description:
         0) Check frequency.
-        
-        1) If variable is precipitation, replace low values with random values.
 
-        2) Get number of years of the observed period.
-        
+        1) If variable is precipitation, determined by allow_negatives=1, 
+           replace low values with random values.
+
+        2) Get number of years of the series.
+
         3) If monthly data is specified, reshape the input series to a matrix
            of 12 rows and several columns equal to the number of years of each
            series. If annual data is specified, reshape the input to a row
            vector with same entries as the input series.
-        
-        4) If monthly data is specified, get monthly mean, standard deviation,
-           skewness, and log-skewness for the historical period of the observed
-           and modeled series. If annual data is specified, get monthly mean, 
-           standard deviation, skewness, and log-skewness for the historical 
-           period of the observed and modeled series.
 
     Inputs:
-        obs:             A column vector of monthly or annual observed data 
-                         (temperature or precipitation). If monthly frequency 
-                         is specified, the length of this vector is 12 times 
-                         the number of observed years [12 x y_obs, 1]. If
-                         annual frequency is specified, the length of this
-                         vector is equal to the number of observed years 
-                         [y_obs, 1].
+        series_:         A column vector of monthly or annual data. If monthly
+                         frequency is specified, the length of this vector
+                         should be 12 times the number of years in the series
+                         [12 x years, 1]. If annual frequency is specified, the
+                         length of this vector should be equal to the number of
+                         years of the series [years, 1].
 
-        mod:             A column vector of monthly or annual modeled data
-                         (temperature or precipitation). If monthly frequency
-                         is specified, the length of this vector is 12 times
-                         the number of observed years [12 x y_mod, 1]. If 
-                         annual frequency is specified, the length of this
-                         vector is equal to the number of observed years
-                         [y_mod, 1].
-                
-        var:             A flag that identifies if data are temperature or 
-                         precipitation. This flag tells the getDist function if
-                         it has to discard distribution functions that allow
-                         negative numbers, and if the terms in the correction
-                         equations are multiplied/divided or added/subtracted.
-                             Temperature:   var = 0
-                             Precipitation: var = 1
+        allow_negatives: A flag that identifies if the series allow for negative
+                         values or not. If negative values are not allowed, the
+                         series will be treated as a precipitation series,
+                         replacing the values considered as physicaly null 
+                         precipitation by near-zero random values.
+                             allow_negatives = 1   : Allow negative values
+                             allow_negatives = 0   : Does not allow negative
+                                                     values
 
-        frq:             A string specifying if the input is annual or monthly
-                         data. If not specified, it is set monthly as default.
+        frq:             A string specifying if the input has annual or monthly
+                         data. If not specified, it is set annual as default.
                              Monthly:   frq = 'M'
                              Annual:    frq = 'A'
-                    
+
         pp_threshold:    A float indicating the threshold to consider 
                          physically null precipitation values.
-                
+
         pp_factor:       A float indicating the maximum value of the random
                          values that replace physically null precipitation 
                          values.
 
-        NOTE: This routine considers that obs and mod series start in january
-        of the first year and ends in december of the last year.
-
 
     Output:
-        y_obs:          Number of observed years.
-        
-        obs_series:     A column vector of monthly or annual observed data
-                        (temperature or precipitation). If monthly frequency is
-                        specified, the length of this vector is 12 times the 
-                        number of observed years [12, y_obs]. If annual 
-                        frequency is specified, the length of this vector is 
-                        equal to the number of observed years [1, y_obs].
-        
-        mod_series:     A column vector of monthly or annual modeled data 
-                        (temperature or precipitation). If monthly frequency is
-                        specified, the length of this vector is 12 times the 
-                        number of observed years [12, y_mod]. If annual 
-                        frequency is specified, the length of this vector is 
-                        equal to the number of observed years [1, y_mod].
-        
-        mu_obs:         If monthly frequency is specified, a column vector of 
-                        monthly mean of observed data [12,1]. If annual 
-                        frequency is specified, the mean of the observed data 
-                        (float).
-        
-        mu_mod:         If monthly frequency is specified, a column vector of 
-                        monthly mean of modeled data of the historical period 
-                        [12,1]. If annual frequency is specified, the mean of 
-                        the modeled data of the historical period(float).
-        
-        sigma_obs:      If monthly frequency is specified, a column vector of 
-                        monthly standard deviation of observed data [12,1]. If
-                        annual frequency is specified, the standard deviation 
-                        of the observed data (float).
-        
-        sigma_mod:      If monthly frequency is specified, a column vector of 
-                        monthly standard deviation of modeled data of the 
-                        historical period [12,1]. If annual frequency is 
-                        specified, the standard deviation of the modeled data 
-                        of the historical period(float).
-        
-        skew_obs:       If monthly frequency is specified, a column vector of 
-                        monthly skewness of observed data [12,1]. If annual 
-                        frequency is specified, the skewness of the observed 
-                        data (float).
-        
-        skew_mod:       If monthly frequency is specified, a column vector of 
-                        monthly skewness of modeled data of the historical 
-                        period [12,1]. If annual frequency is specified, the 
-                        skewness of the modeled data of the historical period
-                        (float).
-        
-        skewy_obs:      If monthly frequency is specified, a column vector of 
-                        monthly skewness of the logarithm of observed data 
-                        [12,1]. If annual frequency is specified, the skewness
-                        of the logarithm of the observed data (float).
-        
-        skewy_mod:      If monthly frequency is specified, a column vector of 
-                        monthly skewness of the logarithm of modeled data of 
-                        the historical period [12,1]. If annual frequency is 
-                        specified, the skewness of the logarithm of the modeled
-                        data of the historical period(float).
+        years:          Number of years in the series.
 
+        series    :     A matrix of monthly or annual data. If monthly frequency
+                        is specified, the number of rows of the matrix is 12
+                        and the number of columns is the number of years
+                        [12, years]. If annual frequency is specified, the
+                        number of rows of the matrix is 1 and the number of
+                        columns is the number of years [1, years].
     """
-    
-    # Prevents modyfing the original input passed by reference
-    ## Must look for a mor elegant way to skip this step
+
+    # This prevents modyfing the original input passed by reference
+    ## Must look for a more elegant way to skip this step
     series = series_.copy()
-    
+
     # 0) Check frequency.
     if frq=='D':
         I = 365
@@ -170,22 +104,23 @@ def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
         I = 1
     else:
         I = 1
-        
-    # 1) If variable is precipitation, replace low values with random values.
+
+    # 1) If variable is precipitation, determined by allow_negatives=1, replace
+    #    low values with random values.
     if not allow_negatives:
         bool_low = series<pp_threshold
         series[bool_low] = np.random.rand(bool_low.sum())*pp_factor
-    
-    # 2) Get number of years of the series.
-    y_series = int(series.shape[0]/I)
-    
-    # 3) If sub-annual data is specified, reshape the input series to a matrix 
-    #    of if 12 or 365 rows and several columns equal to the number of years.
-    #    If annual frequency is specified, reshape the input to a row vector 
-    #    with same entries as the input series.
-    series = series.reshape((I, int(series.shape[0]/I)), order='F')
 
-    return y_series, series
+    # 2) Get number of years of the series.
+    years = int(series.shape[0]/I)
+    
+    # 3) If monthly data is specified, reshape the input series to a matrix of
+    #    12 rows and several columns equal to the number of years of each
+    #    series. If annual data is specified, reshape the input to a row vector
+    #    with same entries as the input series.
+    series = series.reshape((I,int(series.shape[0]/I)), order='F')
+
+    return years, series
 
 
 def getStats(series):
@@ -235,6 +170,12 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
     Description:
         1) Get the number of years to compute the empirical distribution in 
            step 3) and get the number of rows of the input series.
+                                                              
+        4) If monthly data is specified, get monthly mean, standard deviation,
+           skewness, and log-skewness for the historical period of the observed
+           and modeled series. If annual data is specified, get monthly mean, 
+           standard deviation, skewness, and log-skewness for the historical 
+           period of the observed and modeled series.
 
         2) Initialize column vectors for the statistics needed for the 
            available probability distribution functions.
@@ -283,6 +224,49 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
                 the numeration of the distribution listed in the description of
                 this function. This ID is used in the getCDF and getCDFinv 
                 functions of the climQMBC package.
+                
+        mu_obs:         If monthly frequency is specified, a column vector of 
+                        monthly mean of observed data [12,1]. If annual 
+                        frequency is specified, the mean of the observed data 
+                        (float).
+        
+        mu_mod:         If monthly frequency is specified, a column vector of 
+                        monthly mean of modeled data of the historical period 
+                        [12,1]. If annual frequency is specified, the mean of 
+                        the modeled data of the historical period(float).
+        
+        sigma_obs:      If monthly frequency is specified, a column vector of 
+                        monthly standard deviation of observed data [12,1]. If
+                        annual frequency is specified, the standard deviation 
+                        of the observed data (float).
+        
+        sigma_mod:      If monthly frequency is specified, a column vector of 
+                        monthly standard deviation of modeled data of the 
+                        historical period [12,1]. If annual frequency is 
+                        specified, the standard deviation of the modeled data 
+                        of the historical period(float).
+        
+        skew_obs:       If monthly frequency is specified, a column vector of 
+                        monthly skewness of observed data [12,1]. If annual 
+                        frequency is specified, the skewness of the observed 
+                        data (float).
+        
+        skew_mod:       If monthly frequency is specified, a column vector of 
+                        monthly skewness of modeled data of the historical 
+                        period [12,1]. If annual frequency is specified, the 
+                        skewness of the modeled data of the historical period
+                        (float).
+        
+        skewy_obs:      If monthly frequency is specified, a column vector of 
+                        monthly skewness of the logarithm of observed data 
+                        [12,1]. If annual frequency is specified, the skewness
+                        of the logarithm of the observed data (float).
+        
+        skewy_mod:      If monthly frequency is specified, a column vector of 
+                        monthly skewness of the logarithm of modeled data of 
+                        the historical period [12,1]. If annual frequency is 
+                        specified, the skewness of the logarithm of the modeled
+                        data of the historical period(float).
 
     """
     

@@ -463,14 +463,8 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
     win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-(y_obs)]
     
-    mu_win = np.nanmean(win_series, 1)
-    std_win = np.nanstd(win_series, 1, ddof=1)
-    skew_win = stat.skew(win_series, 1, bias=False)
-    win_series_log = np.log(win_series)
-    win_series_log[np.isinf(win_series_log)] = np.log(0.01)
-    skewy_win = stat.skew(win_series_log,1,bias=False)
-    
-    
+    mu_win, std_win, skew_win, skewy_win = getStats(win_series)
+
     
     pdf_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
     Taot = np.zeros((mod_series.shape[0], y_mod-y_obs))
@@ -646,13 +640,8 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
     win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-(y_obs)]
     
-    mu_win = np.nanmean(win_series, 1)
-    std_win = np.nanstd(win_series, 1, ddof=1)
-    skew_win = stat.skew(win_series, 1, bias=False)
-    win_series_log = np.log(win_series)
-    win_series_log[np.isinf(win_series_log)] = np.log(0.01)
-    skewy_win = stat.skew(win_series_log,1,bias=False)
-    
+    mu_win, std_win, skew_win, skewy_win = getStats(win_series)
+
     if mult_change:  # Precipitation
         delta_mu = mu_win/np.tile(mu_mod,(y_mod-y_obs,1)).T
         delta_sigma = std_win/np.tile(std_mod,(y_mod-y_obs,1)).T

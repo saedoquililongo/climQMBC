@@ -3,6 +3,27 @@ import matplotlib.pylab as plt
 import pandas as pd
 import numpy as np
 
+"""
+This script contains the report function to compare the performance of different
+methods.
+
+Written by Sebastian Aedo Quililongo (1*)
+           Cristian Chadwick         (2)
+           Fernando Gonzalez-Leiva   (3)
+           Jorge Gironas             (3, 4)
+           
+  (1) Stockholm Environment Institute, Latin America Centre, Bogota, Colombia
+  (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez, Santiago,
+      Chile
+  (3) Department of Hydraulics and Environmental Engineering, Pontificia
+      Universidad Catolica de Chile, Santiago, Chile
+  (4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
+      Santiago, Chile
+      
+*Maintainer contact: sebastian.aedo.q@gmail.com
+Revision: 1, updated Jan 2024
+"""
+
 def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function generates two report of the performance of the different
@@ -143,22 +164,6 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
     
         NOTE: This function returns all five bias correction methods,
               independently of which methods are specified for this report.
-    
-    
-    Written by Sebastian Aedo Quililongo (1*)
-               Cristian Chadwick         (2)
-               Fernando Gonzalez-Leiva   (3)
-               Jorge Gironas             (3)
-               
-      (1) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
-          Santiago, Chile
-      (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
-          Santiago, Chile
-      (3) Department of Hydraulics and Environmental Engineering, Pontificia
-          Universidad Catolica de Chile, Santiago, Chile
-          
-    *Maintainer contact: slaedo@uc.cl
-    Revision: 0, updated Dec 2021
     """
     
 
