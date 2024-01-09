@@ -669,11 +669,16 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     Taot = np.zeros((mod_series.shape[0], y_mod-y_obs))
     UQM_series = np.zeros((mod_series.shape[0], y_mod-y_obs))
     for j in range(Taot.shape[1]):
+        
+        Dwin_series = detrend(win_series[:,:,j]) + np.tile(mu_win[:,j],(y_obs,1)).T
+        mu_win_, std_win_, skew_win_, skewy_win_ = getStats(Dwin_series)
+        
         # a) Assign a probability distribution function to each month. If
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
         if user_pdf==False:
-            pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+            # pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+            pdf_win[:,j] = getDist(Dwin_series, allow_negatives, mu_win_, std_win_, skew_win_, skewy_win_)
         else:
             pdf_win[:,j] = pdf_mod
         
@@ -681,7 +686,8 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         #    period, evaluated with the statistics of this period, to the last
         #    data of the period (getCDF function of the climQMBC package).
         #    Equation 3 in Chadwick et al. (2023).
-        Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
+        # Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
+        Taot[:,j] = getCDF(pdf_win[:,j], Dwin_series[:,-1:], mu_win_, std_win_, skew_win_, skewy_win_)[:,0]
         
         # 4) Apply the inverse cumulative distribution function of the observed
         #    data, evaluated with the time dependent statistics, to the values

@@ -54,11 +54,11 @@ import pandas as pd
 import numpy as np
 
 # Avaiable variables: 'tmax','pp'
-variable = 'tmax'
+variable = 'pp'
 
-mult_change = 0
-allow_negatives = 1
-SDM_var = 0
+mult_change = 1
+allow_negatives = 0
+SDM_var = 1
 
 # Load observed and model data. Remember that for temperature, var = 0, and
 # for precipitation, var = 1.
@@ -76,7 +76,7 @@ mod = np.array(pd.read_csv('../Sample_data/mod_'+variable+'.csv',header=None))
 
 QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
 
-DQM_series = DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives)
+# DQM_series = DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives)
 
 # Example 2
 # Example 2 shows how to use the report function for specific bias

@@ -83,7 +83,7 @@ def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
     Output:
         years:          Number of years in the series.
 
-        series    :     A matrix of monthly or annual data. If monthly frequency
+        series:         A matrix of monthly or annual data. If monthly frequency
                         is specified, the number of rows of the matrix is 12
                         and the number of columns is the number of years
                         [12, years]. If annual frequency is specified, the
@@ -125,19 +125,44 @@ def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
 
 def getStats(series):
     """
+    This function computes the mean, standard deviation, skewness and skewness
+    of the logarithmic values, for each sub-period within the year, according
+    to the frequency initially defined.
 
+    Inputs:
+        series:         A matrix of monthly or annual data. If monthly frequency
+                        is specified, the number of rows of the matrix is 12
+                        and the number of columns is the number of years
+                        [12, years]. If annual frequency is specified, the
+                        number of rows of the matrix is 1 and the number of
+                        columns is the number of years [1, years].
+
+
+    Output:
+        mu:         A column vector of mean values of the series. [12,1] if the
+                    series consider monthly data and [1,1] if the series 
+                    consider annual data.
+
+        sigma:      A column vector of standard deviation of the series. [12,1]
+                    if the series consider monthly data and [1,1] if the series
+                    consider annual data.
+
+        skew:       A column vector of skewness of the series. [12,1] if the 
+                    series consider monthly data and [1,1] if the series 
+                    consider annual data.
+
+        skewy:      A column vector of skewness of the logarithm of the series.
+                    [12,1] if the series consider monthly data and [1,1] if the
+                    series consider annual data.
     """
-    # 4) If monthly data is specified, get monthly mean, standard deviation and 
-    #    skewness for the historical period of the observed
-    #    and modeled series. If annually data is specified, get monthly mean,
-    #    standard deviation, skewness, and log-skewness for the historical
-    #    period of the observed and modeled series.
-    mu  = np.nanmean(series, 1)     # Mean
-    sigma = np.nanstd(series, 1, ddof=1)    # Standard deviation
-    skew = stat.skew(series, 1, bias=False)     # Skewness
+    # Get the mean, standard deviation, skewness and skewness of the
+    # logarithmic values of each year sub-period of the series.
+    mu  = np.nanmean(series, 1)                     # Mean
+    sigma = np.nanstd(series, 1, ddof=1)            # Standard deviation
+    skew = stat.skew(series, 1, bias=False)         # Skewness
     series_log  = np.log(series)
     series_log[np.isinf(series_log)] = np.log(0.01)
-    skewy = stat.skew(series_log, 1, bias=False)
+    skewy = stat.skew(series_log, 1, bias=False)    # Skewness of the log
 
     return mu, sigma, skew, skewy
 
