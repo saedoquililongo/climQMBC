@@ -136,16 +136,32 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, us
     y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
     y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
     
-    mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
-    mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
+    if frq=='D':
+        win = 15
+        obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
+        obs_series_moving = obs_series_moving.reshape(obs_series.shape[0]+1,win*2,obs_series.shape[1], order='F')[:-1,1:]
+        
+        mod_series_moving = np.vstack([mod_series[-win:],np.tile(mod_series,(win*2,1)),mod_series[:win]])
+        mod_series_moving = mod_series_moving.reshape(mod_series.shape[0]+1,win*2,mod_series.shape[1], order='F')[:-1,1:]
+        
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving, frq)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series_moving[:,:,:y_obs], frq)
+    
+    else:
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
     
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
     if user_pdf==False:
-        pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
-        pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+        if frq=='D':
+            pdf_obs = getDist(obs_series_moving.reshape(365,(2*win-1)*y_obs), allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod = getDist(mod_series_moving[:,:,:y_obs].reshape(365,(2*win-1)*y_obs), allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+        else:
+            pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
 
     # 2) Apply the cumulative distribution function of the modeled data,
     #    evaluated with the statistics of the modeled data in the historical
@@ -270,22 +286,44 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
     y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
     
-    mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
-    mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
+    if frq=='D':
+        win = 15
+        obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
+        obs_series_moving = obs_series_moving.reshape(obs_series.shape[0]+1,win*2,obs_series.shape[1], order='F')[:-1,1:]
+        
+        mod_series_moving = np.vstack([mod_series[-win:],np.tile(mod_series,(win*2,1)),mod_series[:win]])
+        mod_series_moving = mod_series_moving.reshape(mod_series.shape[0]+1,win*2,mod_series.shape[1], order='F')[:-1,1:]
+        
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving, frq)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series_moving[:,:,:y_obs], frq)
+    
+    else:
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
     
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
     if user_pdf==False:
-        pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
-        pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+        if frq=='D':
+            pdf_obs = getDist(obs_series_moving.reshape(365,(2*win-1)*y_obs), allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod = getDist(mod_series_moving[:,:,:y_obs].reshape(365,(2*win-1)*y_obs), allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+        else:
+            pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
 
     # 2) Get the monthly mean of each projected period or window. If annual 
     #    frequency is specified, this is applied to the complete period).
-    win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
-    win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
-    mu_win = win_series.mean(1)
+    if frq=='D':
+        win_series = np.dstack([np.tile(mod_series_moving,(1,1,y_obs)), np.zeros((mod_series.shape[0],2*win-1,y_obs))])
+    
+        win_series = win_series.reshape(mod_series.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
+        mu_win = win_series.mean((1,2))
+    else:
+        win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
+        win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
+        mu_win = win_series.mean(1)
 
     # 3) Scaling factor (model series))
     # 3)Compute the linear scaled values (value in square brackets in equation
@@ -448,22 +486,46 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
     y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
     
-    mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
-    mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
+    if frq=='D':
+        win = 15
+        obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
+        obs_series_moving = obs_series_moving.reshape(obs_series.shape[0]+1,win*2,obs_series.shape[1], order='F')[:-1,1:]
+        
+        mod_series_moving = np.vstack([mod_series[-win:],np.tile(mod_series,(win*2,1)),mod_series[:win]])
+        mod_series_moving = mod_series_moving.reshape(mod_series.shape[0]+1,win*2,mod_series.shape[1], order='F')[:-1,1:]
+        
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving, frq)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series_moving[:,:,:y_obs], frq)
+    
+    else:
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
     
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
     if user_pdf==False:
-        pdf_obs = getDist(obs_series, allow_negatives,  mu_obs, std_obs, skew_obs, skewy_obs)
-        pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+        if frq=='D':
+            pdf_obs = getDist(obs_series_moving.reshape(365,(2*win-1)*y_obs), allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod = getDist(mod_series_moving[:,:,:y_obs].reshape(365,(2*win-1)*y_obs), allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+        else:
+            pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
 
     # 2) For each projected period:
-    win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
-    win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-(y_obs)]
+    if frq=='D':
+        win_series = np.dstack([np.tile(mod_series_moving,(1,1,y_obs)), np.zeros((mod_series.shape[0],2*win-1,y_obs))])
+        win_series = win_series.reshape(mod_series.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
+        mu_win, std_win, skew_win, skewy_win = getStats(win_series, frq)
+        
+    else:
+        win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
+        win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
+        
+        mu_win, std_win, skew_win, skewy_win = getStats(win_series)
+            
     
-    mu_win, std_win, skew_win, skewy_win = getStats(win_series)
 
     
     pdf_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
@@ -473,7 +535,10 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
         if user_pdf==False:
-            pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+            if frq=='D':
+                pdf_win[:,j] = getDist(win_series[:,:,:,j].reshape(365,(2*win-1)*y_obs), allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+            else:
+                pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
         else:
             pdf_win[:,j] = pdf_mod
         
@@ -481,7 +546,11 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         #    period, evaluated with the statistics of this period, to the last
         #    data of the period (getCDF function of the climQMBC package).
         #    Equation 3 of Cannon et al. (2015).
-        Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
+        if frq=='D':
+            Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,win-1,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
+        else:
+            Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
+    
 
     # 3) Apply the inverse cumulative distribution function:
     #    a) Of the observed data, evaluated with the statistics of the observed
@@ -623,24 +692,45 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
     y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
     
-    mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
-    mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
+    if frq=='D':
+        win = 15
+        obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
+        obs_series_moving = obs_series_moving.reshape(obs_series.shape[0]+1,win*2,obs_series.shape[1], order='F')[:-1,1:]
+        
+        mod_series_moving = np.vstack([mod_series[-win:],np.tile(mod_series,(win*2,1)),mod_series[:win]])
+        mod_series_moving = mod_series_moving.reshape(mod_series.shape[0]+1,win*2,mod_series.shape[1], order='F')[:-1,1:]
+        
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving, frq)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series_moving[:,:,:y_obs], frq)
+    
+    else:
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
     
     # 1) Assign a probability distribution function to each month for the
     #    observed and modeled data in the historical period. If annual
     #    frequency is specified, this is applied to the complete historical
     #    period (getDist function of the climQMBC package).
     if user_pdf==False:
-        pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+        if frq=='D':
+            pdf_obs = getDist(obs_series_moving.reshape(365,(2*win-1)*y_obs), allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+        else:
+            pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
     
     # 2) For each projected period, get the delta factor (delta) and time
     #    dependent (aster) statistics (mean, standard deviation, skewness, and
     #    log skewness). Equations 13 to 14 in Chadwick et al. (2023).
     # Matrix [sub-periods, window, periods]
-    win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
-    win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-(y_obs)]
-    
-    mu_win, std_win, skew_win, skewy_win = getStats(win_series)
+    if frq=='D':
+        win_series = np.dstack([np.tile(mod_series_moving,(1,1,y_obs)), np.zeros((mod_series.shape[0],2*win-1,y_obs))])
+        win_series = win_series.reshape(mod_series.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
+        mu_win, std_win, skew_win, skewy_win = getStats(win_series, frq)
+        
+    else:
+        win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
+        win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
+        
+        mu_win, std_win, skew_win, skewy_win = getStats(win_series)
 
     if mult_change:  # Precipitation
         delta_mu = mu_win/np.tile(mu_mod,(y_mod-y_obs,1)).T
@@ -670,15 +760,18 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     UQM_series = np.zeros((mod_series.shape[0], y_mod-y_obs))
     for j in range(Taot.shape[1]):
         
-        Dwin_series = detrend(win_series[:,:,j]) + np.tile(mu_win[:,j],(y_obs,1)).T
-        mu_win_, std_win_, skew_win_, skewy_win_ = getStats(Dwin_series)
+        # Dwin_series = detrend(win_series[:,:,j]) + np.tile(mu_win[:,j],(y_obs,1)).T
+        # mu_win_, std_win_, skew_win_, skewy_win_ = getStats(Dwin_series)
         
         # a) Assign a probability distribution function to each month. If
         #    annual frequency is specified, this is applied to the complete 
         #    period (getDist function of the climQMBC package).
         if user_pdf==False:
-            # pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
-            pdf_win[:,j] = getDist(Dwin_series, allow_negatives, mu_win_, std_win_, skew_win_, skewy_win_)
+            if frq=='D':
+                pdf_win[:,j] = getDist(win_series[:,:,:,j].reshape(365,(2*win-1)*y_obs), allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+            else:
+                pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+            # pdf_win[:,j] = getDist(Dwin_series, allow_negatives, mu_win_, std_win_, skew_win_, skewy_win_)
         else:
             pdf_win[:,j] = pdf_mod
         
@@ -686,8 +779,11 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         #    period, evaluated with the statistics of this period, to the last
         #    data of the period (getCDF function of the climQMBC package).
         #    Equation 3 in Chadwick et al. (2023).
-        # Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
-        Taot[:,j] = getCDF(pdf_win[:,j], Dwin_series[:,-1:], mu_win_, std_win_, skew_win_, skewy_win_)[:,0]
+        if frq=='D':
+            Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,win-1,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
+        else:
+            Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
+        # Taot[:,j] = getCDF(pdf_win[:,j], Dwin_series[:,-1:], mu_win_, std_win_, skew_win_, skewy_win_)[:,0]
         
         # 4) Apply the inverse cumulative distribution function of the observed
         #    data, evaluated with the time dependent statistics, to the values
@@ -978,14 +1074,14 @@ def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100):
                                            np.linspace(1, len(D_obs), len(D_obs)),
                                            CDF_obs)
             else:
-                obs_cdf_intpol = np.linspace(CDF_th, 1-CDF_th, len(D_win))
+                obs_cdf_intpol = CDF_win*0
                 
             if len(D_mod)>0:
                 mod_cdf_intpol = np.interp(np.linspace(1, len(D_mod), len(D_win)),
                                            np.linspace(1, len(D_mod), len(D_mod)),
                                            CDF_mod)
             else:
-                mod_cdf_intpol = np.linspace(CDF_th, 1-CDF_th, len(D_win))
+                mod_cdf_intpol = CDF_win*0
 
             # i) [Switanek et al. (2017), steps 4 and 5)]
             #    Get recurrence intervals and its scaled version for the

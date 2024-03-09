@@ -62,9 +62,16 @@ SDM_var = 1
 
 # Load observed and model data. Remember that for temperature, var = 0, and
 # for precipitation, var = 1.
-obs = np.array(pd.read_csv('../Sample_data/obs_'+variable+'.csv',header=None))
-mod = np.array(pd.read_csv('../Sample_data/mod_'+variable+'.csv',header=None))
+# obs = np.array(pd.read_csv('../Sample_data/obs_'+variable+'.csv',header=None))
+# mod = np.array(pd.read_csv('../Sample_data/mod_'+variable+'.csv',header=None))
 
+obs = pd.read_csv('../Sample_data/obs_D.csv',skiprows=1, index_col=0, parse_dates=True, dayfirst=True)[['CRA']].loc['1985':'2014']
+obs = obs[(obs.index.month!=2)|(obs.index.day!=29)]
+obs = obs.values
+
+mod = pd.read_csv('../Sample_data/mod_D.csv', index_col=0, parse_dates=True).loc['1985':]
+mod = mod[(mod.index.month!=2)|(mod.index.day!=29)]
+mod = mod.values
 
 # Example 1
 # Example 1 shows how to use the report function with the minimum number
@@ -74,9 +81,13 @@ mod = np.array(pd.read_csv('../Sample_data/mod_'+variable+'.csv',header=None))
 # of the modeled period. Remember that the projected periods length is
 # equal to the length of the historical period.
 
-QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
+# QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
 
-# DQM_series = DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives)
+import matplotlib.pylab as plt
+qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq='D')
+dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq='D', mult_change=mult_change)
+qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq='D', mult_change=mult_change)
+uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq='D', mult_change=mult_change)
 
 # Example 2
 # Example 2 shows how to use the report function for specific bias

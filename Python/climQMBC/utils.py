@@ -98,6 +98,7 @@ def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
     # 0) Check frequency.
     if frq=='D':
         I = 365
+        pp_threshold = pp_factor/30
     elif frq=='M':
         I = 12
     elif frq=='A':
@@ -123,7 +124,7 @@ def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
     return years, series
 
 
-def getStats(series):
+def getStats(series, frq=None):
     """
     This function computes the mean, standard deviation, skewness and skewness
     of the logarithmic values, for each sub-period within the year, according
@@ -155,14 +156,18 @@ def getStats(series):
                     [12,1] if the series consider monthly data and [1,1] if the
                     series consider annual data.
     """
+    if frq=='D':
+        dim_stats = (1,2)
+    else:
+        dim_stats = 1
     # Get the mean, standard deviation, skewness and skewness of the
     # logarithmic values of each year sub-period of the series.
-    mu  = np.nanmean(series, 1)                     # Mean
-    sigma = np.nanstd(series, 1, ddof=1)            # Standard deviation
-    skew = stat.skew(series, 1, bias=False)         # Skewness
+    mu  = np.nanmean(series, dim_stats)                     # Mean
+    sigma = np.nanstd(series, dim_stats, ddof=1)            # Standard deviation
+    skew = stat.skew(series, dim_stats, bias=False)         # Skewness
     series_log  = np.log(series)
     series_log[np.isinf(series_log)] = np.log(0.01)
-    skewy = stat.skew(series_log, 1, bias=False)    # Skewness of the log
+    skewy = stat.skew(series_log, dim_stats, bias=False)    # Skewness of the log
 
     return mu, sigma, skew, skewy
 
