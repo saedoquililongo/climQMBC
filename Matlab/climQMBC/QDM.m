@@ -1,4 +1,16 @@
 function QDM_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,pp_factor, rel_change_th,inv_mod_th, win)
+arguments
+    obs
+    mod
+    mult_change = 1;
+    allow_negatives = 1;
+    frq = 'A';
+    pp_threshold = 1;
+    pp_factor = 1/100;
+    rel_change_th = 2;
+    inv_mod_th = pp_threshold;
+    win.win = 1;
+end
 %% QDM_series:
 %   This function performs bias correction of modeled series based on
 %   observed data by the Quantile Delta Mapping (QDM) method, as described
@@ -127,39 +139,41 @@ function QDM_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,p
 
 
 % 0) Check if annual or monthly data is specified.
-if ~exist('mult_change','var')
-    mult_change = 1;
-end
+% if ~exist('mult_change','var')
+%     mult_change = 1;
+% end
+% 
+% if ~exist('allow_negatives','var')
+%     allow_negatives = 1;
+% end
+% 
+% if ~exist('frq','var')
+%     frq = 'A';
+% end
+% 
+% % Define optional arguments
+% if ~exist('pp_threshold','var')
+%     pp_threshold = 1;
+% end
+% 
+% if ~exist('pp_factor','var')
+%     pp_factor = 1/100;
+% end
+% 
+% if ~exist('rel_change_th','var')
+%     rel_change_th = 2;
+% end
+% 
+% if ~exist('inv_mod_th','var')
+%     inv_mod_th = pp_threshold;
+% end
+% 
+% if ~exist('win','var')
+%     win = 1;
+% end
 
-if ~exist('allow_negatives','var')
-    allow_negatives = 1;
-end
 
-if ~exist('frq','var')
-    frq = 'A';
-end
-
-% Define optional arguments
-if ~exist('pp_threshold','var')
-    pp_threshold = 1;
-end
-
-if ~exist('pp_factor','var')
-    pp_factor = 1/100;
-end
-
-if ~exist('rel_change_th','var')
-    rel_change_th = 2;
-end
-
-if ~exist('inv_mod_th','var')
-    inv_mod_th = pp_threshold;
-end
-
-if ~exist('win','var')
-    win = 1;
-end
-
+win = win.win;
 
 % 1) Format inputs and get statistics of the observed and modeled series of
 %    the historical period (formatQM function of the climQMBC package).
@@ -217,13 +231,26 @@ for j = 1:size(prob,2)
     % a) Assign a probability distribution function to each month. If
     %    annual frequency is specified, this is applied to the complete 
     %    period (getDist function of the climQMBC package).
-    pdf_win(:,j) = getDist(reshape((win_series(:,j,:)),size(win_series,[1,3])),allow_negatives,mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
+    if frq=='D'
+        pdf_win(:,j) = getDist(reshape(win_series(:,:,j,:),size(win_series,1),[]),allow_negatives,mu_win(:,1,j),std_win(:,1,j),skew_win(:,1,j),skewy_win(:,1,j));
+    else
+        pdf_win(:,j) = getDist(reshape(win_series(:,j,:),size(win_series,[1,3])),allow_negatives,mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
+    end
+
+    
     
     % b) Apply the cumulative distribution function of the projected
     %    period, evaluated with the statistics of this period, to the last
     %    data of the period (getCDF function of the climQMBC package).
     %    Equation 3 of Cannon et al. (2015).
-    prob(:,j) = getCDF(pdf_win(:,j),win_series(:,j,end),mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
+    if frq=='D'
+        prob(:,j) = getCDF(pdf_win(:,j),win_series(:,win,j,end),mu_win(:,1,j),std_win(:,1,j),skew_win(:,1,j),skewy_win(:,1,j));
+    else
+        prob(:,j) = getCDF(pdf_win(:,j),win_series(:,j,end),mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
+    end
+
+
+    
 end
 
 % 4) Apply the inverse cumulative distribution function:
@@ -255,7 +282,7 @@ QDM = QDM(:);
 % 6) Perform QM for the historical period.
 mod_h = mod_series(:,1:y_obs);
 mod_h = mod_h(:);
-QM_series = QM(obs,mod_h,allow_negatives,frq);
+QM_series = QM(obs,mod_h,allow_negatives,frq,pp_threshold,pp_factor,win);
 QDM_series = [QM_series' QDM']';
 if allow_negatives==0
     QDM_series(QDM_series<pp_threshold) = 0;

@@ -102,7 +102,7 @@ QDM_series <- QDM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1
 UQM_series <- UQM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
 # SDM_series <- SDM(obs,mod,SDM_var=1,frq=frq)
 
-plot(QDM_series)
+plot(UQM_series)
 
 
 ## Example 1
