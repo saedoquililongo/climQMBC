@@ -84,8 +84,8 @@ pp_threshold=1;
 pp_factor=1/(100*100);
 win=15;
 
-qm_series = QM(obs,mod,allow_negatives,frq,pp_threshold, pp_factor, win);
-dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, win);
+% qm_series = QM(obs,mod,allow_negatives,frq,pp_threshold, pp_factor, win);
+% dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, win);
 qdm_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,pp_factor,win=win);
 uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, win);
 

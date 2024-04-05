@@ -212,14 +212,21 @@ if frq == 'D'
     win_series = reshape(win_series, [size(mod_series,1), win*2-1, y_mod+1, y_obs]);
     win_series = win_series(:,:,2:(y_mod-y_obs+1),:);
 
+    [mu_win, std_win, skew_win, skewy_win] = getStats(win_series, frq);
+
+    mu_win = reshape(mu_win, 365, []);
+    std_win = reshape(std_win, 365, []);
+    skew_win = reshape(skew_win, 365, []);
+    skewy_win = reshape(skewy_win, 365, []);
+
 else
     win_series = [repmat(mod_series,1,y_obs), zeros(size(mod_series,1),y_obs)];
     win_series = reshape(win_series,[size(mod_series,1),y_mod+1,y_obs]);
     win_series = win_series(:,2:end-y_obs,:);
+
+    [mu_win, std_win, skew_win, skewy_win] = getStats(win_series, frq);
 end
 
-
-[mu_win, std_win, skew_win, skewy_win] = getStats(win_series, frq);
 
 % 3) For each projected period:
 pdf_win = zeros(size(mod_series,1),size(mod_series,2)-y_obs);
@@ -232,7 +239,7 @@ for j = 1:size(prob,2)
     %    annual frequency is specified, this is applied to the complete 
     %    period (getDist function of the climQMBC package).
     if frq=='D'
-        pdf_win(:,j) = getDist(reshape(win_series(:,:,j,:),size(win_series,1),[]),allow_negatives,mu_win(:,1,j),std_win(:,1,j),skew_win(:,1,j),skewy_win(:,1,j));
+        pdf_win(:,j) = getDist(reshape(win_series(:,:,j,:),size(win_series,1),[]),allow_negatives,mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
     else
         pdf_win(:,j) = getDist(reshape(win_series(:,j,:),size(win_series,[1,3])),allow_negatives,mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
     end
@@ -244,7 +251,7 @@ for j = 1:size(prob,2)
     %    data of the period (getCDF function of the climQMBC package).
     %    Equation 3 of Cannon et al. (2015).
     if frq=='D'
-        prob(:,j) = getCDF(pdf_win(:,j),win_series(:,win,j,end),mu_win(:,1,j),std_win(:,1,j),skew_win(:,1,j),skewy_win(:,1,j));
+        prob(:,j) = getCDF(pdf_win(:,j),win_series(:,win,j,end),mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
     else
         prob(:,j) = getCDF(pdf_win(:,j),win_series(:,j,end),mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
     end

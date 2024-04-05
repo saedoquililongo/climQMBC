@@ -49,6 +49,7 @@ Revision: 0, updated Dec 2021
 """
 
 from climQMBC.methods import QM, DQM, QDM, UQM, SDM
+from climQMBC.utils import formatQM, getStats, getDist, getCDF, getCDFinv
 from climQMBC.report import report
 import matplotlib.pylab as plt
 import pandas as pd
