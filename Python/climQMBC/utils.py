@@ -1,3 +1,10 @@
+"""
+1) Umbral dinámica para ajustar días lluvia GCM
+2) No lluvia a nan (verificar todos los estadísticos)
+3) días lluvia >30 -> dele
+4) días lluvia <30 -> zero-value replacement
+"""
+
 # -*- coding: utf-8 -*-
 """
 This script contains the main functions requiered by the methods implemented in
@@ -98,7 +105,7 @@ def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
     # 0) Check frequency.
     if frq=='D':
         I = 365
-        pp_threshold = pp_factor/30
+        # pp_threshold = pp_factor/30
     elif frq=='M':
         I = 12
     elif frq=='A':

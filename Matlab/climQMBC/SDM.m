@@ -1,4 +1,4 @@
-function SDM_series = SDM(obs,mod,var,frq,pp_threshold,pp_factor)
+function SDM_series = SDM(obs,mod,SDM_var,frq,pp_threshold,pp_factor)
 %% SDM_series
 %   This function performs bias correction of modeled series based on
 %   observed data by the Scaled Distribution Mapping (SDM) method, as
@@ -169,7 +169,8 @@ end
 
 % 1) Format inputs and get statistics of the observed and modeled series of
 % the historical period (formatQM function of the climQMBC package).
-[y_obs,obs_series,mod_series,~,~,~,~,~,~,~,~] = formatQM(obs,mod,var,frq,pp_threshold,pp_factor);
+[y_obs,obs_series] = formatQM(obs, SDM_var, frq,pp_threshold,pp_factor);
+[y_mod,mod_series] = formatQM(mod, SDM_var, frq,pp_threshold,pp_factor);
 
 SDM  = zeros(size(mod_series,1),size(mod_series,2)-y_obs);
 SDM_h  = zeros(size(obs_series,1),y_obs);
@@ -181,7 +182,7 @@ for m = 1:size(mod_series,1)
     %     the historical period.
     %     For precipitation, get the rainday values and its frequency for
     %     the modeled and observed series in the historical period.
-    if var == 0
+    if SDM_var == 0
         D_obs = detrend(obs_series(m,:));
         D_mod = detrend(mod_series(m,1:y_obs));
 
@@ -206,7 +207,7 @@ for m = 1:size(mod_series,1)
     %    for temperature and to (1 - threshold) for temperature and
     %    precipitation. Threshold is set in the first lines of this
     %    function. Default is CDF_th = 10^-3.
-    if var == 0
+    if SDM_var == 0
         mu_obsD = mean(D_obs);
         mu_modD = mean(D_mod);
         sigma_obsD = std(D_obs,0);
@@ -241,7 +242,7 @@ for m = 1:size(mod_series,1)
         %    For precipitation, get the rainday values, its frequency, and
         %    expected raindays for the projected period.
         %    Get the index of the sorted detrended or rainday values.
-        if var == 0
+        if SDM_var == 0
             D_win = detrend(win_series);
             exp_D = size(win_series,2);
             [~,win_argsort] = sort(D_win);
@@ -264,7 +265,7 @@ for m = 1:size(mod_series,1)
         %    (0 + threshold) for temperature and to (1 - threshold) for
         %    temperature and precipitation. Threshold is set in the first
         %    lines of this function. Default is CDF_th = 10^-3.
-        if var == 0
+        if SDM_var == 0
             mu_winD = nanmean(D_win);
             sigma_winD = nanstd(D_win,0);
             
@@ -282,7 +283,7 @@ for m = 1:size(mod_series,1)
         % g) [Switanek et al. (2017), step 3)]
         %    Get the scaling between the model projected period and
         %    historical period distributions.
-        if var == 0
+        if SDM_var == 0
             SF = (sigma_obsD/sigma_modD)*(norminv(CDF_win,mu_winD,sigma_winD) - norminv(CDF_win,mu_modD,sigma_modD));
         else
             SF = gaminv(CDF_win,fit_win(1),fit_win(2))./gaminv(CDF_win,fit_mod(1),fit_mod(2));
@@ -297,7 +298,7 @@ for m = 1:size(mod_series,1)
         %    Get recurrence intervals and its scaled version for the
         %    observed, historical modeled and projected period modeled
         %    CDFs.
-        if var == 0
+        if SDM_var == 0
             RI_obs = 1./(0.5 - abs(obs_cdf_intpol - 0.5));
             RI_mod = 1./(0.5 - abs(mod_cdf_intpol - 0.5));
             RI_win = 1./(0.5 - abs(CDF_win - 0.5));
@@ -322,7 +323,7 @@ for m = 1:size(mod_series,1)
         %    Get the initial bias corrected values. For precipitation,
         %    these values are interpolated to the length of the expected
         %    raindays.
-        if var == 0
+        if SDM_var == 0
             xvals = norminv(sort(CDF_scaled),mu_obsD,sigma_obsD) + SF;
             xvals = xvals - mean(xvals) + mu_obs + (mu_win - mu_mod);
         else
@@ -340,7 +341,7 @@ for m = 1:size(mod_series,1)
         %    For temperature, the trend of the projected period is added
         %    back.
         corr_temp(win_argsort(end-exp_D+1:end)) = xvals;
-        if var == 0
+        if SDM_var == 0
             corr_temp = corr_temp + diff_win - mu_win;
         end
         
@@ -359,7 +360,7 @@ end
 SDM = SDM(:);
 SDM_h = SDM_h(:);
 SDM_series = [SDM_h' SDM']';
-if var==1
+if SDM_var==1
     SDM_series(SDM_series<pp_threshold) = 0;
 end
 end

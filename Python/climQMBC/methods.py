@@ -47,7 +47,7 @@ import scipy.stats as stat
 import numpy as np
 
 
-def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None, win=1):
     """
     This function performs bias correction of modeled series based on observed
     data by the Quantile Mapping (QM) method, as described by Cannon et al. 
@@ -137,7 +137,6 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, us
     y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
     
     if frq=='D':
-        win = 15
         obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
         obs_series_moving = obs_series_moving.reshape(obs_series.shape[0]+1,win*2,obs_series.shape[1], order='F')[:-1,1:]
         
@@ -182,7 +181,7 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, us
     return QM_series
 
 
-def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None, win=1):
     """
     This function performs bias correction of modeled series based on observed
     data by the Detrended Quantile Mapping (DQM) method, as described by Cannon
@@ -287,7 +286,6 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
     
     if frq=='D':
-        win = 15
         obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
         obs_series_moving = obs_series_moving.reshape(obs_series.shape[0]+1,win*2,obs_series.shape[1], order='F')[:-1,1:]
         
@@ -368,7 +366,7 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     return DQM_series
 
 
-def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, rel_change_th=2, inv_mod_th=None, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, rel_change_th=2, inv_mod_th=None, user_pdf=False, pdf_obs=None, pdf_mod=None, win=1):
     """
     This function performs bias correction of modeled series based on observed
     data by the Quantile Delta Mapping (QDM) method, as described by Cannon
@@ -487,7 +485,6 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
     
     if frq=='D':
-        win = 15
         obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
         obs_series_moving = obs_series_moving.reshape(obs_series.shape[0]+1,win*2,obs_series.shape[1], order='F')[:-1,1:]
         
@@ -589,7 +586,7 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     return QDM_series
 
 
-def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None):
+def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None, win=1):
     """
     This function performs bias correction of modeled series based on observed
     data by the Unbiased Quantile Mapping (UQM) method, as described by 
@@ -693,7 +690,6 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
     
     if frq=='D':
-        win = 15
         obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
         obs_series_moving = obs_series_moving.reshape(obs_series.shape[0]+1,win*2,obs_series.shape[1], order='F')[:-1,1:]
         

@@ -1,4 +1,4 @@
-function UQM_series = UQM(obs,mod,var,frq,pp_threshold,pp_factor)
+function UQM_series = UQM(obs, mod, mult_change, allow_negatives, frq,pp_threshold,pp_factor)
 %% UQM_series:
 %   This function performs bias correction of modeled series based on
 %   observed data by the Unbiased Quantile Mapping (UQM) method, as 
@@ -111,6 +111,20 @@ function UQM_series = UQM(obs,mod,var,frq,pp_threshold,pp_factor)
 
 %%
 
+
+% 0) Check if annual or monthly data is specified.
+if ~exist('mult_change','var')
+    mult_change = 1;
+end
+
+if ~exist('allow_negatives','var')
+    allow_negatives = 1;
+end
+
+if ~exist('frq','var')
+    frq = 'A';
+end
+
 % Define optional arguments
 if ~exist('pp_threshold','var')
     pp_threshold = 1;
@@ -120,114 +134,85 @@ if ~exist('pp_factor','var')
     pp_factor = 1/100;
 end
 
-% 0) Check if annual or monthly data is specified.
-if ~exist('frq','var')
-    frq = 'M';
-end
-
 % 1) Format inputs and get statistics of the observed and modeled series of
 %    the historical period (formatQM function of the climQMBC package).
-[y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod] = formatQM(obs,mod,var,frq,pp_threshold,pp_factor);
+[y_obs,obs_series] = formatQM(obs, allow_negatives, frq,pp_threshold,pp_factor);
+[y_mod,mod_series] = formatQM(mod, allow_negatives, frq,pp_threshold,pp_factor);
+
+[mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series, frq);
+[mu_mod, std_mod, skew_mod, skewy_mod] = getStats(mod_series(:,1:y_obs), frq);
 
 % 2) Assign a probability distribution function to each month of the 
 %    historical period (getDist function of the climQMBC package).
-PDF_obs = getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var);
+pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
 
 % 3) For each projected period, get the delta factor (delta) and time
 %    dependent (aster) statistics (mean, standard deviation, skewness, and
 %    log skewness). Equations X to X in Chadwick et al. (2021).
-xbarmt = zeros(size(mod_series,1),size(mod_series,2)-y_obs);
-xhatmt = zeros(size(xbarmt));
-skwmt = zeros(size(xbarmt));
-Lskwmt = zeros(size(xbarmt));
+win_series = [repmat(mod_series,1,y_obs), zeros(size(mod_series,1),y_obs)];
+win_series = reshape(win_series,[size(mod_series,1),y_mod+1,y_obs]);
+win_series = win_series(:,2:end-y_obs,:);
 
-Dmu    = zeros(size(xbarmt));
-Dsigma = zeros(size(xbarmt));
-Dskw   = zeros(size(xbarmt));
-DLskw  = zeros(size(xbarmt));
-muAster= zeros(size(xbarmt));
-sigmaAster= zeros(size(xbarmt));
-skwAster  = zeros(size(xbarmt));
-LskwAster = zeros(size(xbarmt));
+[mu_win, std_win, skew_win, skewy_win] = getStats(win_series, frq);
 
-if var==1 % Precipitation
-    for i = 1:size(xbarmt,1)
-        for j = 1:size(xbarmt,2)
-            xbarmt(i,j) = nanmean(mod_series(i,j+1:y_obs+j));
-            xhatmt(i,j) = nanstd(mod_series(i,j+1:y_obs+j),0);
-            
-            skwmt(i,j)  = skewness(mod_series(i,j+1:y_obs+j),0);
-            Lnskwmt     = log(mod_series(i,j+1:y_obs+j));
-            Lnskwmt(isinf(Lnskwmt))= log(0.01);
-            Lskwmt(i,j) = skewness(Lnskwmt,0);
-            
-            Dmu(i,j)    = (xbarmt(i,j)- mu_mod(i))/ mu_mod(i);
-            Dsigma(i,j) = (xhatmt(i,j)- std_mod(i))/ std_mod(i);
-            Dskw(i,j)   = (skwmt(i,j) - skew_mod(i))/ skew_mod(i);
-            DLskw(i,j)  = (Lskwmt(i,j)- skewy_mod(i))/ skewy_mod(i);
-            
-            muAster(i,j)= mu_obs(i)*(1+ Dmu(i,j));
-            sigmaAster(i,j)= std_obs(i)*(1+ Dsigma(i,j));
-            skwAster(i,j)  = skew_obs(i)*(1+ Dskw(i,j));
-            LskwAster(i,j) = skewy_obs(i)*(1+ DLskw(i,j));
-        end
-    end
+mu_mod_repeated = repmat(mu_mod,1,(y_mod-y_obs));
+std_mod_repeated = repmat(std_mod,1,(y_mod-y_obs));
+skew_mod_repeated = repmat(skew_mod,1,(y_mod-y_obs));
+skewy_mod_repeated = repmat(skewy_mod,1,(y_mod-y_obs));
+
+mu_obs_repeated = repmat(mu_obs,1,(y_mod-y_obs));
+std_obs_repeated = repmat(std_obs,1,(y_mod-y_obs));
+skew_obs_repeated = repmat(skew_obs,1,(y_mod-y_obs));
+skewy_obs_repeated = repmat(skewy_obs,1,(y_mod-y_obs));
+
+
+if mult_change==1 % Precipitation
+    delta_mu = mu_win./mu_mod_repeated;
+    delta_sigma = std_win./std_mod_repeated;
+    delta_skew = skew_win./skew_mod_repeated;
+    delta_skewy = skewy_win./skewy_mod_repeated;
+    
+    mu_projected = mu_obs_repeated.*delta_mu;
+    sigma_projected = std_obs_repeated.*delta_sigma;
+    skew_projected = skew_obs_repeated.*delta_skew;
+    skewy_projected = skewy_obs_repeated.*delta_skewy;
+
 else % Temperature
-    for i = 1:size(xbarmt,1)
-        for j = 1:size(xbarmt,2)
-            xbarmt(i,j) = nanmean(mod_series(i,j+1:y_obs+j));
-            xhatmt(i,j) = nanstd(mod_series(i,j+1:y_obs+j),0);
-            
-            skwmt(i,j)  = skewness(mod_series(i,j+1:y_obs+j),0);
-            Lnskwmt     = log(mod_series(i,j+1:y_obs+j));
-            Lnskwmt(imag(Lnskwmt)~=0)= 0;
-            Lskwmt(i,j) = skewness(Lnskwmt,0);
-            
-            Dmu(i,j)    = xbarmt(i,j)- mu_mod(i);
-            Dsigma(i,j) = xhatmt(i,j)- std_mod(i);
-            Dskw(i,j)   = skwmt(i,j) - skew_mod(i);
-            DLskw (i,j) = Lskwmt(i,j)- skewy_mod(i);
-            
-            muAster(i,j)= mu_obs(i)+(Dmu(i,j));
-            sigmaAster(i,j)= std_obs(i)+(Dsigma(i,j));
-            skwAster(i,j)  = skew_obs(i)+(Dskw(i,j));
-            LskwAster(i,j) = skewy_obs(i)+(DLskw(i,j));
-        end
-    end
+    delta_mu = mu_win - mu_mod_repeated;
+    delta_sigma = std_win - std_mod_repeated;
+    delta_skew = skew_win - skew_mod_repeated;
+    delta_skewy = skewy_win - skewy_mod_repeated;
+    
+    mu_projected = mu_obs_repeated + delta_mu;
+    sigma_projected = std_obs_repeated + delta_sigma;
+    skew_projected = skew_obs_repeated + delta_skew;
+    skewy_projected = skewy_obs_repeated + delta_skewy;
 end
 
 % 4) For each projected period:
-PDF_win = zeros(size(mod_series,1),size(mod_series,2)-y_obs);
-Taot = zeros(size(mod_series,1),size(mod_series,2)-y_obs);
+pdf_win = zeros(size(mod_series,1),size(mod_series,2)-y_obs);
+prob = zeros(size(mod_series,1),size(mod_series,2)-y_obs);
 UQM  = zeros(size(mod_series,1),size(mod_series,2)-y_obs);
-for j = 1:size(Taot,2)
-    win_series  = mod_series(:,1+j:y_obs+j);
-    
-    mux  = nanmean(win_series,2);
-    sigmax = nanstd(win_series,0,2);
-    skewx = skewness(win_series,0,2);
-    Ln_win  = log(win_series);
-    Ln_win(imag(Ln_win)~=0)= 0;
-    skewy = skewness(Ln_win,0,2);
+for j = 1:size(prob,2)
     
     % a) Assign a probability distribution function to each month. If
     %    annual frequency is specified, this is applied to the complete 
     %    period (getDist function of the climQMBC package).
-    PDF_win(:,j) = getDist(win_series,mux,sigmax,skewx,skewy,var);
+    pdf_win(:,j) = getDist(reshape((win_series(:,j,:)),size(win_series,[1,3])),allow_negatives,mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
     
     % b) Apply the cumulative distribution function of the projected
     %    period, evaluated with the statistics of this period, to the last
     %    data of the period (getCDF function of the climQMBC package).
     %    Equation X of Chadwick et al. (2021).
-    Taot(:,j) = getCDF(PDF_win(:,j),mod_series(:,y_obs+j),mux,sigmax,skewx,skewy);
+    prob(:,j) = getCDF(pdf_win(:,j),win_series(:,j,end),mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
 end
 
 % 5) Apply the inverse cumulative distribution function of the observed
 %    data, evaluated with the time dependent statistics, to the values
 %    obtained in 4b) (getCDFinv function of the climQMBC package). Equation
 %    X of Chadwick et al. (2021).
-for yr=1:size(Taot,2)
-    UQM(:,yr) = getCDFinv(PDF_obs,Taot(:,yr),muAster(:,yr),sigmaAster(:,yr),skwAster(:,yr),LskwAster(:,yr));
+for yr=1:size(prob,2)
+    UQM(:,yr) = getCDFinv(pdf_obs,prob(:,yr),mu_projected(:,yr),sigma_projected(:,yr),skew_projected(:,yr),skewy_projected(:,yr));
 end
 
 UQM = UQM(:);
@@ -235,9 +220,9 @@ UQM = UQM(:);
 % 6) Perform QM for the historical period
 mod_h = mod_series(:,1:y_obs);
 mod_h = mod_h(:);
-QM_series = QM(obs,mod_h,var,frq);
+QM_series = QM(obs,mod_h,allow_negatives,frq);
 UQM_series = [QM_series' UQM']';
-if var==1
+if allow_negatives==0
     UQM_series(UQM_series<pp_threshold) = 0;
 end
 end

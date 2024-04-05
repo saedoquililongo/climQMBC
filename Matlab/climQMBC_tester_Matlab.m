@@ -62,6 +62,17 @@ var = 1;
 obs = csvread(strcat('../Sample_data/obs_',char(var_name(var+1)),'.csv'));
 mod = csvread(strcat('../Sample_data/mod_',char(var_name(var+1)),'.csv'));
 
+allow_negatives = 0;
+mult_change = 1;
+SDM_var = 1;
+
+frq = 'A'; % 'M' for monthly data; 'A' for annual data
+QM_series = QM(obs,mod,allow_negatives,frq);
+DQM_series = DQM(obs,mod,mult_change,allow_negatives,frq);
+QDM_series = QDM(obs,mod,mult_change,allow_negatives,frq);
+UQM_series = UQM(obs,mod,mult_change,allow_negatives,frq);
+SDM_series = SDM(obs,mod,SDM_var,frq);
+
 %% Example 1
 %   Example 1 shows how to use the report function with the minimum number
 %   of inputs. The five methods available in the climQMBC package will be
@@ -70,7 +81,7 @@ mod = csvread(strcat('../Sample_data/mod_',char(var_name(var+1)),'.csv'));
 %   of the modeled period. Remember that the projected periods length is
 %   equal to the length of the historical period.
 
-[QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,var);
+% [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,var);
 
 
 %% Example 2

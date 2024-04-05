@@ -1,4 +1,4 @@
-function QM_series = QM(obs,mod,var,frq,pp_threshold,pp_factor)
+function QM_series = QM(obs, mod, allow_negatives, frq,pp_threshold,pp_factor)
 %% QM_series:
 %   This function performs bias correction of modeled series based on 
 %   observed data by the Quantile Mapping (QM) method, as described by
@@ -100,6 +100,15 @@ function QM_series = QM(obs,mod,var,frq,pp_threshold,pp_factor)
 
 %%
 
+% 0) Check if annual or monthly data is specified.
+if ~exist('allow_negatives','var')
+    allow_negatives = 1;
+end
+
+if ~exist('frq','var')
+    frq = 'A';
+end
+
 % Define optional arguments
 if ~exist('pp_threshold','var')
     pp_threshold = 1;
@@ -109,36 +118,37 @@ if ~exist('pp_factor','var')
     pp_factor = 1/100;
 end
 
-% 0) Check if annual or monthly data is specified.
-if ~exist('frq','var')
-    frq = 'M';
-end
+
 
 % 1) Format inputs and get statistics of the observed and modeled series of
 %    the historical period (formatQM function of the climQMBC package).
-[y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod] = formatQM(obs,mod,var,frq,pp_threshold,pp_factor);
+[y_obs,obs_series] = formatQM(obs, allow_negatives, frq,pp_threshold,pp_factor);
+[y_mod,mod_series] = formatQM(mod, allow_negatives, frq,pp_threshold,pp_factor);
+
+[mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series, frq);
+[mu_mod, std_mod, skew_mod, skewy_mod] = getStats(mod_series(:,1:y_obs), frq);
 
 % 2) Assign a probability distribution function to each month for the
 %    observed and modeled data in the historical period. If annual
 %    frequency is specified, this is applied to the complete historical
 %    period (getDist function of the climQMBC package).
-PDF_obs = getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var);
-PDF_mod = getDist(mod_series(:,1:y_obs),mu_mod,std_mod,skew_mod,skewy_mod,var);
+pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+pdf_mod = getDist(mod_series(:,1:y_obs),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
 
 % 3) Apply the cumulative distribution function of the modeled data,
 %    evaluated with the statistics of the modeled data in the historical
 %    period, to the modeled data (getCDF function of the climQMBC package).
 %    Equation 1 of Cannon et al. (2015).
-Taot = getCDF(PDF_mod,mod_series,mu_mod,std_mod,skew_mod,skewy_mod);
+prob = getCDF(pdf_mod,mod_series,mu_mod,std_mod,skew_mod,skewy_mod);
 
 % 4) Apply the inverse cumulative distribution function of the observed
 %    data, evaluated with the statistics of the observed data in the
 %    historical period, to the probabilities obtained from 3) (getCDFinv
 %    function of the climQMBC package). Equation 1 of Cannon et al. (2015).
-QM_series = getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs);
+QM_series = getCDFinv(pdf_obs,prob,mu_obs,std_obs,skew_obs,skewy_obs);
 
 QM_series=QM_series(:);
-if var==1
+if allow_negatives==0
     QM_series(QM_series<pp_threshold) = 0;
 end
 end

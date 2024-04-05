@@ -1,4 +1,4 @@
-function DQM_series = DQM(obs,mod,var,frq,pp_threshold,pp_factor)
+function DQM_series = DQM(obs, mod, mult_change, allow_negatives, frq,pp_threshold,pp_factor)
 %% DQM_series:
 %   This function performs bias correction of modeled series based on
 %   observed data by the Detrended Quantile Mapping (DQM) method, as 
@@ -115,6 +115,19 @@ function DQM_series = DQM(obs,mod,var,frq,pp_threshold,pp_factor)
 
 %%
 
+% 0) Check if annual or monthly data is specified.
+if ~exist('mult_change','var')
+    mult_change = 1;
+end
+
+if ~exist('allow_negatives','var')
+    allow_negatives = 1;
+end
+
+if ~exist('frq','var')
+    frq = 'A';
+end
+
 % Define optional arguments
 if ~exist('pp_threshold','var')
     pp_threshold = 1;
@@ -124,66 +137,62 @@ if ~exist('pp_factor','var')
     pp_factor = 1/100;
 end
 
-% 0) Check if annual or monthly data is specified.
-if ~exist('frq','var')
-    frq = 'M';
-end
 
 % 1) Format inputs and get statistics of the observed and modeled series of
 %    the historical period (formatQM function of the climQMBC package).
-[y_obs,obs_series,mod_series,mu_obs,std_obs,skew_obs,skewy_obs,mu_mod,std_mod,skew_mod,skewy_mod] = formatQM(obs,mod,var,frq,pp_threshold,pp_factor);
+[y_obs,obs_series] = formatQM(obs, allow_negatives, frq,pp_threshold,pp_factor);
+[y_mod,mod_series] = formatQM(mod, allow_negatives, frq,pp_threshold,pp_factor);
+
+[mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series, frq);
+[mu_mod, std_mod, skew_mod, skewy_mod] = getStats(mod_series(:,1:y_obs), frq);
 
 % 2) Assign a probability distribution function to each month for the
 %    observed and modeled data in the historical period. If annual
 %    frequency is specified, this is applied to the complete historical
 %    period (getDist function of the climQMBC package).
-PDF_obs = getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var);
-PDF_mod = getDist(mod_series(:,1:y_obs),mu_mod,std_mod,skew_mod,skewy_mod,var);
+pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+pdf_mod = getDist(mod_series(:,1:y_obs),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
 
 % 3) Extract the long-term trend from the modeled data:
 %    a) Get the monthly mean of the historical period. If annual
 %       frequency is specified, this is applied to the complete period).
-xbarmh = mean(mod_series(:,1:y_obs),2);
+win_series = [repmat(mod_series,1,y_obs), zeros(size(mod_series,1),y_obs)];
+win_series = reshape(win_series,[size(mod_series,1),y_mod+1,y_obs]);
+win_series = win_series(:,2:end-y_obs,:);
 
-%    b) Get the monthly mean of each projected period. If annual
-%       frequency is specified, this is applied to the complete period).
-y_mod   = size(mod_series,2);
-xbarmp = zeros(size(mod_series,1),(y_mod-y_obs));
-for j=1:(y_mod-y_obs)
-    xbarmp(:,j) = mean(mod_series(:,(j+1):(y_obs+j)),2);
-end
+mu_win = mean(win_series,3);
+
+mu_mod_repeated = repmat(mu_mod,1,(y_mod-y_obs));
+
 
 % 4)Compute the linear scaled values (value in square brackets in equation
 %   2 of Cannon et al. (2015)).
-LS = zeros(size(xbarmp));
-if var == 1   % Precipitation
-    for m = 1:size(mod_series,1)
-        LS(m,:) = (mod_series(m,y_obs+1:end).* xbarmh(m,1))./ xbarmp(m,:);
-    end    
+if mult_change == 1   % Precipitation
+    scaling_factor = mu_win./mu_mod_repeated;
+    detrended_series = mod_series(:,y_obs+1:end)./scaling_factor;
 else          % Temperature
-    for m = 1:size(mod_series,1)
-        LS(m,:) = (mod_series(m,y_obs+1:end)+ xbarmh(m))- xbarmp(m,:);
-    end     
+    scaling_factor = mu_win - mu_mod_repeated;
+    detrended_series = mod_series(:,y_obs+1:end) - scaling_factor;
 end
 
 % 5) Apply the cumulative distribution function of the modeled data,
 %    evaluated with the statistics of the modeled period, to the future
 %    modeled data (getCDF function of the climQMBC package). Equation 2 of
 %    Cannon et al. (2015).
-Taot = getCDF(PDF_mod,LS,mu_mod,std_mod,skew_mod,skewy_mod);
+prob = getCDF(pdf_mod,detrended_series,mu_mod,std_mod,skew_mod,skewy_mod);
 
 % 6) Apply the inverse cumulative distribution function of the observed
 %    data, evaluated with the statistics of the observed data in the
 %    historical period, to the probabilities obtained from 5) (getCDFinv
 %    function of the climQMBC package). Equation 2 of Cannon et al. (2015).
-DQM_LS = getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs);
+DQM_LS = getCDFinv(pdf_obs,prob,mu_obs,std_obs,skew_obs,skewy_obs);
 
 % 7) Reimpose the trend to the values obtained in 6). Equation 2 of Cannon
 %    et al. (2015).
-if var == 1 % Precipitation
-    DQM = DQM_LS .* (xbarmp ./ repmat(xbarmh,1,y_mod-y_obs)); 
+if mult_change == 1 % Precipitation
+    DQM = DQM_LS.*scaling_factor;
 else % Temperature
-    DQM = DQM_LS + (xbarmp - repmat(xbarmh,1,y_mod-y_obs)); 
+    DQM = DQM_LS + scaling_factor;
 end
 
 DQM = DQM(:);
@@ -191,9 +200,9 @@ DQM = DQM(:);
 % 8) Perform QM for the historical period.
 mod_h = mod_series(:,1:y_obs);
 mod_h = mod_h(:);
-QM_series = QM(obs,mod_h,var,frq);
+QM_series = QM(obs,mod_h,allow_negatives,frq);
 DQM_series = [QM_series' DQM']';
-if var==1
+if allow_negatives==0
     DQM_series(DQM_series<pp_threshold) = 0;
 end
 end

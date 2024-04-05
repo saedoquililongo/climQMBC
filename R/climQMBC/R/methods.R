@@ -20,57 +20,106 @@
 #' @examples QM(obs,mod,var,frq='M',pp_threshold=0.1)
 #' @examples QM(obs,mod,var,frq='M',pp_factor=1/1000)
 #' @examples QM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
-QM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
-
+QM <- function(obs, mod, allow_negatives, frq, pp_threshold, pp_factor, win){
+  
+  if(missing(allow_negatives)) {
+    allow_negatives <- 1
+  }
+  
+  if(missing(frq)) {
+    frq <- 'A'
+  }
+  
   if(missing(pp_threshold)) {
     pp_threshold <- 1
   }
-
+  
   if(missing(pp_factor)) {
     pp_factor <- 1/100
   }
-
-  # 0) Check if annually or monthly data is specified.
-  if(missing(frq)) {
-    frq <- 'M'
+  
+  if(missing(win)) {
+    win <- 1
   }
-
+  
+  
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
+  format_list_obs <- formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
+  y_obs <- format_list_obs[[1]]
+  obs_series <- format_list_obs[[2]]
+  
+  format_list_mod <- formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
+  y_mod <- format_list_mod[[1]]
+  mod_series <- format_list_mod[[2]]
+  
+  if (frq=='D') {
+    
+    obs_series_moving <- rbind(obs_series[(dim(obs_series)[1]-win+1):dim(obs_series)[1],],rep(1,win*2) %x% obs_series,obs_series[1:win,])
+    obs_series_moving <- array(obs_series_moving, c(dim(obs_series)[1]+1, win*2, dim(obs_series)[2]))[1:dim(obs_series)[1],2:(win*2),]
+    
+    # Avoids dropping a dimension of length 1
+    obs_series_moving <- array(obs_series_moving, c(dim(obs_series_moving)[1], win*2-1,dim(obs_series)[2]))
 
-  y_obs       <- format_list[[1]]
-  obs_series  <- format_list[[2]]
-  mod_series  <- format_list[[3]]
-  mu_obs      <- format_list[[4]]
-  std_obs     <- format_list[[5]]
-  skew_obs    <- format_list[[6]]
-  skewy_obs   <- format_list[[7]]
-  mu_mod      <- format_list[[8]]
-  std_mod     <- format_list[[9]]
-  skew_mod    <- format_list[[10]]
-  skewy_mod   <- format_list[[11]]
+    
+    mod_series_moving <- rbind(mod_series[(dim(mod_series)[1]-win+1):dim(mod_series)[1],],rep(1,win*2) %x% mod_series,mod_series[1:win,])
+    mod_series_moving <- array(mod_series_moving, c(dim(mod_series)[1]+1, win*2, dim(mod_series)[2]))[1:dim(mod_series)[1],2:(win*2),]
+    mod_series_moving <- array(mod_series_moving, c(dim(mod_series_moving)[1], win*2-1,dim(mod_series)[2]))
+    
+    stats_list_obs <- getStats(obs_series_moving, frq)
+    mu_obs <- stats_list_obs[[1]]
+    std_obs <- stats_list_obs[[2]]
+    skew_obs <- stats_list_obs[[3]]
+    skewy_obs <- stats_list_obs[[4]]
+    
+    stats_list_mod <- getStats(array(mod_series_moving[,,1:y_obs],c(dim(mod_series_moving)[1],2*win-1,y_obs)), frq)
+    mu_mod <- stats_list_mod[[1]]
+    std_mod <- stats_list_mod[[2]]
+    skew_mod <- stats_list_mod[[3]]
+    skewy_mod <- stats_list_mod[[4]]
+    
+  } else {
+    stats_list_obs <- getStats(obs_series, frq)
+    mu_obs <- stats_list_obs[[1]]
+    std_obs <- stats_list_obs[[2]]
+    skew_obs <- stats_list_obs[[3]]
+    skewy_obs <- stats_list_obs[[4]]
+    
+    stats_list_mod <- getStats(matrix(mod_series[,1:y_obs],nrow=dim(mod_series)[1]), frq)
+    mu_mod <- stats_list_mod[[1]]
+    std_mod <- stats_list_mod[[2]]
+    skew_mod <- stats_list_mod[[3]]
+    skewy_mod <- stats_list_mod[[4]]
+  }
 
   # 2) Assign a probability distribution function to each month for the
   #    observed and modeled data in the historical period. If annual
   #    frequency is specified, this is applied to the complete historical
   #    period (getDist function of the climQMBC package).
-  PDF_obs <- getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var)
-  PDF_mod <- getDist(matrix(mod_series[,1:y_obs],nrow=dim(mod_series)[1]),mu_mod,std_mod,skew_mod,skewy_mod,var)
+  if (frq=='D') {
+    pdf_obs <- getDist(array(obs_series_moving, c(dim(obs_series_moving)[1],(2*win-1)*y_obs)),
+                       allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
+    pdf_mod <- getDist(array(mod_series_moving[,,1:y_obs], c(dim(mod_series_moving)[1],(2*win-1)*y_obs)),
+                       allow_negatives, mu_mod,std_mod,skew_mod,skewy_mod)
+  } else {
+    pdf_obs <- getDist(obs_series, allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
+    pdf_mod <- getDist(matrix(mod_series[,1:y_obs],nrow=dim(mod_series)[1]),allow_negatives, mu_mod,std_mod,skew_mod,skewy_mod)
+  }
+  
 
   # 3) Apply the cumulative distribution function of the modeled data,
   #    evaluated with the statistics of the modeled data in the historical
   #    period, to the modeled data (getCDF function of the climQMBC package).
   #    Equation 1 of Cannon et al. (2015).
-  Taot <- getCDF(PDF_mod,mod_series,mu_mod,std_mod,skew_mod,skewy_mod)
+  prob <- getCDF(pdf_mod,mod_series,mu_mod,std_mod,skew_mod,skewy_mod)
 
   # 4) Apply the inverse cumulative distribution function of the observed
   #    data, evaluated with the statistics of the observed data in the
   #    historical period, to the probabilities obtained from 3) (getCDFinv
   #    function of the climQMBC package). Equation 1 of Cannon et al. (2015).
-  QM_series <- getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs)
+  QM_series <- getCDFinv(pdf_obs,prob,mu_obs,std_obs,skew_obs,skewy_obs)
   QM_series <- matrix(QM_series)
-  if (var == 1){
+  if (allow_negatives==0){
     QM_series[QM_series<pp_threshold] <- 0
   }
 
@@ -99,8 +148,20 @@ QM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 #' @examples DQM(obs,mod,var,frq='M',pp_threshold=0.1)
 #' @examples DQM(obs,mod,var,frq='M',pp_factor=1/1000)
 #' @examples DQM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
-DQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
+DQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold, pp_factor, win){
+  
+  if(missing(mult_change)) {
+    mult_change <- 1
+  }
+  
+  if(missing(allow_negatives)) {
+    allow_negatives <- 1
+  }
 
+  if(missing(frq)) {
+    frq <- 'A'
+  }
+  
   if(missing(pp_threshold)) {
     pp_threshold <- 1
   }
@@ -108,90 +169,139 @@ DQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
   if(missing(pp_factor)) {
     pp_factor <- 1/100
   }
-
-  # 0) Check if annually or monthly data is specified.
-  if(missing(frq)) {
-    frq <- 'M'
+  
+  if(missing(win)) {
+    win <- 1
   }
+
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
-
-  y_obs       <- format_list[[1]]
-  obs_series  <- format_list[[2]]
-  mod_series  <- format_list[[3]]
-  mu_obs      <- format_list[[4]]
-  std_obs     <- format_list[[5]]
-  skew_obs    <- format_list[[6]]
-  skewy_obs   <- format_list[[7]]
-  mu_mod      <- format_list[[8]]
-  std_mod     <- format_list[[9]]
-  skew_mod    <- format_list[[10]]
-  skewy_mod   <- format_list[[11]]
+  format_list_obs <- formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
+  y_obs <- format_list_obs[[1]]
+  obs_series <- format_list_obs[[2]]
+  
+  format_list_mod <- formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
+  y_mod <- format_list_mod[[1]]
+  mod_series <- format_list_mod[[2]]
+  
+  if (frq=='D') {
+    
+    obs_series_moving <- rbind(obs_series[(dim(obs_series)[1]-win+1):dim(obs_series)[1],],rep(1,win*2) %x% obs_series,obs_series[1:win,])
+    obs_series_moving <- array(obs_series_moving, c(dim(obs_series)[1]+1, win*2, dim(obs_series)[2]))[1:dim(obs_series)[1],2:(win*2),]
+    
+    # Avoids dropping a dimension of length 1
+    obs_series_moving <- array(obs_series_moving, c(dim(obs_series_moving)[1], win*2-1,dim(obs_series)[2]))
+    
+    
+    mod_series_moving <- rbind(mod_series[(dim(mod_series)[1]-win+1):dim(mod_series)[1],],rep(1,win*2) %x% mod_series,mod_series[1:win,])
+    mod_series_moving <- array(mod_series_moving, c(dim(mod_series)[1]+1, win*2, dim(mod_series)[2]))[1:dim(mod_series)[1],2:(win*2),]
+    mod_series_moving <- array(mod_series_moving, c(dim(mod_series_moving)[1], win*2-1,dim(mod_series)[2]))
+    
+    stats_list_obs <- getStats(obs_series_moving, frq)
+    mu_obs <- stats_list_obs[[1]]
+    std_obs <- stats_list_obs[[2]]
+    skew_obs <- stats_list_obs[[3]]
+    skewy_obs <- stats_list_obs[[4]]
+    
+    stats_list_mod <- getStats(array(mod_series_moving[,,1:y_obs],c(dim(mod_series_moving)[1],2*win-1,y_obs)), frq)
+    mu_mod <- stats_list_mod[[1]]
+    std_mod <- stats_list_mod[[2]]
+    skew_mod <- stats_list_mod[[3]]
+    skewy_mod <- stats_list_mod[[4]]
+    
+  } else {
+    stats_list_obs <- getStats(obs_series, frq)
+    mu_obs <- stats_list_obs[[1]]
+    std_obs <- stats_list_obs[[2]]
+    skew_obs <- stats_list_obs[[3]]
+    skewy_obs <- stats_list_obs[[4]]
+    
+    stats_list_mod <- getStats(matrix(mod_series[,1:y_obs],nrow=dim(mod_series)[1]), frq)
+    mu_mod <- stats_list_mod[[1]]
+    std_mod <- stats_list_mod[[2]]
+    skew_mod <- stats_list_mod[[3]]
+    skewy_mod <- stats_list_mod[[4]]
+  }
+  
 
   # 2) Assign a probability distribution function to each month for the
   #    observed and modeled data in the historical period. If annual
   #    frequency is specified, this is applied to the complete historical
   #    period (getDist function of the climQMBC package).
-  PDF_obs <- getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var)
-  PDF_mod <- getDist(matrix(mod_series[,1:y_obs],nrow=dim(mod_series)[1]),mu_mod,std_mod,skew_mod,skewy_mod,var)
+  if (frq=='D') {
+    pdf_obs <- getDist(array(obs_series_moving, c(dim(obs_series_moving)[1],(2*win-1)*y_obs)),
+                       allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
+    pdf_mod <- getDist(array(mod_series_moving[,,1:y_obs], c(dim(mod_series_moving)[1],(2*win-1)*y_obs)),
+                       allow_negatives, mu_mod,std_mod,skew_mod,skewy_mod)
+  } else {
+    pdf_obs <- getDist(obs_series, allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
+    pdf_mod <- getDist(matrix(mod_series[,1:y_obs],nrow=dim(mod_series)[1]),allow_negatives, mu_mod,std_mod,skew_mod,skewy_mod)
+  }
 
   # 3) Extract the long-term trend from the modeled data:
   #    a) Get the monthly mean of the historical period. If annually
   #       frequency is specified, this is applied to the complete period).
-  xbarmh <- matrix(apply(matrix(mod_series[,1:y_obs],nrow=dim(mod_series)[1]),1,mean,na.rm=TRUE))
+  if (frq=='D') { 
+    win_series <- abind::abind(array(rep(1,y_obs), c(1,1,y_obs)) %x% mod_series_moving,
+                               array(0, c(dim(mod_series)[1],win*2-1,y_obs)), along=3)
+                                          
+    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod+1,y_obs))[,,2:(y_mod-y_obs+1),]
+    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod-y_obs,y_obs))
 
-  #    b) Get the monthly mean of each projected period. If annually
-  #       frequency is specified, this is applied to the complete period).
-  y_mod <- dim(mod_series)[2]
-  xbarmp <- matrix(0,dim(mod_series)[1],(y_mod-y_obs))
-
-  for (j in 1:(y_mod-y_obs)){
-    xbarmp[,j] <- apply(matrix(mod_series[,(j+1):(y_obs+j)],nrow=dim(mod_series)[1]),1,mean)
+    mu_win <- apply(win_series,c(1,3),mean, na.rm=TRUE)
+    
+  } else {
+    win_series <- cbind(array(rep(mod_series,y_obs), c(dim(mod_series)[1],dim(mod_series)[2]*y_obs)),
+                       array(0, c(dim(mod_series)[1],y_obs)))
+    win_series <- array(win_series, c(dim(mod_series)[1],y_mod+1,y_obs))[,2:(y_mod-y_obs+1),]
+    win_series <- array(win_series, c(dim(mod_series)[1],y_mod-y_obs,y_obs))
+    
+    mu_win <- apply(win_series,c(1,2),mean, na.rm=TRUE)
   }
 
+  mu_mod_repeated <- array(rep(mu_mod,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
+  
   # 4)Compute the linear scaled values (value in square brackets in equation
   #                                     2 of Cannon et al. (2015)).
-  LS <- matrix(0,dim(xbarmp)[1],dim(xbarmp)[2])
-  if (var == 1){   # Precipitation
-    for (m in 1:dim(mod_series)[1]){
-      LS[m,] <- (mod_series[m,(y_obs+1):y_mod]*xbarmh[m])/ xbarmp[m,]
-    }
-  } else {          # Temperature
-    for (m in 1:dim(mod_series)[1]){
-      LS[m,] <- (mod_series[m,(y_obs+1):y_mod] + xbarmh[m]) - xbarmp[m,]
-    }
+  if (mult_change == 1){ # Precipitation
+    scaling_factor <- mu_win/mu_mod_repeated
+    detrended_series <- mod_series[,(y_obs+1):dim(mod_series)[2]]/scaling_factor
+  } else{        # Temperature
+    scaling_factor <- mu_win - mu_mod_repeated
+    detrended_series <- mod_series[,(y_obs+1):dim(mod_series)[2]] - scaling_factor
   }
+  
 
   # 5) Apply the cumulative distribution function of the modeled data,
   #    evaluated with the statistics of the modeled period, to the future
   #    modeled data (getCDF function of the climQMBC package). Equation 2 of
   #    Cannon et al. (2015).
-  Taot <- getCDF(PDF_mod,LS,mu_mod,std_mod,skew_mod,skewy_mod)
+  prob <- getCDF(pdf_mod,detrended_series,mu_mod,std_mod,skew_mod,skewy_mod)
 
   # 6) Apply the inverse cumulative distribution function of the observed
   #    data, evaluated with the statistics of the observed data in the
   #    historical period, to the probabilities obtained from 5) (getCDFinv
   #    function of the climQMBC package). Equation 2 of Cannon et al. (2015).
-  DQM_LS <- getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs)
+  DQM_LS <- getCDFinv(pdf_obs,prob,mu_obs,std_obs,skew_obs,skewy_obs)
 
   # 7) Reimpose the trend to the values obtained in 6). Equation 2 of Cannon
   #    et al. (2015).
-  if (var == 1){ # Precipitation
-    DQM <- DQM_LS*(xbarmp/ matrix(rep(xbarmh,y_mod-y_obs),ncol=y_mod-y_obs))
+  if (mult_change == 1){ # Precipitation
+    DQM <- DQM_LS*scaling_factor
   } else{        # Temperature
-    DQM <- DQM_LS + (xbarmp - matrix(rep(xbarmh,y_mod-y_obs),ncol=y_mod-y_obs))
+    DQM <- DQM_LS + scaling_factor
   }
+  
 
   DQM <- matrix(DQM)
 
   # 8) Perform QM for the historical period.
   mod_h <- mod_series[,1:y_obs]
   mod_h <- matrix(mod_h)
-  QM_series <- QM(obs,mod_h,var,frq)
+  QM_series <- QM(obs, mod_h, allow_negatives,frq)
   DQM_series <- c(QM_series,DQM)
-  if (var == 1){
+  if (allow_negatives == 0){
     DQM_series[DQM_series<pp_threshold] <- 0
   }
 
@@ -225,12 +335,24 @@ DQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 #' @examples QDM(obs,mod,var,frq='M',rel_change_th=4)
 #' @examples QDM(obs,mod,var,frq='M',inv_mod_th=1/10)
 #' @examples QDM(obs,mod,var,frq='M',rel_change_th=4,inv_mod_th=1/10)
-QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor,rel_change_th,inv_mod_th){
+QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold, pp_factor ,rel_change_th,inv_mod_th, win){
 
+  if(missing(mult_change)) {
+    mult_change <- 1
+  }
+  
+  if(missing(allow_negatives)) {
+    allow_negatives <- 1
+  }
+  
+  if(missing(frq)) {
+    frq <- 'A'
+  }
+  
   if(missing(pp_threshold)) {
     pp_threshold <- 1
   }
-
+  
   if(missing(pp_factor)) {
     pp_factor <- 1/100
   }
@@ -242,59 +364,111 @@ QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor,rel_change_th,inv_mod_th)
   if(missing(inv_mod_th)) {
     inv_mod_th <- pp_threshold
   }
-
-  # 0) Check if annually or monthly data is specified.
-  if(missing(frq)) {
-    frq <- 'M'
+  
+  if(missing(win)) {
+    win <- 1
   }
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
-
-  y_obs       <- format_list[[1]]
-  obs_series  <- format_list[[2]]
-  mod_series  <- format_list[[3]]
-  mu_obs      <- format_list[[4]]
-  std_obs     <- format_list[[5]]
-  skew_obs    <- format_list[[6]]
-  skewy_obs   <- format_list[[7]]
-  mu_mod      <- format_list[[8]]
-  std_mod     <- format_list[[9]]
-  skew_mod    <- format_list[[10]]
-  skewy_mod   <- format_list[[11]]
+  format_list_obs <- formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
+  y_obs <- format_list_obs[[1]]
+  obs_series <- format_list_obs[[2]]
+  
+  format_list_mod <- formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
+  y_mod <- format_list_mod[[1]]
+  mod_series <- format_list_mod[[2]]
+  
+  if (frq=='D') {
+    
+    obs_series_moving <- rbind(obs_series[(dim(obs_series)[1]-win+1):dim(obs_series)[1],],rep(1,win*2) %x% obs_series,obs_series[1:win,])
+    obs_series_moving <- array(obs_series_moving, c(dim(obs_series)[1]+1, win*2, dim(obs_series)[2]))[1:dim(obs_series)[1],2:(win*2),]
+    
+    # Avoids dropping a dimension of length 1
+    obs_series_moving <- array(obs_series_moving, c(dim(obs_series_moving)[1], win*2-1,dim(obs_series)[2]))
+    
+    
+    mod_series_moving <- rbind(mod_series[(dim(mod_series)[1]-win+1):dim(mod_series)[1],],rep(1,win*2) %x% mod_series,mod_series[1:win,])
+    mod_series_moving <- array(mod_series_moving, c(dim(mod_series)[1]+1, win*2, dim(mod_series)[2]))[1:dim(mod_series)[1],2:(win*2),]
+    mod_series_moving <- array(mod_series_moving, c(dim(mod_series_moving)[1], win*2-1,dim(mod_series)[2]))
+    
+    stats_list_obs <- getStats(obs_series_moving, frq)
+    mu_obs <- stats_list_obs[[1]]
+    std_obs <- stats_list_obs[[2]]
+    skew_obs <- stats_list_obs[[3]]
+    skewy_obs <- stats_list_obs[[4]]
+    
+    stats_list_mod <- getStats(array(mod_series_moving[,,1:y_obs],c(dim(mod_series_moving)[1],2*win-1,y_obs)), frq)
+    mu_mod <- stats_list_mod[[1]]
+    std_mod <- stats_list_mod[[2]]
+    skew_mod <- stats_list_mod[[3]]
+    skewy_mod <- stats_list_mod[[4]]
+    
+  } else {
+    stats_list_obs <- getStats(obs_series, frq)
+    mu_obs <- stats_list_obs[[1]]
+    std_obs <- stats_list_obs[[2]]
+    skew_obs <- stats_list_obs[[3]]
+    skewy_obs <- stats_list_obs[[4]]
+    
+    stats_list_mod <- getStats(matrix(mod_series[,1:y_obs],nrow=dim(mod_series)[1]), frq)
+    mu_mod <- stats_list_mod[[1]]
+    std_mod <- stats_list_mod[[2]]
+    skew_mod <- stats_list_mod[[3]]
+    skewy_mod <- stats_list_mod[[4]]
+  }
+  
 
   # 2) Assign a probability distribution function to each month for the
   #    observed and modeled data in the historical period. If annual
   #    frequency is specified, this is applied to the complete historical
   #    period (getDist function of the climQMBC package).
-  PDF_obs <- getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var)
-  PDF_mod <- getDist(matrix(mod_series[,1:y_obs],nrow=dim(mod_series)[1]),mu_mod,std_mod,skew_mod,skewy_mod,var)
+  if (frq=='D') {
+    pdf_obs <- getDist(array(obs_series_moving, c(dim(obs_series_moving)[1],(2*win-1)*y_obs)),
+                       allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
+    pdf_mod <- getDist(array(mod_series_moving[,,1:y_obs], c(dim(mod_series_moving)[1],(2*win-1)*y_obs)),
+                       allow_negatives, mu_mod,std_mod,skew_mod,skewy_mod)
+  } else {
+    pdf_obs <- getDist(obs_series, allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
+    pdf_mod <- getDist(matrix(mod_series[,1:y_obs],nrow=dim(mod_series)[1]),allow_negatives, mu_mod,std_mod,skew_mod,skewy_mod)
+  }
+  
+  if (frq=='D') { 
+    win_series <- abind::abind(array(rep(1,y_obs), c(1,1,y_obs)) %x% mod_series_moving,
+                               array(0, c(dim(mod_series)[1],win*2-1,y_obs)), along=3)
+    
+    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod+1,y_obs))[,,2:(y_mod-y_obs+1),]
+    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod-y_obs,y_obs))
+    
+  } else {
+    win_series <- cbind(array(rep(mod_series,y_obs), c(dim(mod_series)[1],dim(mod_series)[2]*y_obs)),
+                        array(0, c(dim(mod_series)[1],y_obs)))
+    win_series <- array(win_series, c(dim(mod_series)[1],y_mod+1,y_obs))[,2:(y_mod-y_obs+1),]
+    win_series <- array(win_series, c(dim(mod_series)[1],y_mod-y_obs,y_obs))
+  }
+  
+
+  stats_list_win <- getStats(win_series, frq)
+  mu_win <- stats_list_win[[1]]
+  std_win <- stats_list_win[[2]]
+  skew_win <- stats_list_win[[3]]
+  skewy_win <- stats_list_win[[4]]
 
   # 3) For each projected period:
-  PDF_win <- matrix(0,dim(mod_series)[1],dim(mod_series)[2]-y_obs)
-  Taot <- matrix(0,dim(mod_series)[1],dim(mod_series)[2]-y_obs)
-  for (j in 1:dim(Taot)[2]){
-    win_series <- matrix(mod_series[,(1+j):(y_obs+j)],nrow=dim(mod_series)[1])
-
-    mux <- apply(win_series, 1, mean, na.rm = TRUE)         # Mean
-    sigmax <- apply(win_series, 1, sd, na.rm = TRUE)        # Standard deviation
-    skewx <- apply(win_series,1,e1071::skewness,na.rm=TRUE,type=2) # Skewness
-    Ln_win <- log(win_series)
-    Ln_win[Im(Ln_win)!=0] <- 0
-    Ln_win[!is.finite(Ln_win)] <- log(0.01)
-    skewy <- apply(Ln_win,1,e1071::skewness,na.rm=TRUE,type=2) # Log-Skewness
+  pdf_win <- matrix(0,dim(mod_series)[1],dim(mod_series)[2]-y_obs)
+  prob <- matrix(0,dim(mod_series)[1],dim(mod_series)[2]-y_obs)
+  for (j in 1:dim(prob)[2]){
 
     # a) Assign a probability distribution function to each month. If
     #    annual frequency is specified, this is applied to the complete
     #    period (getDist function of the climQMBC package).
-    PDF_win[,j] <- getDist(win_series,mux,sigmax,skewx,skewy,var)
+    pdf_win[,j] <- getDist(matrix(win_series[,j,], nrow=dim(win_series)[1], ncol=dim(win_series)[3]),allow_negatives,mu_win[,j],std_win[,j],skew_win[,j],skewy_win[,j])
 
     # b) Apply the cumulative distribution function of the projected
     #    period, evaluated with the statistics of this period, to the last
     #    data of the period (getCDF function of the climQMBC package).
     #    Equation 3 of Cannon et al. (2015).
-    Taot[,j] = getCDF(PDF_win[,j],matrix(mod_series[,y_obs+j]),mux,sigmax,skewx,skewy)
+    prob[,j] = getCDF(pdf_win[,j],matrix(mod_series[,y_obs+j]),mu_win[,j],std_win[,j],skew_win[,j],skewy_win[,j])
   }
 
   # 4) Apply the inverse cumulative distribution function:
@@ -302,23 +476,24 @@ QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor,rel_change_th,inv_mod_th)
   #       data in the historical period, to the probabilities obtained from
   #       3b) (getCDFinv function of the climQMBC package). Equation 5 of
   #       Cannon et al. (2015).
-  inv_obs <- getCDFinv(PDF_obs,Taot,mu_obs,std_obs,skew_obs,skewy_obs)
+  inv_obs <- getCDFinv(pdf_obs,prob,mu_obs,std_obs,skew_obs,skewy_obs)
 
   #    b) Of the modeled data, evaluated with the statistics of the observed
   #       data in the historical period, to the probabilities obtained from
   #       3b) (getCDFinv function of the climQMBC package). Equations 4 of
   #       Cannon et al. (2015).
-  inv_mod <- getCDFinv(PDF_mod,Taot,mu_mod,std_mod,skew_mod,skewy_mod)
+  inv_mod <- getCDFinv(pdf_mod,prob,mu_mod,std_mod,skew_mod,skewy_mod)
 
   # 5) Get the delta factor or relative change and apply it to the value
   #    obtained in 4b). Equation 4 and 6 of Cannon et al. (2015).
-  if (var == 1){
-    DM <- mod_series[,(y_obs+1):dim(mod_series)[2]]/inv_mod
-    DM[(DM>rel_change_th) & (inv_mod<inv_mod_th)] <- rel_change_th
-    QDM <- inv_obs*DM
+  if (mult_change == 1){
+    delta_quantile <- mod_series[,(y_obs+1):dim(mod_series)[2]]/inv_mod
+    bool_undefined <- (delta_quantile>rel_change_th) & (inv_mod<inv_mod_th)
+    delta_quantile[bool_undefined] <- rel_change_th
+    QDM <- inv_obs*delta_quantile
   } else{
-    DM <- mod_series[,(y_obs+1):dim(mod_series)[2]] - inv_mod
-    QDM <- inv_obs + DM
+    delta_quantile <- mod_series[,(y_obs+1):dim(mod_series)[2]] - inv_mod
+    QDM <- inv_obs + delta_quantile
   }
 
   QDM <- matrix(QDM)
@@ -326,9 +501,9 @@ QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor,rel_change_th,inv_mod_th)
   # 6) Perform QM for the historical period.
   mod_h <- mod_series[,1:y_obs]
   mod_h <- matrix(mod_h)
-  QM_series <- QM(obs,mod_h,var,frq)
+  QM_series <- QM(obs, mod_h, allow_negatives,frq)
   QDM_series <- c(QM_series,QDM)
-  if (var == 1){
+  if (allow_negatives == 0){
     QDM_series[QDM_series<pp_threshold] <- 0
   }
   return(QDM_series)
@@ -356,141 +531,131 @@ QDM <- function(obs,mod,var,frq,pp_threshold,pp_factor,rel_change_th,inv_mod_th)
 #' @examples UQM(obs,mod,var,frq='M',pp_threshold=0.1)
 #' @examples UQM(obs,mod,var,frq='M',pp_factor=1/1000)
 #' @examples UQM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
-UQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 
+UQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold, pp_factor){
+
+  
+  if(missing(mult_change)) {
+    mult_change <- 1
+  }
+  
+  if(missing(allow_negatives)) {
+    allow_negatives <- 1
+  }
+  
+  if(missing(frq)) {
+    frq <- 'A'
+  }
+  
   if(missing(pp_threshold)) {
     pp_threshold <- 1
   }
-
+  
   if(missing(pp_factor)) {
     pp_factor <- 1/100
   }
-
-  # 0) Check if annually or monthly data is specified.
-  if(missing(frq)) {
-    frq <- 'M'
-  }
-
+  
+  
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
+  format_list_obs <- formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
+  y_obs <- format_list_obs[[1]]
+  obs_series <- format_list_obs[[2]]
+  
+  format_list_mod <- formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
+  y_mod <- format_list_mod[[1]]
+  mod_series <- format_list_mod[[2]]
+  
+  stats_list_obs <- getStats(obs_series, frq)
+  mu_obs <- stats_list_obs[[1]]
+  std_obs <- stats_list_obs[[2]]
+  skew_obs <- stats_list_obs[[3]]
+  skewy_obs <- stats_list_obs[[4]]
+  
+  stats_list_mod <- getStats(matrix(mod_series[,1:y_obs],nrow=dim(mod_series)[1]), frq)
+  mu_mod <- stats_list_mod[[1]]
+  std_mod <- stats_list_mod[[2]]
+  skew_mod <- stats_list_mod[[3]]
+  skewy_mod <- stats_list_mod[[4]]
 
-  y_obs       <- format_list[[1]]
-  obs_series  <- format_list[[2]]
-  mod_series  <- format_list[[3]]
-  mu_obs      <- format_list[[4]]
-  std_obs     <- format_list[[5]]
-  skew_obs    <- format_list[[6]]
-  skewy_obs   <- format_list[[7]]
-  mu_mod      <- format_list[[8]]
-  std_mod     <- format_list[[9]]
-  skew_mod    <- format_list[[10]]
-  skewy_mod   <- format_list[[11]]
 
   # 2) Assign a probability distribution function to each month for the
   #    observed and modeled data in the historical period. If annual
   #    frequency is specified, this is applied to the complete historical
   #    period (getDist function of the climQMBC package).
-  PDF_obs <- getDist(obs_series,mu_obs,std_obs,skew_obs,skewy_obs,var)
+  pdf_obs <- getDist(obs_series,allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
 
   # 3) For each projected period, get the delta factor (delta) and time
   #    dependent (aster) statistics (mean, standard deviation, skewness, and
   #    log skewness). Equations X to X in Chadwick et al. (2021).
-  xbarmt <- matrix(0,dim(mod_series)[1],dim(mod_series)[2]-y_obs)
-  xhatmt <- matrix(0,dim(xbarmt)[1],dim(xbarmt)[2])
-  skwmt <- matrix(0,dim(xbarmt)[1],dim(xbarmt)[2])
-  Lskwmt <- matrix(0,dim(xbarmt)[1],dim(xbarmt)[2])
+  win_series <- cbind(array(rep(mod_series,y_obs), c(dim(mod_series)[1],dim(mod_series)[2]*y_obs)),
+                      array(0, c(dim(mod_series)[1],y_obs)))
+  win_series <- array(win_series, c(dim(mod_series)[1],y_mod+1,y_obs))[,2:(y_mod-y_obs+1),]
+  win_series <- array(win_series, c(dim(mod_series)[1],y_mod-y_obs,y_obs))
+  stats_list_win <- getStats(win_series, frq)
+  mu_win <- stats_list_win[[1]]
+  std_win <- stats_list_win[[2]]
+  skew_win <- stats_list_win[[3]]
+  skewy_win <- stats_list_win[[4]]
+  
+  mu_mod_repeated <- array(rep(mu_mod,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
+  std_mod_repeated <- array(rep(std_mod,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
+  skew_mod_repeated <- array(rep(skew_mod,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
+  skewy_mod_repeated <- array(rep(skewy_mod,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
+  
+  mu_obs_repeated <- array(rep(mu_obs,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
+  std_obs_repeated <- array(rep(std_obs,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
+  skew_obs_repeated <- array(rep(skew_obs,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
+  skewy_obs_repeated <- array(rep(skewy_obs,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
+  
 
-  Dmu    <- matrix(0,dim(xbarmt)[1],dim(xbarmt)[2])
-  Dsigma <- matrix(0,dim(xbarmt)[1],dim(xbarmt)[2])
-  Dskw   <- matrix(0,dim(xbarmt)[1],dim(xbarmt)[2])
-  DLskw  <- matrix(0,dim(xbarmt)[1],dim(xbarmt)[2])
-  muAster <- matrix(0,dim(xbarmt)[1],dim(xbarmt)[2])
-  sigmaAster <- matrix(0,dim(xbarmt)[1],dim(xbarmt)[2])
-  skwAster  <- matrix(0,dim(xbarmt)[1],dim(xbarmt)[2])
-  LskwAster <- matrix(0,dim(xbarmt)[1],dim(xbarmt)[2])
-
-  if (var==1){ # Precipitation
-    for (i in 1:dim(xbarmt)[1]){
-      for (j in 1:dim(xbarmt)[2]){
-        xbarmt[i,j] <- mean(mod_series[i,(j+1):(y_obs+j)],na.rm=TRUE)
-        xhatmt[i,j] <- sd(mod_series[i,(j+1):(y_obs+j)],na.rm=TRUE)
-
-        skwmt[i,j]  <- e1071::skewness(mod_series[i,(j+1):(y_obs+j)],na.rm=TRUE,type=2)
-        Lnskwmt     <- log(mod_series[i,(j+1):(y_obs+j)])
-        Lnskwmt[Im(Lnskwmt)!=0] <- 0
-        Lnskwmt[!is.finite(Lnskwmt)] <- log(0.01)
-        Lskwmt[i,j] <- e1071::skewness(Lnskwmt,na.rm=TRUE,type=2)
-
-        Dmu[i,j]    <- (xbarmt[i,j]- mu_mod[i])/ mu_mod[i]
-        Dsigma[i,j] <- (xhatmt[i,j]- std_mod[i])/ std_mod[i]
-        Dskw[i,j]   <- (skwmt[i,j] - skew_mod[i])/ skew_mod[i]
-        DLskw[i,j]  <- (Lskwmt[i,j]- skewy_mod[i])/ skewy_mod[i]
-
-        muAster[i,j] <- mu_obs[i]*(1+ Dmu[i,j])
-        sigmaAster[i,j] <- std_obs[i]*(1+ Dsigma[i,j])
-        skwAster[i,j]  <- skew_obs[i]*(1+ Dskw[i,j])
-        LskwAster[i,j] <- skewy_obs[i]*(1+ DLskw[i,j])
-      }
-    }
+  if (mult_change==1){ # Precipitation
+    delta_mu <- mu_win/mu_mod_repeated
+    delta_sigma <- std_win/std_mod_repeated
+    delta_skew <- skew_win/skew_mod_repeated
+    delta_skewy <- skewy_win/skewy_mod_repeated
+    
+    mu_projected <- mu_obs_repeated*delta_mu
+    sigma_projected <- std_obs_repeated*delta_sigma
+    skew_projected <- skew_obs_repeated*delta_skew
+    skewy_projected <- skewy_obs_repeated*delta_skewy
   } else { # Temperature
-    for (i in 1:dim(xbarmt)[1]){
-      for (j in 1:dim(xbarmt)[2]){
-        xbarmt[i,j] <- mean(mod_series[i,(j+1):(y_obs+j)],na.rm=TRUE)
-        xhatmt[i,j] <- sd(mod_series[i,(j+1):(y_obs+j)],na.rm=TRUE)
-
-        skwmt[i,j]  <- e1071::skewness(mod_series[i,(j+1):(y_obs+j)],na.rm=TRUE,type=2)
-        Lnskwmt     <- log(mod_series[i,(j+1):(y_obs+j)])
-        Lnskwmt[Im(Lnskwmt)!=0] <- 0
-        Lnskwmt[!is.finite(Lnskwmt)] <- log(0.01)
-        Lskwmt[i,j] <- e1071::skewness(Lnskwmt,na.rm=TRUE,type=2)
-
-        Dmu[i,j]   = xbarmt[i,j] - mu_mod[i]
-        Dsigma[i,j] = xhatmt[i,j] - std_mod[i]
-        Dskw[i,j]   = skwmt[i,j] - skew_mod[i]
-        DLskw[i,j] = Lskwmt[i,j]- skewy_mod[i]
-
-        muAster[i,j]= mu_obs[i]+(Dmu[i,j])
-        sigmaAster[i,j]= std_obs[i]+(Dsigma[i,j])
-        skwAster[i,j]  = skew_obs[i]+(Dskw[i,j])
-        LskwAster[i,j] = skewy_obs[i]+(DLskw[i,j])
-      }
-    }
+    
+    delta_mu <- mu_win - mu_mod_repeated
+    delta_sigma <- std_win - std_mod_repeated
+    delta_skew <- skew_win - skew_mod_repeated
+    delta_skewy <- skewy_win - skewy_mod_repeated
+    
+    mu_projected <- mu_obs_repeated + delta_mu
+    sigma_projected <- std_obs_repeated + delta_sigma
+    skew_projected <- skew_obs_repeated + delta_skew
+    skewy_projected <- skewy_obs_repeated + delta_skewy
   }
 
   # 4) For each projected period:
-  PDF_win <- matrix(0,dim(mod_series)[1],dim(mod_series)[2]-y_obs)
-  Taot <- matrix(0,dim(mod_series)[1],dim(mod_series)[2]-y_obs)
+  pdf_win <- matrix(0,dim(mod_series)[1],dim(mod_series)[2]-y_obs)
+  prob <- matrix(0,dim(mod_series)[1],dim(mod_series)[2]-y_obs)
   UQM <- matrix(0,dim(mod_series)[1],dim(mod_series)[2]-y_obs)
-  for (j in 1:dim(Taot)[2]){
-    win_series <- matrix(mod_series[,(1+j):(y_obs+j)],nrow=dim(mod_series)[1])
-
-    mux <- apply(win_series, 1, mean, na.rm = TRUE)         # Mean
-    sigmax <- apply(win_series, 1, sd, na.rm = TRUE)        # Standard deviation
-    skewx <- apply(win_series,1,e1071::skewness,na.rm=TRUE,type=2) # Skewness
-    Ln_win <- log(win_series)
-    Ln_win[Im(Ln_win)!=0] <- 0
-    Ln_win[!is.finite(Ln_win)] <- log(0.01)
-    skewy <- apply(Ln_win,1,e1071::skewness,na.rm=TRUE,type=2) # Log-Skewness
+  for (j in 1:dim(prob)[2]){
 
     # a) Assign a probability distribution function to each month. If
     #    annual frequency is specified, this is applied to the complete
     #    period (getDist function of the climQMBC package).
-    PDF_win[,j] <- getDist(win_series,mux,sigmax,skewx,skewy,var)
+    pdf_win[,j] <- getDist(matrix(win_series[,j,], nrow=dim(win_series)[1], ncol=dim(win_series)[3]),allow_negatives,mu_win[,j],std_win[,j],skew_win[,j],skewy_win[,j])
 
     # b) Apply the cumulative distribution function of the projected
     #    period, evaluated with the statistics of this period, to the last
     #    data of the period (getCDF function of the climQMBC package).
     #    Equation X of Chadwick et al. (2021).
-    Taot[,j] <- getCDF(PDF_win[,j],matrix(mod_series[,y_obs+j]),mux,sigmax,skewx,skewy)
+    prob[,j] = getCDF(pdf_win[,j],matrix(mod_series[,y_obs+j]),mu_win[,j],std_win[,j],skew_win[,j],skewy_win[,j])
   }
 
   # 5) Apply the inverse cumulative distribution function of the observed
   #    data, evaluated with the time dependent statistics, to the values
   #    obtained in 4b) (getCDFinv function of the climQMBC package). Equation
   #    X of Chadwick et al. (2021).
-  for (yr in 1:dim(Taot)[2]){
-    UQM[,yr] <- getCDFinv(PDF_obs,matrix(Taot[,yr]),matrix(muAster[,yr]),matrix(sigmaAster[,yr]),matrix(skwAster[,yr]),matrix(LskwAster[,yr]))
+  for (yr in 1:dim(prob)[2]){
+    UQM[,yr] <- getCDFinv(pdf_obs,matrix(prob[,yr]),matrix(mu_projected[,yr]),matrix(sigma_projected[,yr]),matrix(skew_projected[,yr]),matrix(skewy_projected[,yr]))
   }
 
   UQM <- matrix(UQM)
@@ -498,9 +663,9 @@ UQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
   # 6) Perform QM for the historical period
   mod_h <- mod_series[,1:y_obs]
   mod_h <- matrix(mod_h)
-  QM_series <- QM(obs,mod_h,var,frq)
+  QM_series <- QM(obs, mod_h, allow_negatives,frq)
   UQM_series <- c(QM_series,UQM)
-  if (var == 1){
+  if (allow_negatives == 0){
     UQM_series[UQM_series<pp_threshold] <- 0
   }
   return(UQM_series)
@@ -529,7 +694,7 @@ UQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 #' @examples SDM(obs,mod,var,frq='M',pp_threshold=0.1)
 #' @examples SDM(obs,mod,var,frq='M',pp_factor=1/1000)
 #' @examples SDM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
-SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
+SDM <- function(obs,mod,SDM_var,frq,pp_threshold,pp_factor){
 
   if(missing(pp_threshold)) {
     pp_threshold <- 1
@@ -549,11 +714,13 @@ SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
-  format_list <- formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
-
-  y_obs       <- format_list[[1]]
-  obs_series  <- format_list[[2]]
-  mod_series  <- format_list[[3]]
+  format_list_obs <- formatQM(obs, SDM_var, frq, pp_threshold, pp_factor)
+  y_obs <- format_list_obs[[1]]
+  obs_series <- format_list_obs[[2]]
+  
+  format_list_mod <- formatQM(mod, SDM_var, frq, pp_threshold, pp_factor)
+  y_mod <- format_list_mod[[1]]
+  mod_series <- format_list_mod[[2]]
 
   SDM  <- matrix(0,dim(mod_series)[1],dim(mod_series)[2]-y_obs)
   SDM_h  <- matrix(0,dim(obs_series)[1],y_obs)
@@ -565,7 +732,7 @@ SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
     #     the historical period.
     #     For precipitation, get the rainday values and its frequency for
     #     the modeled and observed series in the historical period.
-    if (var == 0){
+    if (SDM_var == 0){
       D_obs <- pracma::detrend(obs_series[m,])
       D_mod <- pracma::detrend(mod_series[m,1:y_obs])
 
@@ -591,7 +758,7 @@ SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
     #    for temperature and to (1 - threshold) for temperature and
     #    precipitation. Threshold is set in the first lines of this
     #    function. Default is CDF_th = 10^-3.
-    if (var == 0){
+    if (SDM_var == 0){
       mu_obsD <- mean(D_obs)
       mu_modD <- mean(D_mod)
       sigma_obsD <- sd(D_obs)
@@ -626,7 +793,7 @@ SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
       #    For precipitation, get the rainday values, its frequency, and
       #    expected raindays for the projected period.
       #    Get the index of the sorted detrended or rainday values.
-      if (var == 0){
+      if (SDM_var == 0){
         D_win <- pracma::detrend(win_series)
         exp_D <- length(win_series)
         win_argsort <- sort(D_win,index.return=TRUE)[[2]]
@@ -649,7 +816,7 @@ SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
       #    (0 + threshold) for temperature and to (1 - threshold) for
       #    temperature and precipitation. Threshold is set in the first
       #    lines of this function. Default is CDF_th = 10^-3.
-      if (var == 0){
+      if (SDM_var == 0){
         mu_winD <- mean(D_win,na.rm=TRUE)
         sigma_winD <- sd(D_win,na.rm=TRUE)
 
@@ -667,7 +834,7 @@ SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
       # g) [Switanek et al. (2017), step 3)]
       #    Get the scaling between the model projected period and
       #    historical period distributions.
-      if (var == 0){
+      if (SDM_var == 0){
         SF <- (sigma_obsD/sigma_modD)*(qnorm(CDF_win,mu_winD,sigma_winD) - qnorm(CDF_win,mu_modD,sigma_modD))
       } else {
         SF <- qgamma(CDF_win,shape=fit_win[[1]][1],rate=fit_win[[1]][2])/qgamma(CDF_win,shape=fit_mod[[1]][1],rate=fit_mod[[1]][2])
@@ -682,7 +849,7 @@ SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
       #    Get recurrence intervals and its scaled version for the
       #    observed, historical modeled and projected period modeled
       #    CDFs.
-      if (var == 0){
+      if (SDM_var == 0){
         RI_obs <- 1/(0.5 - abs(obs_cdf_intpol - 0.5))
         RI_mod <- 1/(0.5 - abs(mod_cdf_intpol - 0.5))
         RI_win <- 1/(0.5 - abs(CDF_win - 0.5))
@@ -707,7 +874,7 @@ SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
       #    Get the initial bias corrected values. For precipitation,
       #    these values are interpolated to the length of the expected
       #    raindays.
-      if (var == 0){
+      if (SDM_var == 0){
         xvals <- qnorm(sort(CDF_scaled),mu_obsD,sigma_obsD) + SF
         xvals <- xvals - mean(xvals) + mu_obs + (mu_win - mu_mod)
       } else {
@@ -725,7 +892,7 @@ SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
       #    For temperature, the trend of the projected period is added
       #    back.
       corr_temp[win_argsort[(length(win_argsort)-exp_D+1):length(win_argsort)]] <- matrix(xvals)
-      if (var == 0){
+      if (SDM_var == 0){
         corr_temp <- corr_temp + diff_win - mu_win
       }
 
@@ -744,7 +911,7 @@ SDM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
   SDM <- matrix(SDM)
   SDM_h <- matrix(SDM_h)
   SDM_series <- c(SDM_h,SDM)
-  if (var == 1){
+  if (SDM_var == 1){
     SDM_series[SDM_series<pp_threshold] <- 0
   }
 

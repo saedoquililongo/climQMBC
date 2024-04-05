@@ -22,57 +22,78 @@
 #' @return skewy_mod:      If monthly frequency is specified, a column vector of monthly skewness of the logarithm of modeled data of the historical period [12,1]. If annual frequency is specified, the skewness of the logarithm of the modeled data of the historical period(float).
 #' @export
 #'
-#' @examples formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
-formatQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
+#' @examples formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor)
+formatQM <- function(series_, allow_negatives, frq, pp_threshold, pp_factor){
+  
+  series <- series_
 
   # 0) Check if annually or monthly data is specified.
-  if (frq == 'A') {
+  if (frq=='D') {
+    I <- 365
+  } else if (frq=='M') {
+    I <- 12
+  } else if (frq=='A') {
     I <- 1
   } else {
-    I <- 12
+    I <- 1
   }
 
   # 1) If variable is precipitation, replace low values with random values.
-  if (var==1){
-    bool_low_obs <- obs<pp_threshold
-    bool_low_mod <- mod<pp_threshold
-    obs[bool_low_obs] <- runif(sum(bool_low_obs))*pp_factor
-    mod[bool_low_mod] <- runif(sum(bool_low_mod))*pp_factor
+  if (allow_negatives==0) {
+    bool_low <- series<pp_threshold
+    series[bool_low] <- runif(sum(bool_low))*pp_factor
   }
 
   # 2) Get number of years of the observed period.
-  y_obs <- length(obs)/I
+  years <- length(series)/I
 
   # 3) If monthly data is specified, reshape the input series to a matrix of
   #    12 rows and several columns equal to the number of years of each
   #    series. If annually data is specified, reshape the input to a row
   #    vector with same entries as the input series.
-  obs_series <- matrix(obs,nrow = I, ncol = length(obs)/I)
-  mod_series <- matrix(mod,nrow = I, ncol = length(mod)/I)
+  series <- matrix(series, nrow=I, ncol=length(series)/I)
 
-  # 4) If monthly data is specified, get monthly mean, standard deviation,
-  #   skewness, and log-skewness for the historical period of the observed
-  #   and modeled series. If annually data is specified, get monthly mean,
-  #   standard deviation, skewness, and log-skewness for the historical
-  #   period of the observed and modeled series.
-  mu_obs <- apply(obs_series, 1, mean, na.rm = TRUE)         # Mean
-  sigma_obs <- apply(obs_series, 1, sd, na.rm = TRUE)        # Standard deviation
-  skew_obs <- apply(obs_series,1,e1071::skewness,na.rm=TRUE,type=2) # Skewness
-  Ln_obs <- log(obs_series)
-  Ln_obs[Im(Ln_obs)!=0] <- 0
-  Ln_obs[!is.finite(Ln_obs)] = log(0.01)
-  skewy_obs = apply(Ln_obs,1,e1071::skewness,na.rm=TRUE,type=2) # Log-Skewness
+  return(list(years, series))
+}
 
-  mod_series_h = matrix(mod_series[,1:y_obs],nrow=dim(mod_series)[1])
-  mu_mod <- apply(mod_series_h, 1, mean, na.rm = TRUE)         # Mean
-  sigma_mod <- apply(mod_series_h, 1, sd, na.rm = TRUE)        # Standard deviation
-  skew_mod <- apply(mod_series_h,1,e1071::skewness,na.rm=TRUE,type=2) # Skewness
-  Ln_mod <- log(mod_series_h)
-  Ln_mod[Im(Ln_mod)!=0] <- 0
-  Ln_mod[!is.finite(Ln_mod)] = log(0.01)
-  skewy_mod <- apply(Ln_mod,1,e1071::skewness,na.rm=TRUE,type=2) # Log-Skewness
+#' getStats
+#'
+#'This function computes the mean, standard deviation, skewness and skewness of the logarithmic values, for each sub-period within the year, according to the frequency initially defined.
+#'
+#' @param series A matrix of monthly or annual data. If monthly frequency is specified, the number of rows of the matrix is 12 and the number of columns is the number of years [12, years]. If annual frequency is specified, the number of rows of the matrix is 1 and the number of columns is the number of years [1, years].
+#'
+#' @return mu:         If monthly frequency is specified, a column vector of monthly mean of observed data [12,1]. If annual frequency is specified, the mean of the observed data (float).
+#' @return sigma:      If monthly frequency is specified, a column vector of monthly standard deviation of observed data [12,1]. If annual frequency is specified, the standard deviation of the observed data (float).
+#' @return skew:       If monthly frequency is specified, a column vector of monthly skewness of observed data [12,1]. If annual frequency is specified, the skewness of the observed data (float).
+#' @return skewy:     If monthly frequency is specified, a column vector of monthly skewness of observed data [12,1]. If annual frequency is specified, the skewness of the observed data (float).
+#' @export
+#'
+#' @examples getStats(series)
+getStats <- function(series, frq){
+  
+  if (frq=='D') {
+    if (length(dim(series))==4) {
+      dim_stats <- c(1,3)
+    } else {
+      dim_stats <- 1
+    }
+  } else {
+    if (length(dim(series))==3) {
+      dim_stats <- c(1,2)
+    } else {
+      dim_stats <- 1
+    }
+  }
 
-  return(list(y_obs,obs_series,mod_series,matrix(mu_obs,nrow=I),matrix(sigma_obs,nrow=I),matrix(skew_obs,nrow=I),matrix(skewy_obs,nrow=I),matrix(mu_mod,nrow=I),matrix(sigma_mod,nrow=I),matrix(skew_mod,nrow=I),matrix(skewy_mod),nrow=I))
+  
+  mu <- apply(series, dim_stats, mean, na.rm = TRUE)         # Mean
+  sigma <- apply(series, dim_stats, sd, na.rm = TRUE)        # Standard deviation
+  skew <- apply(series,dim_stats,e1071::skewness,na.rm=TRUE,type=2) # Skewness
+  series_log <- log(series)
+  series_log[!is.finite(series_log)] = log(0.01)
+  skewy <- apply(series_log,dim_stats,e1071::skewness,na.rm=TRUE,type=2) # Log-Skewness
+
+  return(list(mu,sigma,skew,skewy))
 }
 
 
@@ -95,7 +116,7 @@ formatQM <- function(obs,mod,var,frq,pp_threshold,pp_factor){
 #' @export
 #'
 #' @examples getDist(series,mu,sigma,skew,skewy,var)
-getDist <- function(series,mu,sigma,skew,skewy,var){
+getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
 
   # 1) Get the number of years to compute the empirical distribution in step
   #    3) and get the number of rows of the input series.
@@ -188,7 +209,7 @@ getDist <- function(series,mu,sigma,skew,skewy,var){
 
     # c) If variable is precipitation, set KS=1 to distributions that allow
     #    negative values (this will discard those distributions).
-    if (var==1){
+    if (allow_negatives==0){
       KSnormal <- 1
       KSgammaIII <- 1
       KSgumbel <- 1

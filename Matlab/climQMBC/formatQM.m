@@ -1,4 +1,4 @@
-function [y_obs,obs_series,mod_series,mu_obs,sigma_obs,skew_obs,skewy_obs,mu_mod,sigma_mod,skew_mod,skewy_mod] = formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
+function [years, series] = formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor)
 %% formatQM:
 % This function formats the inputs and gets basic statistics for the
 % different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available
@@ -139,6 +139,8 @@ function [y_obs,obs_series,mod_series,mu_obs,sigma_obs,skew_obs,skewy_obs,mu_mod
 % Revision: 1, updated Jul 2022
 
 %%
+series = series_;
+
 % 0) Check if annual or monthly data is specified.
 if frq == 'A'
     I = 1;
@@ -147,41 +149,18 @@ else
 end
 
 % 1) If variable is precipitation, replace low values with random values.
-if var == 1
-    bool_low_obs = obs<pp_threshold;
-    bool_low_mod = mod<pp_threshold;
-    obs(bool_low_obs) = rand(size(obs(bool_low_obs)))*pp_factor;
-    mod(bool_low_mod) = rand(size(mod(bool_low_mod)))*pp_factor;
+if allow_negatives == 0
+    bool_low = series<pp_threshold;
+    series(bool_low) = rand(size(series(bool_low)))*pp_factor;
 end
 
 % 2) Get number of years of the observed period.
-y_obs=length(obs)/I;
+years = length(series)/I;
 
 % 3) If monthly data is specified, reshape the input series to a matrix of
 %    12 rows and several columns equal to the number of years of each 
 %    series. If annual data is specified, reshape the input to a row 
 %    vector with same entries as the input series.
-obs_series = reshape(obs,I,[]);
-mod_series = reshape(mod,I,[]);
+series = reshape(series,I,[]);
 
-% 4) If monthly data is specified, get monthly mean, standard deviation, 
-%    skewness, and log-skewness for the historical period of the observed
-%    and modeled series. If annual data is specified, get monthly mean,
-%    standard deviation, skewness, and log-skewness for the historical
-%    period of the observed and modeled series.
-mu_obs  = nanmean(obs_series,2);     % Mean
-sigma_obs = nanstd(obs_series,0,2);  % Standard deviation
-skew_obs = skewness(obs_series,0,2); % Skewness
-Ln_obs  = log(obs_series);
-Ln_obs(imag(Ln_obs)~=0) = 0;
-Ln_obs(isinf(Ln_obs)) = log(0.01);
-skewy_obs = skewness(Ln_obs,0,2);    % Log-skewness
-
-mu_mod  = nanmean(mod_series(:,1:y_obs),2);     % Mean
-sigma_mod = nanstd(mod_series(:,1:y_obs),0,2);  % Standard deviation
-skew_mod = skewness(mod_series(:,1:y_obs),0,2); % Skewness
-Ln_mod  = log(mod_series(:,1:y_obs));
-Ln_mod(imag(Ln_mod)~=0) = 0;
-Ln_mod(isinf(Ln_mod)) = log(0.01);
-skewy_mod = skewness(Ln_mod,0,2);               % Log-skewness
 end

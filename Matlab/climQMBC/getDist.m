@@ -1,4 +1,4 @@
-function PDF = getDist(series,mu,sigma,skew,skewy,var)
+function PDF = getDist(series,allow_negatives, mu,sigma,skew,skewy)
 %% getDist:
 %   This function assigns an independent probability distribution function
 %   to each row of the input series by comparing the empirical probability
@@ -179,7 +179,7 @@ for m=1:n
     
     % c) If variable is precipitation, set KS=1 to distributions that allow
     %    negative values (this will discard those distributions).
-    if var==1
+    if allow_negatives==0
         KSnormal=1;
         KSgammaIII=1;
         KSgumbel=1;
