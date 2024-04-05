@@ -94,13 +94,13 @@ mod <- matrix(mod$pr)
 
 
 frq <- 'D' #'M' for monthly data; 'A' for annually data
-# QM_series <- QM(obs,mod,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100))
+QM_series <- QM(obs,mod,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
 DQM_series <- DQM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
-# QDM_series <- QDM(obs,mod,mult_change=1,allow_negatives=0,frq=frq)
-# UQM_series <- UQM(obs,mod,mult_change=1,allow_negatives=0,frq=frq)
+QDM_series <- QDM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
+UQM_series <- UQM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
 # SDM_series <- SDM(obs,mod,SDM_var=1,frq=frq)
 
-plot(DQM_series)
+plot(QDM_series)
 
 
 ## Example 1

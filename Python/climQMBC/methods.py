@@ -357,7 +357,7 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     
     # 7) Perform QM for the historical period.
     mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
-    QM_series = QM(obs, mod_h, allow_negatives, frq)
+    QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor,win=win)
     DQM_series = np.hstack([QM_series, DQM_series])
     
     if not allow_negatives:
@@ -577,7 +577,7 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     
     # 5) Perform QM for the historical period.
     mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
-    QM_series = QM(obs, mod_h, allow_negatives, frq)
+    QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor,win=win)
     QDM_series = np.hstack([QM_series, QDM_series])
     
     if not allow_negatives:
@@ -791,7 +791,7 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     
     # 5) Perform QM for the historical period.
     mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
-    QM_series = QM(obs, mod_h, allow_negatives, frq)
+    QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor,win=win)
     UQM_series = np.hstack([QM_series, UQM_series])
     
     if not allow_negatives:

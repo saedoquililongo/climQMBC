@@ -61,19 +61,19 @@ mult_change = 1
 allow_negatives = 0
 SDM_var = 1
 
-# Load observed and model data. Remember that for temperature, var = 0, and
-# for precipitation, var = 1.
-obs = np.array(pd.read_csv('../Sample_data/obs_'+variable+'.csv',header=None))
-mod = np.array(pd.read_csv('../Sample_data/mod_'+variable+'.csv',header=None))
+# # Load observed and model data. Remember that for temperature, var = 0, and
+# # for precipitation, var = 1.
+# obs = np.array(pd.read_csv('../Sample_data/obs_'+variable+'.csv',header=None))
+# mod = np.array(pd.read_csv('../Sample_data/mod_'+variable+'.csv',header=None))
 
-frq = 'A'
+# frq = 'A'
 # qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq)
-dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
+# dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
 # qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
 # uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
 # sdm_series = SDM(obs, mod, SDM_var=1, frq=frq)
 
-plt.plot(dqm_series,'o', markersize=1)
+# plt.plot(dqm_series,'o', markersize=1)
 
 
 # obs = pd.read_csv('../Sample_data/obs_D.csv', index_col=0, parse_dates=True, dayfirst=True)[['CRA']].loc['1985':'2014']
@@ -120,7 +120,8 @@ uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change
 # sdm_series = SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100)
 
 
-plt.plot(dqm_series,'o')
+plt.plot(uqm_series,'o')
+kk
 # %%
 plt.figure()
 
