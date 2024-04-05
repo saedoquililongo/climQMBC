@@ -85,9 +85,9 @@ pp_factor=1/(100*100);
 win=15;
 
 qm_series = QM(obs,mod,allow_negatives,frq,pp_threshold, pp_factor, win);
-dqm_series = DQM(obs,mod,allow_negatives,frq,mult_change,pp_threshold, pp_factor, win);
+dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, win);
 
-
+plot(dqm_series,'o')
 %% Example 1
 %   Example 1 shows how to use the report function with the minimum number
 %   of inputs. The five methods available in the climQMBC package will be

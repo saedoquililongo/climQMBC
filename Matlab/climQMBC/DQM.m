@@ -180,14 +180,15 @@ end
 %    a) Get the monthly mean of the historical period. If annual
 %       frequency is specified, this is applied to the complete period).
 if frq == 'D'
-    win_series <- abind::abind(array(rep(1,y_obs), c(1,1,y_obs)) %x% mod_series_moving,
-                               array(0, c(dim(mod_series)[1],win*2-1,y_obs)), along=3)
-                                          
-    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod+1,y_obs))[,,2:(y_mod-y_obs+1),]
-    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod-y_obs,y_obs))
+    win_series = cat(3, repmat(mod_series_moving, [1,1,y_obs]),zeros(size(mod_series,1), win*2-1, y_obs));
+    win_series = reshape(win_series, [size(mod_series,1), win*2-1, y_mod+1, y_obs]);
+    win_series = win_series(:,:,2:(y_mod-y_obs+1),:);
 
-    mu_win <- apply(win_series,c(1,3),mean, na.rm=TRUE)
-    
+    mu_win = mean(win_series,[2,4]);
+    mu_win = reshape(mu_win, [size(mu_win,1),size(mu_win,3)]);
+
+    mu_mod_repeated = repmat(mu_mod,1,(y_mod-y_obs));
+
 else
     win_series = [repmat(mod_series,1,y_obs), zeros(size(mod_series,1),y_obs)];
     win_series = reshape(win_series,[size(mod_series,1),y_mod+1,y_obs]);
@@ -237,7 +238,7 @@ DQM = DQM(:);
 % 8) Perform QM for the historical period.
 mod_h = mod_series(:,1:y_obs);
 mod_h = mod_h(:);
-QM_series = QM(obs,mod_h,allow_negatives,frq);
+QM_series = QM(obs,mod_h,allow_negatives,frq, pp_threshold,pp_factor,win);
 DQM_series = [QM_series' DQM']';
 if allow_negatives==0
     DQM_series(DQM_series<pp_threshold) = 0;
