@@ -47,6 +47,8 @@
 # *Maintainer contact: sebastian.aedo.q@gmail.com
 # Revision: 0, updated Dec 2021
 
+## Recordar a usuarios que deben descargar libreria abind
+
 # # If the package is not installed, save the .tar.gz file in the same directory
 # # as this script. The following lines will install the package and import it.
 # install.packages(paste(getwd(),'/','climQMBC_0.1.1.tar.gz',sep=''),repos=NULL,type='source')

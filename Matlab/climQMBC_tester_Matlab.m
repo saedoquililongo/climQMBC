@@ -53,25 +53,40 @@ clc
 clear all
 
 addpath('./climQMBC')  
-var_name = {'tmax','pp'};
+% var_name = {'tmax','pp'};
+% 
+% 
+% % Load observed and model data. Remember that for temperature, var = 0, and
+% % for precipitation, var = 1.
+% var = 1;
+% obs = csvread(strcat('../Sample_data/obs_',char(var_name(var+1)),'.csv'));
+% mod = csvread(strcat('../Sample_data/mod_',char(var_name(var+1)),'.csv'));
+% 
+% allow_negatives = 0;
+% mult_change = 1;
+% SDM_var = 1;
+% 
+% frq = 'A'; % 'M' for monthly data; 'A' for annual data
+% QM_series = QM(obs,mod,allow_negatives,frq);
+% DQM_series = DQM(obs,mod,mult_change,allow_negatives,frq);
+% QDM_series = QDM(obs,mod,mult_change,allow_negatives,frq);
+% UQM_series = UQM(obs,mod,mult_change,allow_negatives,frq);
+% SDM_series = SDM(obs,mod,SDM_var,frq);
 
+%% AA
+obs = csvread('../Sample_data/obs_pr_D.csv', 1,3);
+mod = csvread('../Sample_data/mod_pr_D.csv', 1,3);
 
-% Load observed and model data. Remember that for temperature, var = 0, and
-% for precipitation, var = 1.
-var = 1;
-obs = csvread(strcat('../Sample_data/obs_',char(var_name(var+1)),'.csv'));
-mod = csvread(strcat('../Sample_data/mod_',char(var_name(var+1)),'.csv'));
-
-allow_negatives = 0;
+frq = 'D';
+allow_negatives=0;
 mult_change = 1;
-SDM_var = 1;
+pp_threshold=1;
+pp_factor=1/(100*100);
+win=15;
 
-frq = 'A'; % 'M' for monthly data; 'A' for annual data
-QM_series = QM(obs,mod,allow_negatives,frq);
-DQM_series = DQM(obs,mod,mult_change,allow_negatives,frq);
-QDM_series = QDM(obs,mod,mult_change,allow_negatives,frq);
-UQM_series = UQM(obs,mod,mult_change,allow_negatives,frq);
-SDM_series = SDM(obs,mod,SDM_var,frq);
+qm_series = QM(obs,mod,allow_negatives,frq,pp_threshold, pp_factor, win);
+dqm_series = DQM(obs,mod,allow_negatives,frq,mult_change,pp_threshold, pp_factor, win);
+
 
 %% Example 1
 %   Example 1 shows how to use the report function with the minimum number

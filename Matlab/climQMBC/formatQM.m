@@ -142,11 +142,16 @@ function [years, series] = formatQM(series_, allow_negatives, frq, pp_threshold,
 series = series_;
 
 % 0) Check if annual or monthly data is specified.
-if frq == 'A'
+if frq=='D'
+    I = 365;
+elseif frq=='M'
+    I = 12;
+elseif frq=='A'
     I = 1;
 else
-    I = 12;
+    I = 1;
 end
+
 
 % 1) If variable is precipitation, replace low values with random values.
 if allow_negatives == 0

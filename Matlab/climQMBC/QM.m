@@ -1,4 +1,4 @@
-function QM_series = QM(obs, mod, allow_negatives, frq,pp_threshold,pp_factor)
+function QM_series = QM(obs, mod, allow_negatives, frq,pp_threshold,pp_factor, win)
 %% QM_series:
 %   This function performs bias correction of modeled series based on 
 %   observed data by the Quantile Mapping (QM) method, as described by
@@ -118,6 +118,10 @@ if ~exist('pp_factor','var')
     pp_factor = 1/100;
 end
 
+if ~exist('win','var')
+    win = 1;
+end
+
 
 
 % 1) Format inputs and get statistics of the observed and modeled series of
@@ -125,15 +129,38 @@ end
 [y_obs,obs_series] = formatQM(obs, allow_negatives, frq,pp_threshold,pp_factor);
 [y_mod,mod_series] = formatQM(mod, allow_negatives, frq,pp_threshold,pp_factor);
 
-[mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series, frq);
-[mu_mod, std_mod, skew_mod, skewy_mod] = getStats(mod_series(:,1:y_obs), frq);
+if frq=='D'
+    obs_series_moving = cat(1,obs_series(end-win+1:end,:),repmat(obs_series, [win*2,1]),obs_series(1:win,:));
+    obs_series_moving = reshape(obs_series_moving,[size(obs_series,1)+1, win*2, size(obs_series,2)]);
+    obs_series_moving = obs_series_moving(1:end-1,2:end,:);
+
+    mod_series_moving = cat(1,mod_series(end-win+1:end,:),repmat(mod_series, [win*2,1]),mod_series(1:win,:));
+    mod_series_moving = reshape(mod_series_moving,[size(mod_series,1)+1, win*2, size(mod_series,2)]);
+    mod_series_moving = mod_series_moving(1:end-1,2:end,:);
+
+    [mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series_moving, frq);
+    [mu_mod, std_mod, skew_mod, skewy_mod] = getStats(mod_series_moving(:,:,1:y_obs), frq);
+    
+else
+    [mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series, frq);
+    [mu_mod, std_mod, skew_mod, skewy_mod] = getStats(mod_series(:,1:y_obs), frq);
+end
+
+
 
 % 2) Assign a probability distribution function to each month for the
 %    observed and modeled data in the historical period. If annual
 %    frequency is specified, this is applied to the complete historical
 %    period (getDist function of the climQMBC package).
-pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
-pdf_mod = getDist(mod_series(:,1:y_obs),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+if frq=='D'
+    pdf_obs = getDist(reshape(obs_series_moving, 365,[]),allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+    pdf_mod = getDist(reshape(mod_series_moving(:,:,1:y_obs), 365,[]),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+else
+    pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+    pdf_mod = getDist(mod_series(:,1:y_obs),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+end
+
+
 
 % 3) Apply the cumulative distribution function of the modeled data,
 %    evaluated with the statistics of the modeled data in the historical

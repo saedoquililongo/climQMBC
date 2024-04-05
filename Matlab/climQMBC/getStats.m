@@ -140,7 +140,7 @@ function [mu, sigma, skew, skewy] = getStats(series, frq)
 
 %%
 if frq == 'D'
-    dim_stats = [1 2];
+    dim_stats = [2 3];
 else
     if length(size(series)) == 3
         dim_stats = 3;

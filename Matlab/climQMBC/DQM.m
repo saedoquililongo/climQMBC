@@ -1,4 +1,4 @@
-function DQM_series = DQM(obs, mod, mult_change, allow_negatives, frq,pp_threshold,pp_factor)
+function DQM_series = DQM(obs, mod, mult_change, allow_negatives, frq,pp_threshold,pp_factor,win)
 %% DQM_series:
 %   This function performs bias correction of modeled series based on
 %   observed data by the Detrended Quantile Mapping (DQM) method, as 
@@ -137,32 +137,69 @@ if ~exist('pp_factor','var')
     pp_factor = 1/100;
 end
 
+if ~exist('win','var')
+    win = 1;
+end
+
 
 % 1) Format inputs and get statistics of the observed and modeled series of
 %    the historical period (formatQM function of the climQMBC package).
 [y_obs,obs_series] = formatQM(obs, allow_negatives, frq,pp_threshold,pp_factor);
 [y_mod,mod_series] = formatQM(mod, allow_negatives, frq,pp_threshold,pp_factor);
 
-[mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series, frq);
-[mu_mod, std_mod, skew_mod, skewy_mod] = getStats(mod_series(:,1:y_obs), frq);
+if frq=='D'
+    obs_series_moving = cat(1,obs_series(end-win+1:end,:),repmat(obs_series, [win*2,1]),obs_series(1:win,:));
+    obs_series_moving = reshape(obs_series_moving,[size(obs_series,1)+1, win*2, size(obs_series,2)]);
+    obs_series_moving = obs_series_moving(1:end-1,2:end,:);
+
+    mod_series_moving = cat(1,mod_series(end-win+1:end,:),repmat(mod_series, [win*2,1]),mod_series(1:win,:));
+    mod_series_moving = reshape(mod_series_moving,[size(mod_series,1)+1, win*2, size(mod_series,2)]);
+    mod_series_moving = mod_series_moving(1:end-1,2:end,:);
+
+    [mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series_moving, frq);
+    [mu_mod, std_mod, skew_mod, skewy_mod] = getStats(mod_series_moving(:,:,1:y_obs), frq);
+    
+else
+    [mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series, frq);
+    [mu_mod, std_mod, skew_mod, skewy_mod] = getStats(mod_series(:,1:y_obs), frq);
+end
 
 % 2) Assign a probability distribution function to each month for the
 %    observed and modeled data in the historical period. If annual
 %    frequency is specified, this is applied to the complete historical
 %    period (getDist function of the climQMBC package).
-pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
-pdf_mod = getDist(mod_series(:,1:y_obs),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+if frq=='D'
+    pdf_obs = getDist(reshape(obs_series_moving, 365,[]),allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+    pdf_mod = getDist(reshape(mod_series_moving(:,:,1:y_obs), 365,[]),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+else
+    pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+    pdf_mod = getDist(mod_series(:,1:y_obs),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+end
 
 % 3) Extract the long-term trend from the modeled data:
 %    a) Get the monthly mean of the historical period. If annual
 %       frequency is specified, this is applied to the complete period).
-win_series = [repmat(mod_series,1,y_obs), zeros(size(mod_series,1),y_obs)];
-win_series = reshape(win_series,[size(mod_series,1),y_mod+1,y_obs]);
-win_series = win_series(:,2:end-y_obs,:);
+if frq == 'D'
+    win_series <- abind::abind(array(rep(1,y_obs), c(1,1,y_obs)) %x% mod_series_moving,
+                               array(0, c(dim(mod_series)[1],win*2-1,y_obs)), along=3)
+                                          
+    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod+1,y_obs))[,,2:(y_mod-y_obs+1),]
+    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod-y_obs,y_obs))
 
-mu_win = mean(win_series,3);
+    mu_win <- apply(win_series,c(1,3),mean, na.rm=TRUE)
+    
+else
+    win_series = [repmat(mod_series,1,y_obs), zeros(size(mod_series,1),y_obs)];
+    win_series = reshape(win_series,[size(mod_series,1),y_mod+1,y_obs]);
+    win_series = win_series(:,2:end-y_obs,:);
+    
+    mu_win = mean(win_series,3);
+    
+    mu_mod_repeated = repmat(mu_mod,1,(y_mod-y_obs));
+end
 
-mu_mod_repeated = repmat(mu_mod,1,(y_mod-y_obs));
+
+
 
 
 % 4)Compute the linear scaled values (value in square brackets in equation

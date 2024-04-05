@@ -120,7 +120,7 @@ uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change
 # sdm_series = SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100)
 
 
-plt.plot(uqm_series,'o')
+plt.plot(qm_series,'o')
 kk
 # %%
 plt.figure()
