@@ -41,11 +41,10 @@ Revision: 2, updated Jan 2024
 """
 
 
-from .utils import formatQM, getStats, getDist, getCDF, getCDFinv
+from .utils import formatQM, getStats, getDist, getCDF, getCDFinv, get_pp_threshold_mod
 from scipy.signal import detrend
 import scipy.stats as stat
 import numpy as np
-
 
 def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None, win=1):
     """
@@ -130,11 +129,16 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, us
         in quantiles and extremes? J. Climate, 28(17), 6938-6959, 
         https://doi.org/10.1175/JCLI-D-14-00754.1
     """
-    
     # 0) Format inputs and get statistics of the observed and modeled series in
     #    the historical period (formatQM function of the climQMBC package).
+    if (frq=='D') & (not allow_negatives):
+        pp_threshold_mod = get_pp_threshold_mod(obs, mod, pp_threshold)
+    else:
+        pp_threshold_mod = pp_threshold
+
     y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
-    y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold_mod, pp_factor)
+    
     
     if frq=='D':
         obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
@@ -142,10 +146,39 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, us
         
         mod_series_moving = np.vstack([mod_series[-win:],np.tile(mod_series,(win*2,1)),mod_series[:win]])
         mod_series_moving = mod_series_moving.reshape(mod_series.shape[0]+1,win*2,mod_series.shape[1], order='F')[:-1,1:]
+
+        obs_series_moving = obs_series_moving.reshape(365,(2*win-1)*y_obs)
+        modh_series_moving = mod_series_moving[:,:,:y_obs].reshape(365,(2*win-1)*y_obs)
         
-        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving, frq)
-        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series_moving[:,:,:y_obs], frq)
-    
+        
+        min_rainday_distribution = 30
+        # Minimos necesarios  -> min_rainday_distribution
+        # Dias que tengo      -> obs_rainday_count[per]
+        # Dias a modificar    -> obs_dry_count
+        # Valores a modificar -> replace_values_nans
+        # Valores no-nans     -> max(Minimos_necesarios - dias que tengo,0)
+        #                            >0: Faltan valores  ->  No todos son nans
+        #                            <0: Sobran valores  ->  Todos son nans
+        
+        obs_rainday_count = np.sum(obs_series_moving>pp_threshold,1)
+        for per in range(obs_series_moving.shape[0]):
+            bool_low = obs_series_moving[per]<pp_threshold
+            replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
+            replace_values_nans[max(0,min_rainday_distribution-obs_rainday_count[per]):] = np.nan
+            obs_series_moving[per,bool_low] = replace_values_nans
+        
+        modh_rainday_count = np.sum(modh_series_moving>pp_threshold_mod,1)
+        for per in range(modh_series_moving.shape[0]):
+            bool_low = modh_series_moving[per]<pp_threshold_mod
+            replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold_mod
+            replace_values_nans[max(0,min_rainday_distribution-modh_rainday_count[per]):] = np.nan
+            modh_series_moving[per,bool_low] = replace_values_nans
+        
+        mod_series[mod_series<pp_threshold_mod] = np.nan
+        
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(modh_series_moving)
+        
     else:
         mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
         mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
@@ -156,8 +189,8 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, us
     #    period (getDist function of the climQMBC package).
     if user_pdf==False:
         if frq=='D':
-            pdf_obs = getDist(obs_series_moving.reshape(365,(2*win-1)*y_obs), allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
-            pdf_mod = getDist(mod_series_moving[:,:,:y_obs].reshape(365,(2*win-1)*y_obs), allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+            pdf_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod = getDist(modh_series_moving, allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
         else:
             pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
             pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
@@ -173,6 +206,8 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, us
     #    historical period, to the probabilities obtained from 2) (getCDFinv
     #    function of the climQMBC package). Equation 1 of Cannon et al. (2015).
     QM_series = getCDFinv(pdf_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
+   
+    QM_series[np.isnan(QM_series)] = 0
     QM_series = QM_series.reshape(-1, order='F')
     
     if not allow_negatives:
@@ -280,10 +315,17 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         https://doi.org/10.1175/JCLI-D-14-00754.1
     """
     
+    
+    
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
+    if (frq=='D') & (not allow_negatives):
+        pp_threshold_mod = get_pp_threshold_mod(obs, mod, pp_threshold)
+    else:
+        pp_threshold_mod = pp_threshold
+
     y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
-    y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold_mod, pp_factor)
     
     if frq=='D':
         obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
@@ -292,10 +334,62 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         mod_series_moving = np.vstack([mod_series[-win:],np.tile(mod_series,(win*2,1)),mod_series[:win]])
         mod_series_moving = mod_series_moving.reshape(mod_series.shape[0]+1,win*2,mod_series.shape[1], order='F')[:-1,1:]
         
-        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving, frq)
-        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series_moving[:,:,:y_obs], frq)
-    
+        
+        win_series = np.dstack([np.tile(mod_series_moving,(1,1,y_obs)), np.zeros((mod_series.shape[0],2*win-1,y_obs))])
+        win_series = win_series.reshape(mod_series.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
+        
+        obs_series_moving = obs_series_moving.reshape(365,(2*win-1)*y_obs)
+        modh_series_moving = mod_series_moving[:,:,:y_obs].reshape(365,(2*win-1)*y_obs)
+        win_series_moving = win_series.reshape(365,(2*win-1)*y_obs,y_mod-y_obs)
+        
+        
+        min_rainday_distribution = 30
+        # Minimos necesarios  -> min_rainday_distribution
+        # Dias que tengo      -> obs_rainday_count[per]
+        # Dias a modificar    -> obs_dry_count
+        # Valores a modificar -> replace_values_nans
+        # Valores no-nans     -> max(Minimos_necesarios - dias que tengo,0)
+        #                            >0: Faltan valores  ->  No todos son nans
+        #                            <0: Sobran valores  ->  Todos son nans
+        
+        obs_rainday_count = np.sum(obs_series_moving>pp_threshold,1)
+        for per in range(obs_series_moving.shape[0]):
+            bool_low = obs_series_moving[per]<pp_threshold
+            replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
+            replace_values_nans[max(0,min_rainday_distribution-obs_rainday_count[per]):] = np.nan
+            obs_series_moving[per,bool_low] = replace_values_nans
+        obs_rainday_count = np.sum(~np.isnan(obs_series_moving),1)
+        
+        modh_rainday_count = np.sum(modh_series_moving>pp_threshold_mod,1)
+        for per in range(modh_series_moving.shape[0]):
+            bool_low = modh_series_moving[per]<pp_threshold_mod
+            replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
+            replace_values_nans[max(0,min_rainday_distribution-modh_rainday_count[per]):] = np.nan
+            modh_series_moving[per,bool_low] = replace_values_nans
+        modh_rainday_count = np.sum(~np.isnan(modh_series_moving),1)
+        
+        
+        win_rainday_count = np.sum(win_series_moving>pp_threshold_mod,1)
+        for per1 in range(win_rainday_count.shape[0]):
+            for per2 in range(win_rainday_count.shape[1]):
+                bool_low = win_series_moving[per1,:,per2]<pp_threshold_mod
+                replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
+                replace_values_nans[max(0,min_rainday_distribution-win_rainday_count[per1,per2]):] = np.nan
+                win_series_moving[per1,bool_low,per2] = replace_values_nans
+        win_rainday_count = np.sum(~np.isnan(win_series_moving),1)
+        
+        mod_series[mod_series<pp_threshold_mod] = np.nan
+
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(modh_series_moving)
+
+        mu_win, std_win, skew_win, skewy_win = getStats(win_series_moving)
     else:
+        win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
+        win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
+        
+        mu_win, std_win, skew_win, skewy_win = getStats(win_series)
+        
         mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
         mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
     
@@ -305,23 +399,12 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     #    period (getDist function of the climQMBC package).
     if user_pdf==False:
         if frq=='D':
-            pdf_obs = getDist(obs_series_moving.reshape(365,(2*win-1)*y_obs), allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
-            pdf_mod = getDist(mod_series_moving[:,:,:y_obs].reshape(365,(2*win-1)*y_obs), allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+            pdf_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod = getDist(modh_series_moving, allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
         else:
             pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
             pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
 
-    # 2) Get the monthly mean of each projected period or window. If annual 
-    #    frequency is specified, this is applied to the complete period).
-    if frq=='D':
-        win_series = np.dstack([np.tile(mod_series_moving,(1,1,y_obs)), np.zeros((mod_series.shape[0],2*win-1,y_obs))])
-    
-        win_series = win_series.reshape(mod_series.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
-        mu_win = win_series.mean((1,2))
-    else:
-        win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
-        win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
-        mu_win = win_series.mean(1)
 
     # 3) Scaling factor (model series))
     # 3)Compute the linear scaled values (value in square brackets in equation
@@ -353,10 +436,11 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     else: # Temperature
         DQM_series = DQM_unscaled + scaling_factor
     
+    DQM_series[np.isnan(DQM_series)] = 0
     DQM_series = DQM_series.reshape(-1, order='F')
     
     # 7) Perform QM for the historical period.
-    mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
+    mod_h = mod[:y_obs]
     QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor,win=win)
     DQM_series = np.hstack([QM_series, DQM_series])
     
@@ -573,10 +657,11 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         delta_quantile = mod_series[:,y_obs:] - inv_mod
         QDM_series = inv_obs + delta_quantile
     
+    QDM_series[np.isnan(QDM_series)] = 0
     QDM_series = QDM_series.reshape(-1,order='F')
     
     # 5) Perform QM for the historical period.
-    mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
+    mod_h = mod[:y_obs]
     QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor,win=win)
     QDM_series = np.hstack([QM_series, QDM_series])
     
@@ -683,11 +768,15 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         https://doi.org/10.1080/02626667.2023.2201450
   
     """
-    
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
+    if (frq=='D') & (not allow_negatives):
+        pp_threshold_mod = get_pp_threshold_mod(obs, mod, pp_threshold)
+    else:
+        pp_threshold_mod = pp_threshold
+
     y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
-    y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold_mod, pp_factor)
     
     if frq=='D':
         obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
@@ -696,10 +785,64 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         mod_series_moving = np.vstack([mod_series[-win:],np.tile(mod_series,(win*2,1)),mod_series[:win]])
         mod_series_moving = mod_series_moving.reshape(mod_series.shape[0]+1,win*2,mod_series.shape[1], order='F')[:-1,1:]
         
-        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving, frq)
-        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series_moving[:,:,:y_obs], frq)
-    
+        
+        win_series = np.dstack([np.tile(mod_series_moving,(1,1,y_obs)), np.zeros((mod_series.shape[0],2*win-1,y_obs))])
+        win_series = win_series.reshape(mod_series.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
+        
+        obs_series_moving = obs_series_moving.reshape(365,(2*win-1)*y_obs)
+        modh_series_moving = mod_series_moving[:,:,:y_obs].reshape(365,(2*win-1)*y_obs)
+        win_series_moving = win_series.reshape(365,(2*win-1)*y_obs,y_mod-y_obs)
+        
+        
+        min_rainday_distribution = 30
+        # Minimos necesarios  -> min_rainday_distribution
+        # Dias que tengo      -> obs_rainday_count[per]
+        # Dias a modificar    -> obs_dry_count
+        # Valores a modificar -> replace_values_nans
+        # Valores no-nans     -> max(Minimos_necesarios - dias que tengo,0)
+        #                            >0: Faltan valores  ->  No todos son nans
+        #                            <0: Sobran valores  ->  Todos son nans
+        
+        obs_rainday_count = np.sum(obs_series_moving>pp_threshold,1)
+        for per in range(obs_series_moving.shape[0]):
+            bool_low = obs_series_moving[per]<pp_threshold
+            replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
+            replace_values_nans[max(0,min_rainday_distribution-obs_rainday_count[per]):] = np.nan
+            obs_series_moving[per,bool_low] = replace_values_nans
+        obs_rainday_count = np.sum(~np.isnan(obs_series_moving),1)
+        
+        modh_rainday_count = np.sum(modh_series_moving>pp_threshold_mod,1)
+        for per in range(modh_series_moving.shape[0]):
+            bool_low = modh_series_moving[per]<pp_threshold_mod
+            replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
+            replace_values_nans[max(0,min_rainday_distribution-modh_rainday_count[per]):] = np.nan
+            modh_series_moving[per,bool_low] = replace_values_nans
+        modh_rainday_count = np.sum(~np.isnan(modh_series_moving),1)
+        
+        
+        win_rainday_count = np.sum(win_series_moving>pp_threshold_mod,1)
+        for per1 in range(win_rainday_count.shape[0]):
+            for per2 in range(win_rainday_count.shape[1]):
+                bool_low = win_series_moving[per1,:,per2]<pp_threshold_mod
+                replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
+                replace_values_nans[max(0,min_rainday_distribution-win_rainday_count[per1,per2]):] = np.nan
+                win_series_moving[per1,bool_low,per2] = replace_values_nans
+        win_rainday_count = np.sum(~np.isnan(win_series_moving),1)
+
+
+        # mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving, frq)
+        # mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series_moving[:,:,:y_obs], frq)
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(modh_series_moving)
+
+        # mu_win, std_win, skew_win, skewy_win = getStats(win_series, frq)
+        mu_win, std_win, skew_win, skewy_win = getStats(win_series_moving)
     else:
+        win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
+        win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
+        
+        mu_win, std_win, skew_win, skewy_win = getStats(win_series)
+        
         mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
         mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
     
@@ -709,7 +852,7 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     #    period (getDist function of the climQMBC package).
     if user_pdf==False:
         if frq=='D':
-            pdf_obs = getDist(obs_series_moving.reshape(365,(2*win-1)*y_obs), allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
         else:
             pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
     
@@ -717,16 +860,7 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     #    dependent (aster) statistics (mean, standard deviation, skewness, and
     #    log skewness). Equations 13 to 14 in Chadwick et al. (2023).
     # Matrix [sub-periods, window, periods]
-    if frq=='D':
-        win_series = np.dstack([np.tile(mod_series_moving,(1,1,y_obs)), np.zeros((mod_series.shape[0],2*win-1,y_obs))])
-        win_series = win_series.reshape(mod_series.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
-        mu_win, std_win, skew_win, skewy_win = getStats(win_series, frq)
-        
-    else:
-        win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
-        win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
-        
-        mu_win, std_win, skew_win, skewy_win = getStats(win_series)
+
 
     if mult_change:  # Precipitation
         delta_mu = mu_win/np.tile(mu_mod,(y_mod-y_obs,1)).T
@@ -738,6 +872,7 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         sigma_projected = np.tile(std_obs,(y_mod-y_obs,1)).T*delta_sigma
         skew_projected = np.tile(skew_obs,(y_mod-y_obs,1)).T*delta_skew
         skewy_projected = np.tile(skewy_obs,(y_mod-y_obs,1)).T*delta_skewy
+        
     else:
         delta_mu = mu_win - np.tile(mu_mod,(y_mod-y_obs,1)).T
         delta_sigma = std_win - np.tile(std_mod,(y_mod-y_obs,1)).T
@@ -764,10 +899,9 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         #    period (getDist function of the climQMBC package).
         if user_pdf==False:
             if frq=='D':
-                pdf_win[:,j] = getDist(win_series[:,:,:,j].reshape(365,(2*win-1)*y_obs), allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+                pdf_win[:,j] = getDist(win_series_moving[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
             else:
                 pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
-            # pdf_win[:,j] = getDist(Dwin_series, allow_negatives, mu_win_, std_win_, skew_win_, skewy_win_)
         else:
             pdf_win[:,j] = pdf_mod
         
@@ -776,7 +910,7 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         #    data of the period (getCDF function of the climQMBC package).
         #    Equation 3 in Chadwick et al. (2023).
         if frq=='D':
-            Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,win-1,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
+            Taot[:,j] = getCDF(pdf_win[:,j],win_series[:,win-1,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
         else:
             Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
         # Taot[:,j] = getCDF(pdf_win[:,j], Dwin_series[:,-1:], mu_win_, std_win_, skew_win_, skewy_win_)[:,0]
@@ -787,10 +921,11 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         #    15 in Chadwick et al. (2023).
         UQM_series[:,j] = getCDFinv(pdf_obs, Taot[:,j:j+1], mu_projected[:,j], sigma_projected[:,j], skew_projected[:,j], skewy_projected[:,j])[:,0]
     
+    UQM_series[np.isnan(UQM_series)] = 0
     UQM_series = UQM_series.reshape(-1, order='F')
     
     # 5) Perform QM for the historical period.
-    mod_h = mod_series[:,:y_obs].reshape(-1, order='F')
+    mod_h = mod[:y_obs]
     QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor,win=win)
     UQM_series = np.hstack([QM_series, UQM_series])
     

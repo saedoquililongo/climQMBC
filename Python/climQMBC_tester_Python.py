@@ -48,7 +48,7 @@ Revision: 0, updated Dec 2021
 
 """
 
-from climQMBC.methods import QM, DQM, QDM, UQM, SDM
+from climQMBC.methods import QM, DQM, QDM, UQM, SDM, UQM_mod_day, QM_mod_day
 from climQMBC.utils import formatQM, getStats, getDist, getCDF, getCDFinv
 from climQMBC.report import report
 import matplotlib.pylab as plt
@@ -112,16 +112,18 @@ mod = pd.read_csv('../Sample_data/mod_pr_D.csv')[['pr']].values
 
 # QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
 # %%
-import matplotlib.pylab as plt
 frq = 'D'
-qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq, win=15, pp_threshold=1, pp_factor=1/(100*100))
-dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=15, pp_threshold=1, pp_factor=1/(100*100))
-qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=15, pp_threshold=1, pp_factor=1/(100*100))
-uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=15, pp_threshold=1, pp_factor=1/(100*100))
+# qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq, win=15, pp_threshold=1, pp_factor=1/(100*100))
+# dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=15, pp_threshold=1, pp_factor=1/(100*100))
+# qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=15, pp_threshold=1, pp_factor=1/(100*100))
+# uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=15, pp_threshold=1, pp_factor=1/(100*100))
+uqm_mod_series = UQM_mod_day(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=15, pp_threshold=1, pp_factor=1/(100*100))
+qm_mod_series = QM_mod_day(obs, mod, allow_negatives=allow_negatives, frq=frq, win=15, pp_threshold=1, pp_factor=1/(100*100))
 # sdm_series = SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100)
 
 
-plt.plot(qm_series,'o')
+plt.plot(uqm_mod_series,'o')
+plt.ylim(0,100)
 kk
 # %%
 plt.figure()

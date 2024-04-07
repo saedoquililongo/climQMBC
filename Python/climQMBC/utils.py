@@ -105,7 +105,6 @@ def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
     # 0) Check frequency.
     if frq=='D':
         I = 365
-        # pp_threshold = pp_factor/30
     elif frq=='M':
         I = 12
     elif frq=='A':
@@ -117,7 +116,7 @@ def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
     #    low values with random values.
     if not allow_negatives:
         bool_low = series<pp_threshold
-        series[bool_low] = np.random.rand(bool_low.sum())*pp_factor
+        series[bool_low] = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
 
     # 2) Get number of years of the series.
     years = int(series.shape[0]/I)
@@ -129,6 +128,12 @@ def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
     series = series.reshape((I,int(series.shape[0]/I)), order='F')
 
     return years, series
+
+def get_pp_threshold_mod(obs, mod, pp_threshold):
+    obs_rainday_hist = np.sum(obs>pp_threshold)
+    pp_threshold_mod = np.sort(mod[:obs.shape[0]],0)[::-1][min(obs_rainday_hist,len(obs)-1),0]
+    
+    return pp_threshold_mod
 
 
 def getStats(series, frq=None):
@@ -171,10 +176,10 @@ def getStats(series, frq=None):
     # logarithmic values of each year sub-period of the series.
     mu  = np.nanmean(series, dim_stats)                     # Mean
     sigma = np.nanstd(series, dim_stats, ddof=1)            # Standard deviation
-    skew = stat.skew(series, dim_stats, bias=False)         # Skewness
+    skew = stat.skew(series, dim_stats, bias=False, nan_policy='omit')         # Skewness
     series_log  = np.log(series)
-    series_log[np.isinf(series_log)] = np.log(0.01)
-    skewy = stat.skew(series_log, dim_stats, bias=False)    # Skewness of the log
+    series_log[np.isinf(series_log)] = np.log(np.random.rand(np.isinf(series_log).sum())*0.01)
+    skewy = stat.skew(series_log, dim_stats, bias=False, nan_policy='omit')    # Skewness of the log
 
     return mu, sigma, skew, skewy
 
@@ -321,11 +326,20 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
     for m in range(n):
         series_sub = series[m,:]
         
+        ######
+        series_sub = series_sub[~np.isnan(series_sub)]
+        y_series = len(series_sub)
+        #####
+        
         # a) Get empirical distribution.
         sortdata = np.sort(series_sub) 
         probEmp = np.arange(1/(y_series+1),
                             y_series/(y_series+1) + 1/(y_series+1),
                             1/(y_series+1))
+        
+        probEmp = np.linspace(1/(y_series+1),
+                              y_series/(y_series+1) + 1/(y_series+1),
+                              y_series)
 
         # b) Compare distributions.
         # i) Normal distribution.
@@ -368,7 +382,7 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
             Alpy = sigmay/np.sqrt(Bety)
             Gamy = muy-(Alpy*Bety)
             sortdata_log = np.log(sortdata)
-            # Lnsortdata[np.isinf(Lnsortdata)] = np.log(0.01)
+            sortdata_log[np.isinf(sortdata_log)] = np.log(np.random.rand(np.isinf(sortdata_log).sum())*0.01)
             LpIII = stat.gamma.cdf(sortdata_log-Gamy, a=Bety, scale=Alpy)
             KSLpIII = max(abs(LpIII-probEmp))
 
@@ -387,7 +401,7 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
         KSexponential= max(abs(exponential-probEmp))
         
         # c) If variable is precipitation, set KS=1 to distributions that allow
-        #    negative values (this will discard those distributions).
+        #    negative values (this will discard those distributions).        
         if not allow_negatives:
             KSnormal = 1
             KSgammaIII = 1
@@ -511,8 +525,7 @@ def getCDF(PDF, series, mu, sigma, skew, skewy):
             Alpy = sigmay/np.sqrt(Bety)
             Gamy = muy - (Alpy*Bety)
             Lnsortdata = np.log(series_sub)
-            Lnsortdata[np.isinf(Lnsortdata)] = np.log(0.01)
-            Lnsortdata[np.imag(Lnsortdata)!=0] = np.log(0.01)
+            Lnsortdata[np.isinf(Lnsortdata)] = np.log(np.random.rand(np.isinf(Lnsortdata).sum())*0.01)
             Taot[m,:]  = stat.gamma.cdf(Lnsortdata-Gamy,a=Bety,scale=Alpy)
             
         elif PDF[m]==5: # vi) Gumbel distribution.
