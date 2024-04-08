@@ -37,7 +37,7 @@ Written by Sebastian Aedo Quililongo (1*)
       Santiago, Chile
       
 *Maintainer contact: sebastian.aedo.q@gmail.com
-Revision: 2, updated Jan 2024
+Revision: 2, updated Apr 2024
 """
 
 
@@ -57,23 +57,6 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, us
     specified, this is applied to the complete period. Each projected period 
     considers a window whose length is equal to the number of years of the 
     historical period and ends in the analyzed year.
-    
-    Description:
-        0) Format inputs and get statistics of the observed and modeled series
-           in the historical period.
-           
-        1) Assign a probability distribution function to each month for the 
-           observed and modeled data in the historical period. If annual 
-           frequency is specified, this is applied to the complete historical 
-           period.
-           
-        2) Apply the cumulative distribution function of the modeled data, 
-           evaluated with the statistics of the modeled data in the historical 
-           period, to the modeled data.
-
-        3) Apply the inverse cumulative distribution function of the observed 
-           data, evaluated with the statistics of the observed data in the 
-           historical period, to the probabilities obtained from 2).
 
     Inputs:
         obs:    A column vector of monthly or annual observed data (temperature
@@ -230,35 +213,6 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     
     Correction of the historical period is performed by the Quantile Mapping 
     (QM) method, as described by Cannon et al. (2015).
-    
-    Description:
-        0) Format inputs and get statistics of the observed and modeled series
-           of the historical period.
-           
-        1) Assign a probability distribution function to each month for the 
-           observed and modeled data in the historical period. If annual 
-           frequency is specified, this is applied to the complete historical 
-           period.
-           
-        2) Extract the long-term trend from the modeled data:
-            a) Get the monthly mean of the historical period. If annual 
-               frequency is specified, this is applied to the complete period.
-            b) Get the monthly mean of each projected period. If annual 
-              frequency is specified, this is applied to the complete period.
-            
-        3) Compute the linear scaled values.
-        
-        4) Apply the cumulative distribution function of the modeled data, 
-           evaluated with the statistics of the modeled period, to the future 
-           modeled data.
-        
-        5) Apply the inverse cumulative distribution function of the observed 
-           data, evaluated with the statistics of the observed data in the 
-           historical period, to the probabilities obtained from 4).
-        
-        6) Reimpose the trend to the values obtained in 5).
-    
-        End) Perform QM for the historical period.
 
     Inputs:
         obs:    A column vector of monthly or annual observed data (temperature
@@ -440,7 +394,7 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     DQM_series = DQM_series.reshape(-1, order='F')
     
     # 7) Perform QM for the historical period.
-    mod_h = mod[:y_obs]
+    mod_h = mod[:obs.shape[0]]
     QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor,win=win)
     DQM_series = np.hstack([QM_series, DQM_series])
     
@@ -464,36 +418,6 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     
     Correction of the historical period is performed by the Quantile Mapping 
     (QM) method, as described by Cannon et al. (2015).
-    
-    Description:
-        0) Format inputs and get statistics of the observed and modeled series
-           of the historical period.
-           
-        1) Assign a probability distribution function to each month for the 
-           observed and modeled data in the historical period. If annual 
-           frequency is specified, this is applied to the complete historical 
-           period.
-           
-        2) For each projected period:
-            a) Assign a probability distribution function to each month. 
-               If annual frequency is specified, this is applied to the 
-               complete period.
-            b) Apply the cumulative distribution function of the projected 
-               period, evaluated with the statistics of this period, to the 
-               last data of the period.
-
-        3) Apply the inverse cumulative distribution function:
-            a) Of the observed data, evaluated with the statistics of the 
-               observed data in the historical period, to the probabilities
-               obtained from 2b).
-            b) Of the modeled data, evaluated with the statistics of the 
-               observed data in the historical period, to the probabilities
-               obtained from 2b).
-
-        4) Get the delta factor or relative change and apply it to the value
-           obtained in 3b).
-    
-        End) Perform QM for the historical period.
 
     Inputs:
         obs:    A column vector of monthly or annual observed data (temperature
@@ -563,211 +487,6 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     if inv_mod_th is None:
         inv_mod_th = pp_threshold
     
-    # 0) Format inputs and get statistics of the observed and modeled series of
-    #    the historical period (formatQM function of the climQMBC package).
-    y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
-    y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
-    
-    if frq=='D':
-        obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
-        obs_series_moving = obs_series_moving.reshape(obs_series.shape[0]+1,win*2,obs_series.shape[1], order='F')[:-1,1:]
-        
-        mod_series_moving = np.vstack([mod_series[-win:],np.tile(mod_series,(win*2,1)),mod_series[:win]])
-        mod_series_moving = mod_series_moving.reshape(mod_series.shape[0]+1,win*2,mod_series.shape[1], order='F')[:-1,1:]
-        
-        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving, frq)
-        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series_moving[:,:,:y_obs], frq)
-    
-    else:
-        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
-        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
-    
-    # 1) Assign a probability distribution function to each month for the
-    #    observed and modeled data in the historical period. If annual
-    #    frequency is specified, this is applied to the complete historical
-    #    period (getDist function of the climQMBC package).
-    if user_pdf==False:
-        if frq=='D':
-            pdf_obs = getDist(obs_series_moving.reshape(365,(2*win-1)*y_obs), allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
-            pdf_mod = getDist(mod_series_moving[:,:,:y_obs].reshape(365,(2*win-1)*y_obs), allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
-        else:
-            pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
-            pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
-
-    # 2) For each projected period:
-    if frq=='D':
-        win_series = np.dstack([np.tile(mod_series_moving,(1,1,y_obs)), np.zeros((mod_series.shape[0],2*win-1,y_obs))])
-        win_series = win_series.reshape(mod_series.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
-        mu_win, std_win, skew_win, skewy_win = getStats(win_series, frq)
-        
-    else:
-        win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
-        win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
-        
-        mu_win, std_win, skew_win, skewy_win = getStats(win_series)
-            
-    
-
-    
-    pdf_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
-    Taot = np.zeros((mod_series.shape[0], y_mod-y_obs))
-    for j in range(Taot.shape[1]):
-        # a) Assign a probability distribution function to each month. If
-        #    annual frequency is specified, this is applied to the complete 
-        #    period (getDist function of the climQMBC package).
-        if user_pdf==False:
-            if frq=='D':
-                pdf_win[:,j] = getDist(win_series[:,:,:,j].reshape(365,(2*win-1)*y_obs), allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
-            else:
-                pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
-        else:
-            pdf_win[:,j] = pdf_mod
-        
-        # b) Apply the cumulative distribution function of the projected
-        #    period, evaluated with the statistics of this period, to the last
-        #    data of the period (getCDF function of the climQMBC package).
-        #    Equation 3 of Cannon et al. (2015).
-        if frq=='D':
-            Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,win-1,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
-        else:
-            Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
-    
-
-    # 3) Apply the inverse cumulative distribution function:
-    #    a) Of the observed data, evaluated with the statistics of the observed
-    #       data in the historical period, to the probabilities obtained from 
-    #       2b) (getCDFinv function of the climQMBC package). Equation 5 of 
-    #       Cannon et al. (2015).
-    inv_obs = getCDFinv(pdf_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
-    
-    #    b) Of the modeled data, evaluated with the statistics of the observed
-    #       data in the historical period, to the probabilities obtained from 
-    #       2b) (getCDFinv function of the climQMBC package). Equations 4 of 
-    #       Cannon et al. (2015).
-    inv_mod = getCDFinv(pdf_mod, Taot, mu_mod, std_mod, skew_mod, skewy_mod)
-    
-    # 4) Get the delta factor or relative change and apply it to the value
-    #    obtained in 3b). Equation 4 and 6 of Cannon et al. (2015).
-    if mult_change:
-        delta_quantile = mod_series[:,y_obs:]/inv_mod
-        bool_undefined = (delta_quantile>rel_change_th) & (inv_mod<inv_mod_th)
-        delta_quantile[bool_undefined] = rel_change_th
-        QDM_series = inv_obs*delta_quantile
-    else:
-        delta_quantile = mod_series[:,y_obs:] - inv_mod
-        QDM_series = inv_obs + delta_quantile
-    
-    QDM_series[np.isnan(QDM_series)] = 0
-    QDM_series = QDM_series.reshape(-1,order='F')
-    
-    # 5) Perform QM for the historical period.
-    mod_h = mod[:y_obs]
-    QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor,win=win)
-    QDM_series = np.hstack([QM_series, QDM_series])
-    
-    if not allow_negatives:
-        QDM_series[QDM_series<pp_threshold] = 0
-    
-    return QDM_series
-
-
-def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None, win=1):
-    """
-    This function performs bias correction of modeled series based on observed
-    data by the Unbiased Quantile Mapping (UQM) method, as described by 
-    Chadwick et al. (2023). Correction is performed to monthly or annual
-    precipitation or temperature data in a single location. An independent
-    probability distribution function is assigned to each month and to each
-    projected period based on the Kolmogorov-Smirnov test. If annual frequency
-    is specified, this is applied to the complete period. Each projected period 
-    considers a window whose length is equal to the number of years of the 
-    historical period and ends in the analyzed year.
-    
-    Correction of the historical period is performed by the Quantile Mapping 
-    (QM) method, as described by Cannon et al. (2015).
-    
-    Description:
-        0) Format inputs and get statistics of the observed and modeled series
-           of the historical period.
-           
-        1) Assign a probability distribution function to each month for the 
-           observed and modeled data in the historical period. If annual 
-           frequency is specified, this is applied to the complete historical 
-           period.
-           
-        2) For each projected period, get the delta factor (delta) and time
-           dependent (aster) statistics (mean, standard deviation, skewness, 
-           and log skewness).
-
-        3) For each projected period:
-            a) Assign a probability distribution function to each month.
-               If annual frequency is specified, this is applied to the 
-               complete period.
-            b) Apply the cumulative distribution function of the projected 
-               period, evaluated with the statistics of this period, to the 
-               last data of the period.
-
-        4) Apply the inverse cumulative distribution function of the observed
-           data, evaluated with the time dependent statistics, to the values
-           obtained in 3b).
-    
-        End) Perform QM for the historical period.
-
-    Inputs:
-        obs:    A column vector of monthly or annual observed data (temperature
-                or precipitation). If monthly frequency is specified, 
-                the length of this vector is 12 times the number of observed 
-                years [12 x y_obs, 1]. If annual frequency is specified, the 
-                length of this vector is equal to the number of observed years
-                [y_obs, 1].
-
-        mod:    A column vector of monthly or annual modeled data (temperature
-                or precipitation). If monthly frequency is specified, 
-                the length of this vector is 12 times the number of observed
-                years [12 x y_mod, 1]. If annual frequency is specified, the 
-                length of this vector is equal to the number of observed years
-                [y_mod, 1].
-
-        var:    A flag that identifies if data are temperature or 
-                precipitation. This flag tells the getDist function if it has 
-                to discard distribution functions that allow negative numbers,
-                and if the terms in the correction equations are
-                multiplied/divided or added/subtracted.
-                    Temperature:   var = 0
-                    Precipitation: var = 1
-
-        NOTE: This routine considers that obs and mod series start in january
-        of the first year and ends in december of the last year.
-
-    Optional inputs:
-        frq:    A string specifying if the input is annual or monthly data. If
-                not specified, it is set monthly as default.
-                    Monthly:   frq = 'M'
-                    Annual:    frq = 'A'
-                    
-        pp_threshold:    A float indicating the threshold to consider 
-                         physically null precipitation values.
-                
-        pp_factor:       A float indicating the maximum value of the random
-                         values that replace physically null precipitation 
-                         values.
-
-    Output:
-        UQM_series:  A column vector of monthly or annual modeled data 
-                    (temperature or precipitation) corrected by the UQM method. 
-                    If monthly frequency is specified, the length of this 
-                    vector is 12 times the number of observed years 
-                    [12 x y_mod, 1]. If annual frequency is specified, the 
-                    length of this vector is equal to the number of observed 
-                    years [y_mod, 1].
-    
-    References:
-        Chadwick, C., Gironás, J., González-Leiva, F., and Aedo, S. (2023). Bias 
-        adjustment to preserve changes in variability: the unbiased mapping of GCM 
-        changes. Hydrological Sciences Journal,
-        https://doi.org/10.1080/02626667.2023.2201450
-  
-    """
     # 0) Format inputs and get statistics of the observed and modeled series of
     #    the historical period (formatQM function of the climQMBC package).
     if (frq=='D') & (not allow_negatives):
@@ -853,6 +572,232 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     if user_pdf==False:
         if frq=='D':
             pdf_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod = getDist(modh_series_moving, allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+        else:
+            pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+
+    pdf_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
+    Taot = np.zeros((mod_series.shape[0], y_mod-y_obs))
+    for j in range(Taot.shape[1]):
+        # a) Assign a probability distribution function to each month. If
+        #    annual frequency is specified, this is applied to the complete 
+        #    period (getDist function of the climQMBC package).
+        if user_pdf==False:
+            if frq=='D':
+                pdf_win[:,j] = getDist(win_series_moving[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+            else:
+                pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+        else:
+            pdf_win[:,j] = pdf_mod
+        
+        # b) Apply the cumulative distribution function of the projected
+        #    period, evaluated with the statistics of this period, to the last
+        #    data of the period (getCDF function of the climQMBC package).
+        #    Equation 3 in Chadwick et al. (2023).
+        if frq=='D':
+            Taot[:,j] = getCDF(pdf_win[:,j],mod_series[:,y_obs+j:y_obs+j+1], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
+        else:
+            Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
+
+    # 3) Apply the inverse cumulative distribution function:
+    #    a) Of the observed data, evaluated with the statistics of the observed
+    #       data in the historical period, to the probabilities obtained from 
+    #       2b) (getCDFinv function of the climQMBC package). Equation 5 of 
+    #       Cannon et al. (2015).
+    inv_obs = getCDFinv(pdf_obs, Taot, mu_obs, std_obs, skew_obs, skewy_obs)
+    
+    #    b) Of the modeled data, evaluated with the statistics of the observed
+    #       data in the historical period, to the probabilities obtained from 
+    #       2b) (getCDFinv function of the climQMBC package). Equations 4 of 
+    #       Cannon et al. (2015).
+    inv_mod = getCDFinv(pdf_mod, Taot, mu_mod, std_mod, skew_mod, skewy_mod)
+    
+    # 4) Get the delta factor or relative change and apply it to the value
+    #    obtained in 3b). Equation 4 and 6 of Cannon et al. (2015).
+    if mult_change:
+        delta_quantile = mod_series[:,y_obs:]/inv_mod
+        bool_undefined = (delta_quantile>rel_change_th) & (inv_mod<inv_mod_th)
+        delta_quantile[bool_undefined] = rel_change_th
+        QDM_series = inv_obs*delta_quantile
+    else:
+        delta_quantile = mod_series[:,y_obs:] - inv_mod
+        QDM_series = inv_obs + delta_quantile
+    
+    QDM_series[np.isnan(QDM_series)] = 0
+    QDM_series = QDM_series.reshape(-1,order='F')
+    
+    # 5) Perform QM for the historical period.
+    mod_h = mod[:obs.shape[0]]
+    QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor,win=win)
+    QDM_series = np.hstack([QM_series, QDM_series])
+    
+    if not allow_negatives:
+        QDM_series[QDM_series<pp_threshold] = 0
+    
+    return QDM_series
+
+
+def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100, user_pdf=False, pdf_obs=None, pdf_mod=None, win=1):
+    """
+    This function performs bias correction of modeled series based on observed
+    data by the Unbiased Quantile Mapping (UQM) method, as described by 
+    Chadwick et al. (2023). Correction is performed to monthly or annual
+    precipitation or temperature data in a single location. An independent
+    probability distribution function is assigned to each month and to each
+    projected period based on the Kolmogorov-Smirnov test. If annual frequency
+    is specified, this is applied to the complete period. Each projected period 
+    considers a window whose length is equal to the number of years of the 
+    historical period and ends in the analyzed year.
+    
+    Correction of the historical period is performed by the Quantile Mapping 
+    (QM) method, as described by Cannon et al. (2015).
+
+    Inputs:
+        obs:    A column vector of monthly or annual observed data (temperature
+                or precipitation). If monthly frequency is specified, 
+                the length of this vector is 12 times the number of observed 
+                years [12 x y_obs, 1]. If annual frequency is specified, the 
+                length of this vector is equal to the number of observed years
+                [y_obs, 1].
+
+        mod:    A column vector of monthly or annual modeled data (temperature
+                or precipitation). If monthly frequency is specified, 
+                the length of this vector is 12 times the number of observed
+                years [12 x y_mod, 1]. If annual frequency is specified, the 
+                length of this vector is equal to the number of observed years
+                [y_mod, 1].
+
+        var:    A flag that identifies if data are temperature or 
+                precipitation. This flag tells the getDist function if it has 
+                to discard distribution functions that allow negative numbers,
+                and if the terms in the correction equations are
+                multiplied/divided or added/subtracted.
+                    Temperature:   var = 0
+                    Precipitation: var = 1
+
+        NOTE: This routine considers that obs and mod series start in january
+        of the first year and ends in december of the last year.
+
+    Optional inputs:
+        frq:    A string specifying if the input is annual or monthly data. If
+                not specified, it is set monthly as default.
+                    Monthly:   frq = 'M'
+                    Annual:    frq = 'A'
+                    
+        pp_threshold:    A float indicating the threshold to consider 
+                         physically null precipitation values.
+                
+        pp_factor:       A float indicating the maximum value of the random
+                         values that replace physically null precipitation 
+                         values.
+
+    Output:
+        UQM_series:  A column vector of monthly or annual modeled data 
+                    (temperature or precipitation) corrected by the UQM method. 
+                    If monthly frequency is specified, the length of this 
+                    vector is 12 times the number of observed years 
+                    [12 x y_mod, 1]. If annual frequency is specified, the 
+                    length of this vector is equal to the number of observed 
+                    years [y_mod, 1].
+    
+    References:
+        Chadwick, C., Gironás, J., González-Leiva, F., and Aedo, S. (2023). Bias 
+        adjustment to preserve changes in variability: the unbiased mapping of GCM 
+        changes. Hydrological Sciences Journal,
+        https://doi.org/10.1080/02626667.2023.2201450
+  
+    """
+    
+    # 0) Get an equivalent for pp_threshold to match the modeled rainday count
+    # in the historical period and the observed rainday count
+    if (frq=='D') & (not allow_negatives):
+        pp_threshold_mod = get_pp_threshold_mod(obs, mod, pp_threshold)
+    else:
+        pp_threshold_mod = pp_threshold
+    
+    # 1) Format inputs and get statistics of the observed and modeled series of
+    #    the historical period (formatQM function of the climQMBC package).
+    y_obs, obs_series = formatQM(obs, allow_negatives, frq, pp_threshold, pp_factor)
+    y_mod, mod_series = formatQM(mod, allow_negatives, frq, pp_threshold_mod, pp_factor)
+    
+    if frq=='D':
+        obs_series_moving = np.vstack([obs_series[-win:],np.tile(obs_series,(win*2,1)),obs_series[:win]])
+        obs_series_moving = obs_series_moving.reshape(obs_series.shape[0]+1,win*2,obs_series.shape[1], order='F')[:-1,1:]
+        
+        mod_series_moving = np.vstack([mod_series[-win:],np.tile(mod_series,(win*2,1)),mod_series[:win]])
+        mod_series_moving = mod_series_moving.reshape(mod_series.shape[0]+1,win*2,mod_series.shape[1], order='F')[:-1,1:]
+        
+        
+        win_series = np.dstack([np.tile(mod_series_moving,(1,1,y_obs)), np.zeros((mod_series.shape[0],2*win-1,y_obs))])
+        win_series = win_series.reshape(mod_series.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
+        
+        obs_series_moving = obs_series_moving.reshape(365,(2*win-1)*y_obs)
+        modh_series_moving = mod_series_moving[:,:,:y_obs].reshape(365,(2*win-1)*y_obs)
+        win_series_moving = win_series.reshape(365,(2*win-1)*y_obs,y_mod-y_obs)
+        
+        
+        min_rainday_distribution = 30
+        # Minimos necesarios  -> min_rainday_distribution
+        # Dias que tengo      -> obs_rainday_count[per]
+        # Dias a modificar    -> obs_dry_count
+        # Valores a modificar -> replace_values_nans
+        # Valores no-nans     -> max(Minimos_necesarios - dias que tengo,0)
+        #                            >0: Faltan valores  ->  No todos son nans
+        #                            <0: Sobran valores  ->  Todos son nans
+        
+        obs_rainday_count = np.sum(obs_series_moving>pp_threshold,1)
+        for per in range(obs_series_moving.shape[0]):
+            bool_low = obs_series_moving[per]<pp_threshold
+            replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
+            replace_values_nans[max(0,min_rainday_distribution-obs_rainday_count[per]):] = np.nan
+            obs_series_moving[per,bool_low] = replace_values_nans
+        obs_rainday_count = np.sum(~np.isnan(obs_series_moving),1)
+        
+        modh_rainday_count = np.sum(modh_series_moving>pp_threshold_mod,1)
+        for per in range(modh_series_moving.shape[0]):
+            bool_low = modh_series_moving[per]<pp_threshold_mod
+            replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
+            replace_values_nans[max(0,min_rainday_distribution-modh_rainday_count[per]):] = np.nan
+            modh_series_moving[per,bool_low] = replace_values_nans
+        modh_rainday_count = np.sum(~np.isnan(modh_series_moving),1)
+        
+        
+        win_rainday_count = np.sum(win_series_moving>pp_threshold_mod,1)
+        for per1 in range(win_rainday_count.shape[0]):
+            for per2 in range(win_rainday_count.shape[1]):
+                bool_low = win_series_moving[per1,:,per2]<pp_threshold_mod
+                replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
+                replace_values_nans[max(0,min_rainday_distribution-win_rainday_count[per1,per2]):] = np.nan
+                win_series_moving[per1,bool_low,per2] = replace_values_nans
+        win_rainday_count = np.sum(~np.isnan(win_series_moving),1)
+        
+        mod_series[mod_series<pp_threshold_mod] = np.nan
+
+
+        # mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving, frq)
+        # mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series_moving[:,:,:y_obs], frq)
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(modh_series_moving)
+
+        # mu_win, std_win, skew_win, skewy_win = getStats(win_series, frq)
+        mu_win, std_win, skew_win, skewy_win = getStats(win_series_moving)
+    else:
+        win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
+        win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
+        
+        mu_win, std_win, skew_win, skewy_win = getStats(win_series)
+        
+        mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series)
+        mu_mod, std_mod, skew_mod, skewy_mod = getStats(mod_series[:,:y_obs])
+    
+    # 1) Assign a probability distribution function to each month for the
+    #    observed and modeled data in the historical period. If annual
+    #    frequency is specified, this is applied to the complete historical
+    #    period (getDist function of the climQMBC package).
+    if user_pdf==False:
+        if frq=='D':
+            pdf_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
         else:
             pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
     
@@ -860,8 +805,6 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     #    dependent (aster) statistics (mean, standard deviation, skewness, and
     #    log skewness). Equations 13 to 14 in Chadwick et al. (2023).
     # Matrix [sub-periods, window, periods]
-
-
     if mult_change:  # Precipitation
         delta_mu = mu_win/np.tile(mu_mod,(y_mod-y_obs,1)).T
         delta_sigma = std_win/np.tile(std_mod,(y_mod-y_obs,1)).T
@@ -910,7 +853,7 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
         #    data of the period (getCDF function of the climQMBC package).
         #    Equation 3 in Chadwick et al. (2023).
         if frq=='D':
-            Taot[:,j] = getCDF(pdf_win[:,j],win_series[:,win-1,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
+            Taot[:,j] = getCDF(pdf_win[:,j],mod_series[:,y_obs+j:y_obs+j+1], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
         else:
             Taot[:,j] = getCDF(pdf_win[:,j], win_series[:,-1:,j], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
         # Taot[:,j] = getCDF(pdf_win[:,j], Dwin_series[:,-1:], mu_win_, std_win_, skew_win_, skewy_win_)[:,0]
@@ -925,7 +868,7 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1, pp_
     UQM_series = UQM_series.reshape(-1, order='F')
     
     # 5) Perform QM for the historical period.
-    mod_h = mod[:y_obs]
+    mod_h = mod[:obs.shape[0]]
     QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor,win=win)
     UQM_series = np.hstack([QM_series, UQM_series])
     
@@ -949,68 +892,6 @@ def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100):
     corrected series, only the last year is saved and all the others are 
     discarded. This approach aims to build a continuum for the bias corrected     
     series.
-    
-    Description:
-        0) Format inputs and get statistics of the observed and modeled series
-           of the historical period.
-           
-        1) Historical period:
-            a) [Switanek et al. (2017), step 1)]
-                For temperature, get the detrended modeled and observed series in
-                the historical period.
-                For precipitation, get the rainday values and its frequency for the
-                modeled and observed series in the historical period.
-            b) [Switanek et al. (2017), step 2)]
-                For temperature, fit normal probability distribution to the
-                detrended observed and modeled series in the historical period.
-                For precipitation, fit gamma distribution parameters by maximum 
-                likelihood to the rainday values of the observed and modeled series
-                in the historical period.
-                Using these fitted distributions, get the corresponding cumulative
-                distribution values. Tail probabilities are set to (0 + threshold)
-                for temperature and to (1 - threshold) for temperature and
-                precipitation. Threshold is set in the first lines of this function.
-                Default is CDF_th = 10^-3.
-        
-        2) Projected periods:
-            c) Initialize correction array.
-            d) Define projected window.
-            e) [Switanek et al. (2017), step 1)]
-                For temperature, get the detrended series of the projected
-                period.
-                For precipitation, get the rainday values, its frequency, and 
-                expected raindays for the projected period.
-                Get the index of the sorted detrended or rainday values.
-            f) [Switanek et al. (2017), step 2)]
-                For temperature, fit normal probability distribution to the 
-                detrended values of the projected period.
-                For precipitation, fit gamma distribution parameters by maximum
-                likelihood to the rainday values of the projected period.
-                Using these fitted distributions, get the corresponding 
-                cumulative distribution values. Tail probabilities are set to 
-                (0 + threshold) for temperature and to (1 - threshold) for 
-                temperature and precipitation. Threshold is set in the first 
-                lines of this function. Default is CDF_th = 10^-3.
-            g) [Switanek et al. (2017), step 3)]
-                Get the scaling between the model projected period and 
-                historical period distributions.
-            h) Interpolate observed and modeled CDF of the historical period to
-               the length of the projected period.
-            i) [Switanek et al. (2017), steps 4 and 5)]
-                Get recurrence intervals and its scaled version for the 
-                observed, historical modeled and projected period modeled CDFs.
-            j) [Switanek et al. (2017), step 6)]
-                Get the initial bias corrected values. For precipitation, these
-                values are interpolated to the length of the expected raindays.
-            k) [Switanek et al. (2017), step 7)]
-                Bias corrected values are placed back matching the higher bias
-                corrected values with the higher rainday or detrended values.
-                For temperature, the trend of the projected period is added
-                back.
-            l) If the projected period is the historical period (period 0, j=0)
-                save the complete bias corrected series.
-                If the projected period is not the historical period (j>0),
-                save the value of the last year.
     
     Inputs:
         obs:    A column vector of monthly or annual observed data (temperature

@@ -33,6 +33,15 @@ import scipy.stats as stat
 import numpy as np
 
 
+def get_pp_threshold_mod(obs, mod, pp_threshold):
+    obs_rainday_hist = np.sum(obs>pp_threshold)
+    mod_sort_descending = np.sort(mod[:obs.shape[0]],0)[::-1]
+    days_kept = min(obs_rainday_hist,len(obs)-1)
+    pp_threshold_mod = mod_sort_descending[days_kept,0]
+    
+    return pp_threshold_mod
+
+
 def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
     """
     This function formats a time series and gets basic statistics for the 
@@ -129,12 +138,6 @@ def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
 
     return years, series
 
-def get_pp_threshold_mod(obs, mod, pp_threshold):
-    obs_rainday_hist = np.sum(obs>pp_threshold)
-    pp_threshold_mod = np.sort(mod[:obs.shape[0]],0)[::-1][min(obs_rainday_hist,len(obs)-1),0]
-    
-    return pp_threshold_mod
-
 
 def getStats(series, frq=None):
     """
@@ -184,6 +187,21 @@ def getStats(series, frq=None):
     return mu, sigma, skew, skewy
 
 
+def daily_moving_window(series, win):
+    series_moving = np.vstack([series[-win:],np.tile(series,(win*2,1)),series[:win]])
+    series_moving = series_moving.reshape(series.shape[0]+1,win*2,series.shape[1], order='F')[:-1,1:]
+    
+    win_series = np.dstack([np.tile(series_moving,(1,1,y_obs)), np.zeros((series_moving.shape[0],2*win-1,y_obs))])
+    win_series = win_series.reshape(series_moving.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
+
+def projected_moving_window(series, frq, win, y_obs, y_mod):
+    win_series = np.dstack([np.tile(series_moving,(1,1,y_obs)), np.zeros((series_moving.shape[0],2*win-1,y_obs))])
+    win_series = win_series.reshape(series_moving.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
+
+    
+    
+    
+    
 def getDist(series, allow_negatives, mu, sigma, skew, skewy):
     """
     This function assigns an independent probability distribution function to
@@ -407,6 +425,8 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
             KSgammaIII = 1
             KSgumbel = 1
             KSexponential = 1
+        
+        KSLpIII = 1
         
         # d) The distribution with lower KS value is considered for each month.
         KS_vals = [KSnormal, KSlognormal, KSgammaII, KSgammaIII, KSLpIII, KSgumbel, KSexponential]
