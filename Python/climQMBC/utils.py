@@ -190,13 +190,14 @@ def getStats(series, frq=None):
 def daily_moving_window(series, win):
     series_moving = np.vstack([series[-win:],np.tile(series,(win*2,1)),series[:win]])
     series_moving = series_moving.reshape(series.shape[0]+1,win*2,series.shape[1], order='F')[:-1,1:]
-    
-    win_series = np.dstack([np.tile(series_moving,(1,1,y_obs)), np.zeros((series_moving.shape[0],2*win-1,y_obs))])
-    win_series = win_series.reshape(series_moving.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
 
 def projected_moving_window(series, frq, win, y_obs, y_mod):
-    win_series = np.dstack([np.tile(series_moving,(1,1,y_obs)), np.zeros((series_moving.shape[0],2*win-1,y_obs))])
-    win_series = win_series.reshape(series_moving.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
+    if frq=='D':
+        win_series = np.dstack([np.tile(series_moving,(1,1,y_obs)), np.zeros((series_moving.shape[0],2*win-1,y_obs))])
+        win_series = win_series.reshape(series_moving.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
+    else:
+        win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
+        win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
 
     
     
