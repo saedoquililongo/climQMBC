@@ -116,6 +116,17 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100,
                          function (pdf) to be used for the modeled data. The
                          pdf will be the same for all periods and sub-periods.
                          Default: None
+                         
+        NOTE: The available distributions for pdf_obs and pdf_mod are:
+            0) Normal distribution
+            1) Log-Normal distribution
+            2) Gamma 2 parameters distribution
+            3) Gamma 3 parameters distribution
+               (Pearson 3 parameters distribution)
+            4) Log-Gamma 3 parameters distribution
+               (Log-Pearson 3 parameters distribution)
+            5) Gumbel distribution
+            6) Exponential distribution
 
     Output:
         QM_series: A column vector of data bias corrected with the QM method.
@@ -287,6 +298,17 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
                          function (pdf) to be used for the modeled data. The
                          pdf will be the same for all periods and sub-periods.
                          Default: None
+
+        NOTE: The available distributions for pdf_obs and pdf_mod are:
+            0) Normal distribution
+            1) Log-Normal distribution
+            2) Gamma 2 parameters distribution
+            3) Gamma 3 parameters distribution
+               (Pearson 3 parameters distribution)
+            4) Log-Gamma 3 parameters distribution
+               (Log-Pearson 3 parameters distribution)
+            5) Gumbel distribution
+            6) Exponential distribution
 
     Output:
         DQM_series: A column vector of data bias corrected with the DQM method.
@@ -503,6 +525,17 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
                          function (pdf) to be used for the modeled data. The
                          pdf will be the same for all periods and sub-periods.
                          Default: None
+
+        NOTE: The available distributions for pdf_obs and pdf_mod are:
+            0) Normal distribution
+            1) Log-Normal distribution
+            2) Gamma 2 parameters distribution
+            3) Gamma 3 parameters distribution
+               (Pearson 3 parameters distribution)
+            4) Log-Gamma 3 parameters distribution
+               (Log-Pearson 3 parameters distribution)
+            5) Gumbel distribution
+            6) Exponential distribution
 
     Output:
         QDM_series: A column vector of data bias corrected with the QDM method.
@@ -730,6 +763,17 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
                          function (pdf) to be used for the modeled data. The
                          pdf will be the same for all periods and sub-periods.
                          Default: None
+
+        NOTE: The available distributions for pdf_obs and pdf_mod are:
+            0) Normal distribution
+            1) Log-Normal distribution
+            2) Gamma 2 parameters distribution
+            3) Gamma 3 parameters distribution
+               (Pearson 3 parameters distribution)
+            4) Log-Gamma 3 parameters distribution
+               (Log-Pearson 3 parameters distribution)
+            5) Gumbel distribution
+            6) Exponential distribution
 
     Output:
         UQM_series: A column vector of data bias corrected with the UQM method.
