@@ -49,7 +49,7 @@ Revision: 0, updated Dec 2021
 """
 
 from climQMBC.methods import QM, DQM, QDM, UQM, SDM
-from climQMBC.utils import formatQM, getStats, getDist, getCDF, getCDFinv, get_pp_threshold_mod
+from climQMBC.utils import formatQM, getStats, getDist, getCDF, getCDFinv, get_pp_threshold_mod, set_norain_to_nan
 from climQMBC.report import report
 import matplotlib.pylab as plt
 import pandas as pd
@@ -62,21 +62,22 @@ mult_change = 1
 allow_negatives = 0
 SDM_var = 1
 
-# # Load observed and model data. Remember that for temperature, var = 0, and
-# # for precipitation, var = 1.
-# obs = np.array(pd.read_csv('../Sample_data/obs_'+variable+'.csv',header=None))
-# mod = np.array(pd.read_csv('../Sample_data/mod_'+variable+'.csv',header=None))
+# Load observed and model data. Remember that for temperature, var = 0, and
+# for precipitation, var = 1.
+obs = np.array(pd.read_csv('../Sample_data/obs_'+variable+'.csv',header=None))
+mod = np.array(pd.read_csv('../Sample_data/mod_'+variable+'.csv',header=None))
 
-# frq = 'A'
-# qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq)
-# dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
-# qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
-# uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
-# sdm_series = SDM(obs, mod, SDM_var=1, frq=frq)
+frq = 'M'
+qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq)
+dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
+qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
+uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
+sdm_series = SDM(obs, mod, SDM_var=1, frq=frq)
 
-# plt.plot(dqm_series,'o', markersize=1)
-
-
+# %%
+plt.plot(uqm_series,'o', markersize=1)
+# %%
+kk
 # obs = pd.read_csv('../Sample_data/obs_D.csv', index_col=0, parse_dates=True, dayfirst=True)[['CRA']].loc['1985':'2014']
 # obs = obs[(obs.index.month!=2)|(obs.index.day!=29)]
 
@@ -101,7 +102,6 @@ SDM_var = 1
 
 obs = pd.read_csv('../Sample_data/obs_pr_D.csv')[['pr']].values
 mod = pd.read_csv('../Sample_data/mod_pr_D.csv')[['pr']].values
-
 # Example 1
 # Example 1 shows how to use the report function with the minimum number
 # of inputs. The five methods available in the climQMBC package will be
@@ -113,37 +113,38 @@ mod = pd.read_csv('../Sample_data/mod_pr_D.csv')[['pr']].values
 # QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
 # %%
 frq = 'D'
-qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq, win=15, pp_threshold=1, pp_factor=1/(100*100))
-dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=15, pp_threshold=1, pp_factor=1/(100*100))
-qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=15, pp_threshold=1, pp_factor=1/(100*100))
-uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=15, pp_threshold=1, pp_factor=1/(100*100))
+win = 5
+pp_threshold=1
+pp_factor=1/10000
+
+qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq, win=win, pp_threshold=pp_threshold, pp_factor=pp_factor)
+dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=win, pp_threshold=pp_threshold, pp_factor=pp_factor)
+qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=win, pp_threshold=pp_threshold, pp_factor=pp_factor)
+uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=win, pp_threshold=pp_threshold, pp_factor=pp_factor)
 # sdm_series = SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100)
 
 # %%
-# plt.plot(qm_series,dqm_series,'o')
-# plt.plot(qm_series,qdm_series,'o')
-plt.plot(qm_series,uqm_series,'o')
-plt.ylim(0,100)
-plt.xlim(0,100)
-kk
-# %%
 plt.figure()
 
+plt.title('QM')
 plt.subplot(2,2,1)
 plt.plot(qm_series)
 plt.plot(obs[:,0])
 plt.ylim(0,100)
 
+plt.title('DQM')
 plt.subplot(2,2,2)
 plt.plot(dqm_series)
 plt.plot(obs[:,0])
 plt.ylim(0,100)
 
+plt.title('QDM')
 plt.subplot(2,2,3)
 plt.plot(qdm_series)
 plt.plot(obs[:,0])
 plt.ylim(0,100)
 
+plt.title('UQM')
 plt.subplot(2,2,4)
 plt.plot(uqm_series)
 plt.plot(obs[:,0])
@@ -199,14 +200,13 @@ obs_series_d = obs_series_d.reshape(obs.reshape((365,30), order='F').shape[0]+1,
 qm_series_d = np.vstack([qm_series.reshape((365,80), order='F')[-win:],np.tile(qm_series.reshape((365,80), order='F'),(win*2,1)),qm_series.reshape((365,80), order='F')[:win]])
 qm_series_d = qm_series_d.reshape(qm_series.reshape((365,80), order='F').shape[0]+1,win*2,qm_series.reshape((365,80), order='F').shape[1], order='F')[:-1,1:]
 
-
 plt.figure(dpi=300, figsize=(8,6))
 plt.suptitle('Estacionalidad diaria histórica', fontweight='bold')
 
 plt.subplot(2,2,1)
 plt.title('Promedio diario')
 plt.plot(mod.reshape((365,80), order='F')[:,:30].mean(1), label='Mod')
-plt.plot(qm_series.reshape((365,80), order='F')[:,:30].mean(1), label='QM')
+plt.plot(qm_series.reshape((365,80), order='F')[:,:30].mean(1), label='QM_rainday')
 plt.plot(obs.reshape((365,30), order='F')[:,:30].mean(1), label='Obs')
 plt.legend()
 

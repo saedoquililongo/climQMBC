@@ -139,7 +139,7 @@ def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
     return years, series
 
 
-def getStats(series, frq=None):
+def getStats(series):
     """
     This function computes the mean, standard deviation, skewness and skewness
     of the logarithmic values, for each sub-period within the year, according
@@ -171,37 +171,65 @@ def getStats(series, frq=None):
                     [12,1] if the series consider monthly data and [1,1] if the
                     series consider annual data.
     """
-    if frq=='D':
-        dim_stats = (1,2)
-    else:
-        dim_stats = 1
+
     # Get the mean, standard deviation, skewness and skewness of the
     # logarithmic values of each year sub-period of the series.
-    mu  = np.nanmean(series, dim_stats)                     # Mean
-    sigma = np.nanstd(series, dim_stats, ddof=1)            # Standard deviation
-    skew = stat.skew(series, dim_stats, bias=False, nan_policy='omit')         # Skewness
+    mu  = np.nanmean(series, 1)                     # Mean
+    sigma = np.nanstd(series, 1, ddof=1)            # Standard deviation
+    skew = stat.skew(series, 1, bias=False, nan_policy='omit')         # Skewness
     series_log  = np.log(series)
     series_log[np.isinf(series_log)] = np.log(np.random.rand(np.isinf(series_log).sum())*0.01)
-    skewy = stat.skew(series_log, dim_stats, bias=False, nan_policy='omit')    # Skewness of the log
+    skewy = stat.skew(series_log, 1, bias=False, nan_policy='omit')    # Skewness of the log
 
     return mu, sigma, skew, skewy
 
 
-def daily_moving_window(series, win):
+def day_centered_moving_window(series, win):
     series_moving = np.vstack([series[-win:],np.tile(series,(win*2,1)),series[:win]])
     series_moving = series_moving.reshape(series.shape[0]+1,win*2,series.shape[1], order='F')[:-1,1:]
+    
+    return series_moving
 
-def projected_moving_window(series, frq, win, y_obs, y_mod):
+def projected_backward_moving_window(series, projected_win, frq):
+    y_mod = series.shape[-1]
+
     if frq=='D':
-        win_series = np.dstack([np.tile(series_moving,(1,1,y_obs)), np.zeros((series_moving.shape[0],2*win-1,y_obs))])
-        win_series = win_series.reshape(series_moving.shape[0],2*win-1,y_obs,y_mod+1)[:,:,:,1:-y_obs]
+        day_win = int((series.shape[1]+1)/2)
+        win_series = np.dstack([np.tile(series,(1,1,projected_win)),np.zeros((series.shape[0],2*day_win-1,projected_win))])
+        win_series = win_series.reshape(series.shape[0],2*day_win-1,projected_win,y_mod+1)[:,:,:,1:-projected_win]
     else:
-        win_series = np.hstack([np.tile(mod_series,(1,y_obs)), np.zeros((mod_series.shape[0],y_obs))])
-        win_series = win_series.reshape(mod_series.shape[0],y_obs,y_mod+1)[:,:,1:-y_obs]
+        win_series = np.hstack([np.tile(series,(1,projected_win)), np.zeros((series.shape[0],projected_win))])
+        win_series = win_series.reshape(series.shape[0],projected_win,y_mod+1)[:,:,1:-projected_win]
+        
+    return win_series
 
+
+def set_norain_to_nan(series_moving, pp_factor, pp_threshold):
+    min_rainday = 30
+    # Minimos necesarios  -> min_rainday
+    # Dias que tengo      -> rainday_count[per]
+    # Valores a modificar -> replace_values_nans
+    # Valores no-nans     -> max(Minimos_necesarios - dias que tengo,0)
+    #                            >0: Faltan valores  ->  No todos son nans
+    #                            <0: Sobran valores  ->  Todos son nans
+    rainday_count = np.sum(series_moving>pp_threshold,1)
     
+    if len(rainday_count.shape)==1:
+        for per in range(series_moving.shape[0]):
+            bool_low = series_moving[per]<pp_threshold
+            replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
+            replace_values_nans[max(0,min_rainday-rainday_count[per]):] = np.nan
+            series_moving[per,bool_low] = replace_values_nans
+    else:
+        for per1 in range(rainday_count.shape[0]):
+            for per2 in range(rainday_count.shape[1]):
+                bool_low = series_moving[per1,:,per2]<pp_threshold
+                replace_values_nans = np.random.rand(bool_low.sum())*pp_factor*pp_threshold
+                replace_values_nans[max(0,min_rainday-rainday_count[per1,per2]):] = np.nan
+                series_moving[per1,bool_low,per2] = replace_values_nans
     
-    
+    return series_moving
+
     
 def getDist(series, allow_negatives, mu, sigma, skew, skewy):
     """
@@ -427,7 +455,7 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
             KSgumbel = 1
             KSexponential = 1
         
-        KSLpIII = 1
+        # KSLpIII = 1
         
         # d) The distribution with lower KS value is considered for each month.
         KS_vals = [KSnormal, KSlognormal, KSgammaII, KSgammaIII, KSLpIII, KSgumbel, KSexponential]
@@ -438,9 +466,9 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
 
         PDF[m] = bestPDF
     
-    # Check if ks-test failures
-    if ks_fail>0:
-        print(f'KS-Test failed: {int(ks_fail)} times out of {int(n)}')
+    # # Check if ks-test failures
+    # if ks_fail>0:
+    #     print(f'KS-Test failed: {int(ks_fail)} times out of {int(n)}')
         
     return PDF
 
