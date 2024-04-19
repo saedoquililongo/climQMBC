@@ -28,7 +28,7 @@ outputs of each function are columns vector with monthly corrected data.
 
 Feel free to uncomment each example, modify the periods and try your own 
 datasets.
- 
+
 
 Written by Sebastian Aedo Quililongo (1*)
            Cristian Chadwick         (2)
@@ -44,7 +44,7 @@ Written by Sebastian Aedo Quililongo (1*)
       Santiago, Chile
       
 *Maintainer contact: sebastian.aedo.q@gmail.com
-Revision: 0, updated Dec 2021
+Revision: 1, updated Apr 2024
 
 """
 
@@ -68,14 +68,16 @@ obs = np.array(pd.read_csv('../Sample_data/obs_'+variable+'.csv',header=None))
 mod = np.array(pd.read_csv('../Sample_data/mod_'+variable+'.csv',header=None))
 
 frq = 'M'
-qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq)
-dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
-qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
-uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
-sdm_series = SDM(obs, mod, SDM_var=1, frq=frq)
 
-# %%
-plt.plot(uqm_series,'o', markersize=1)
+QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
+# qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq)
+# dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
+# qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
+# uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
+# sdm_series = SDM(obs, mod, SDM_var=1, frq=frq)
+
+
+
 # %%
 kk
 # obs = pd.read_csv('../Sample_data/obs_D.csv', index_col=0, parse_dates=True, dayfirst=True)[['CRA']].loc['1985':'2014']

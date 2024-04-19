@@ -554,7 +554,6 @@ def getCDF(pdf, series, mu, sigma, skew, skewy):
             Lnsortdata = np.log(series_sub)
             Lnsortdata[np.isinf(Lnsortdata)] = np.log(np.random.rand(np.isinf(Lnsortdata).sum())*0.01)
             prob[sp,:]  = stat.gamma.cdf(Lnsortdata-Gamy,a=Bety,scale=Alpy)
-            
         elif pdf[sp]==5: # vi) Gumbel distribution.
             Sn = np.pi/np.sqrt(6)
             yn = 0.5772
