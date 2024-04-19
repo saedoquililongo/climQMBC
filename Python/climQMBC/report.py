@@ -21,7 +21,7 @@ Written by Sebastian Aedo Quililongo (1*)
       Santiago, Chile
       
 *Maintainer contact: sebastian.aedo.q@gmail.com
-Revision: 1, updated Jan 2024
+Revision: 0, updated Dec 2021
 """
 
 def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0, user_pdf=False, pdf_obs=None, pdf_mod=None):

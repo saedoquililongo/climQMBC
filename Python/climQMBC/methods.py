@@ -47,6 +47,7 @@ from scipy.signal import detrend
 import scipy.stats as stat
 import numpy as np
 
+
 def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100,
        day_win=1, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
@@ -131,8 +132,7 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100,
     Output:
         QM_series: A column vector of data bias corrected with the QM method.
                    [ndata_mod, 1]
-                    
-    
+
     References:
         Cannon, A. J., S. R. Sobie, and T. Q. Murdock. (2015). Bias correction
         of GCM precipitation by quantile mapping: How well do methods preserve
