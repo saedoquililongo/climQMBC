@@ -49,61 +49,41 @@ Revision: 1, updated Apr 2024
 """
 
 from climQMBC.methods import QM, DQM, QDM, UQM, SDM
-from climQMBC.utils import formatQM, getStats, getDist, getCDF, getCDFinv, get_pp_threshold_mod, set_norain_to_nan
 from climQMBC.report import report
 import matplotlib.pylab as plt
 import pandas as pd
 import numpy as np
 
-# Avaiable variables: 'tmax','pp'
-variable = 'pp'
 
+# =============================================================================
+# I) Montly and annual data
+# =============================================================================
+# variable:
+#    - pp
+#    - tmax
+# allow_negatives:
+#    - 0 (variables like precipitation)
+#    - 1 (variables like temperature)
+# mult_change:
+#    - 0 (additive change: fut = hist + delta) 
+#    - 1 (multiplicative change: fut = hist*delta)
+# SDM_var: (for Scaled Distribution Mapping only)
+#    - 0 (temperature: normal distribution and additive changes) 
+#    - 1 (precipitation: gamma distribution and multiplicative changes)
+# frq:
+#    - 'D': Daily data (use in section II. Section I works for 'M' and 'A')
+#    - 'M': Monthly data (report function works only with 'M')
+#    - 'A': Anual data
+
+variable = 'pp'
 mult_change = 1
 allow_negatives = 0
 SDM_var = 1
 
-# Load observed and model data. Remember that for temperature, var = 0, and
-# for precipitation, var = 1.
+# Load observed and model data.
 obs = np.array(pd.read_csv('../Sample_data/obs_'+variable+'.csv',header=None))
 mod = np.array(pd.read_csv('../Sample_data/mod_'+variable+'.csv',header=None))
 
-frq = 'M'
-
-QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
-# qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq)
-# dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
-# qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
-# uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change)
-# sdm_series = SDM(obs, mod, SDM_var=1, frq=frq)
-
-
-
-# %%
-kk
-# obs = pd.read_csv('../Sample_data/obs_D.csv', index_col=0, parse_dates=True, dayfirst=True)[['CRA']].loc['1985':'2014']
-# obs = obs[(obs.index.month!=2)|(obs.index.day!=29)]
-
-# obs.columns = ['pr']
-# obs.insert(0, column='Day', value=obs.index.day)
-# obs.insert(0, column='Month', value=obs.index.month)
-# obs.insert(0, column='Year', value=obs.index.year)
-# obs.to_csv('../Sample_data/obs_pr_D.csv', index=False)
-# # obs = obs.resample('MS').sum()
-# obs = obs.values
-
-# mod = pd.read_csv('../Sample_data/mod_D.csv', index_col=0, parse_dates=True).loc['1985':]
-# # mod = mod.resample('MS').sum()
-# mod = mod[(mod.index.month!=2)|(mod.index.day!=29)]
-# mod.insert(0, column='Day', value=mod.index.day)
-# mod.insert(0, column='Month', value=mod.index.month)
-# mod.insert(0, column='Year', value=mod.index.year)
-# mod.to_csv('../Sample_data/mod_pr_D.csv', index=False)
-# mod = mod.values
-
-
-
-obs = pd.read_csv('../Sample_data/obs_pr_D.csv')[['pr']].values
-mod = pd.read_csv('../Sample_data/mod_pr_D.csv')[['pr']].values
 # Example 1
 # Example 1 shows how to use the report function with the minimum number
 # of inputs. The five methods available in the climQMBC package will be
@@ -112,12 +92,65 @@ mod = pd.read_csv('../Sample_data/mod_pr_D.csv')[['pr']].values
 # of the modeled period. Remember that the projected periods length is
 # equal to the length of the historical period.
 
-# QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
-# %%
+qm_series,dqm_series,qdm_series,uqm_series,sdm_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
+
+# Example 2
+# Example 2 shows how to use the report function for specific bias
+# correction methods and projected periods. The Quantile Delta Mapping
+# (QDM), Unbiased Quantile Mapping (UQM), and Scaled Distribution Mapping
+# (SDM) methods will be reported. The report will analyze the projected
+
+# qm_series,dqm_series,qdm_series,uqm_series,sdm_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives, y_init = 1979,y_wind = [2035,2060,2080])
+
+# Example 3
+# Example 3 shows how each bias correction method available in the
+# climQMBC package should be called. The outputs of each function are
+# columns vector with monthly corrected data.
+
+frq = 'M' # 'M' or 'A''
+# qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq)
+# dqm_series = DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq=frq)
+# qdm_series = QDM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq=frq)
+# uqm_series = UQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq=frq)
+# sdm_series = SDM(obs, mod, SDM_var=1, frq=frq)
+
+
+
+# =============================================================================
+# II) Daily data
+# =============================================================================
+# variable:
+#    - pp
+#    - tmax
+# allow_negatives:
+#    - 0 (variables like precipitation)
+#    - 1 (variables like temperature)
+# mult_change:
+#    - 0 (additive change: fut = hist + delta) 
+#    - 1 (multiplicative change: fut = hist*delta)
+# frq:
+#    - 'D': Daily data
+#    - 'M': Monthly data
+#    - 'A': Anual data
+# day_win: An integer to define a moving window for each day of the year and 
+#          compute the statistics for each probability distribution function
+#          and projected change. The lenght of the window is computed as 2*win-1
+# pp_threshold: A float to define the threshold to consider rain or no-rain values
+# pp_factor: A float to scale pp_threshold and set as limit of the random low
+#            values to replace no-rain values
+variable = 'pp'
+mult_change = 1
+allow_negatives = 0
 frq = 'D'
+
 win = 5
 pp_threshold=1
 pp_factor=1/10000
+
+# Load observed and model data.
+obs = pd.read_csv(f'../Sample_data/obs_{variable}_D.csv')[[variable]].values
+mod = pd.read_csv(f'../Sample_data/mod_{variable}_D.csv')[[variable]].values
+
 
 qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq, win=win, pp_threshold=pp_threshold, pp_factor=pp_factor)
 dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, win=win, pp_threshold=pp_threshold, pp_factor=pp_factor)
@@ -334,31 +367,3 @@ plt.tight_layout()
 plt.show()
 
 
-
-
-# %%
-# Example 2
-# Example 2 shows how to use the report function for specific bias
-# correction methods and projected periods. The Quantile Delta Mapping
-# (QDM), Unbiased Quantile Mapping (UQM), and Scaled Distribution Mapping
-# (SDM) methods will be reported. The report will analyze the projected
-
-# QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, var,y_init = 1979,y_wind = [2035,2060,2080])
-
-
-# Example 3
-# Example 3 shows how each bias correction method available in the
-# climQMBC package should be called. The outputs of each function are
-# columns vector with monthly corrected data.
-
-# frq = 'M' # 'M' for monthly data; 'A' for annually data
-# QM_series = QM(obs,mod,var,frq)
-# DQM_series = DQM(obs,mod,var,frq)
-# QDM_series = QDM(obs,mod,var,frq)
-# UQM_series = UQM(obs,mod,var,frq)
-# SDM_series = SDM(obs,mod,var,frq)
-# QM_series = QM(obs,mod,var)
-
-
-
-# QM_series,DQM_series,QDM_series,UQM_series,SDM_series = report(obs, mod, var, user_pdf=False, pdf_obs=[1]*12, pdf_mod=[1]*12)
