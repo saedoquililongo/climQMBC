@@ -144,8 +144,8 @@ def getStats(series):
     to the frequency initially defined. Statistics are computed along axis 1. 
 
     Inputs:
-        series:         An array of daily, monthly or annual observed data,
-                        without considering leap days. Possible input dimensions:
+        series:         An array of daily, monthly or annual data, without 
+                        considering leap days. Possible input dimensions:
                         2D array:
                             [sub-periods, years]
                             [sub-periods + days window, years]
@@ -169,7 +169,7 @@ def getStats(series):
     
         NOTE: If input series is a 2D array, outputs will be a column vector. If
         input series is a 3D array, outputs will be a 2D array.
-        """
+    """
 
     # Get the mean, standard deviation, skewness and skewness of the
     # logarithmic values of each year sub-period of the series.
@@ -206,12 +206,13 @@ def day_centered_moving_window(series, win):
                         with a dimension that considers a centered moving window
                         for each day of the year.
                         [365, 2*win-1, years]
-        """
+    """
         
     series_moving = np.vstack([series[-win:],np.tile(series,(win*2,1)),series[:win]])
     series_moving = series_moving.reshape(series.shape[0]+1,win*2,series.shape[1], order='F')[:-1,1:]
     
     return series_moving
+
 
 def projected_backward_moving_window(series, projected_win, frq):
     """
@@ -221,23 +222,15 @@ def projected_backward_moving_window(series, projected_win, frq):
     projected period.
 
     Inputs:
-        series_matrix:  A matrix of daily, monthly or annual observed data,
-                        without considering leap days. For daily, monthly and
-                        annual frequency, the number of rows will be 365, 12 and
-                        1, respectively. The number of columns will be equal to
-                        the number of years.
-                        [1, 12 or 365, years]
-                        
-                        A 3D array of daily data, without considering leap days,
-                        with a dimension that considers a centered moving window
-                        for each day of the year.
-                        [365, 2*win-1, years]
+        series:         A 2D or 3D array of daily, monthly or annual observed 
+                        data, without considering leap days. For daily, monthly
+                        and annual frequency, the number of rows will be 365, 12
+                        and 1, respectively. If daily data, it is a 3D array
+                        that has a  dimension with a centered moving window for
+                        each day of the year.
+                        [1, 12 or 365, years] or [365, day centered window, years]
 
-        projected_win:  An integer indicating how many days to consider 
-                        backwards and forward to get the statistics of each 
-                        calendar day.The length of the window will be 
-                        (2*win_day-1). For example, day_win=15 -> window of 29.
-                        Default: win = 1
+        projected_win:  An integer the length of the backward moving window.
                             
         frq:             A string specifying if the input frequency is daily,
                          monthly or annual.
@@ -246,16 +239,16 @@ def projected_backward_moving_window(series, projected_win, frq):
                              Annual:    frq = 'A' (default)
 
     Output:
-        win_series:     An array of daily, monthly or annual observed data,
-                        without considering leap days. Possible input dimensions:
-                        2D array:
-                            [sub-periods, years]
-                            [sub-periods + days window, years]
+        win_series:     An array of daily, monthly or annual future data,
+                        without considering leap days, with a dimension
+                        associated to a backward moving window for each 
+                        projected period. Possible dimensions:
                         3D array:
-                            [sub_periods, projected periods window, years]
-                            [sub-periods + days window, projected periods window, years]
-        """
-        
+                            [sub-periods, projected periods window, years]
+                        4D array:
+                            [sub-periods, days window, projected periods window, years]
+    """
+    
     y_mod = series.shape[-1]
 
     if frq=='D':
@@ -269,14 +262,36 @@ def projected_backward_moving_window(series, projected_win, frq):
     return win_series
 
 
-def set_norain_to_nan(series_moving, pp_factor, pp_threshold):
-    min_rainday = 30
-    # Minimos necesarios  -> min_rainday
-    # Dias que tengo      -> rainday_count[per]
-    # Valores a modificar -> replace_values_nans
-    # Valores no-nans     -> max(Minimos_necesarios - dias que tengo,0)
-    #                            >0: Faltan valores  ->  No todos son nans
-    #                            <0: Sobran valores  ->  Todos son nans
+def set_norain_to_nan(series_moving, pp_factor, pp_threshold, min_rainday=30):
+    """
+    This function replace no-rain values with nans, leaving a minimum amout
+    of values (min_rainday) to fit a distribution. If fewer than min_rainday
+    values are above pp_threshold, random small values will be added.
+
+    Inputs:
+        series_moving:  A 2D or 3D array of daily, monthly or annual observed 
+                        data, without considering leap days. For daily, monthly
+                        and annual frequency, the number of rows will be 365, 12
+                        and 1, respectively. If daily data, it is a 3D array
+                        that has a  dimension with a centered moving window for
+                        each day of the year.
+                        [1, 12 or 365, years] or [365, day centered window, years]
+
+        pp_factor:       A float which multiplied to pp_threshold indicates the
+                         maximum value of the random values that replace no-rain
+                         values.
+
+        pp_threshold:    A float indicating the threshold to consider no-rain
+                         values.
+
+        min_rainday:    Minimum amount of values to keep for each sub-period and
+                        projected period, to ensure a minimum amount to fit a 
+                        distribution. Default is 30
+
+    Output:
+        series_moving:  The input, but with no-rain values replaced with nans.
+    """
+
     rainday_count = np.sum(series_moving>pp_threshold,1)
     
     if len(rainday_count.shape)==1:
@@ -295,153 +310,96 @@ def set_norain_to_nan(series_moving, pp_factor, pp_threshold):
     
     return series_moving
 
-    
+
 def getDist(series, allow_negatives, mu, sigma, skew, skewy):
     """
     This function assigns an independent probability distribution function to
     each row of the input series by comparing the empirical probability
     distribution function with seven distributions based on the
-    Kolmogorov-Smirnov (KS) test. If the series consider monthly data, it will
-    have 12 rows and each row will represent a month. For annual data the 
-    series will have only one row. Only strictly positive distributions are 
-    considered for precipitation and strictly positive distributions are 
-    discarded if the series has negative values. The available distributions 
+    Kolmogorov-Smirnov (KS) test. The available distributions 
     are:
-        1) Normal distribution
-        2) Log-Normal distribution
-        3) Gamma 2 parameters distribution
-        4) Gamma 3 parameters distribution
-           (Pearson 3 parameters distribution)
-        5) Log-Gamma 3 parameters distribution
-           (Log-Pearson 3 parameters distribution)
-        6) Gumbel distribution
-        7) Exponential distribution
+        1) Normal
+        2) Log-Normal
+        3) Gamma 2 parameters
+        4) Gamma 3 parameters
+           (Pearson 3 parameters)
+        5) Log-Gamma 3 parameters
+           (Log-Pearson 3 parameters)
+        6) Gumbel
+        7) Exponential
         
-        For precipitation, only 2), 3) and 5) are considered (1, 4, 6, and 7 
+        For allow_negatives=0, only 2), 3) and 5) are considered (1, 4, 6, and 7
         are discarded). For series with negative values, only 1), 3), 4), 6),
         and 7) are considered (2, 3 and 5 are discarded).
 
     Input:
-        series:     A matrix of monthly or annual data (temperature or 
-                    precipitation). If the series consider monthly data, it 
-                    will have 12 rows and each row will represent a month. 
-                    For annual data the series will have only one row.
+        series:         An array of daily, monthly or annual data, without 
+                        considering leap days. Possible input dimensions:
+                        2D array:
+                            [sub-periods, years]
+                            [sub-periods + days window, years]
+                            
+        allow_negatives: A flag that identifies if data allows negative values
+                         and also to replace no-rain values with random small 
+                         values (Chadwick et al., 2023) to avoid numerical
+                         problems with the probability distribution functions.
+                             allow_negatives = 1 or True: Allow negatives (default)
+                             allow_negatives = 0 or False: Do not allow negative
         
-        mu:         A column vector of mean values of the series. [12,1] if the
-                    series consider monthly data and [1,1] if the series 
-                    consider annual data.
-        
-        sigma:      A column vector of standard deviation of the series. [12,1]
-                    if the series consider monthly data and [1,1] if the series
-                    consider annual data.
-        
-        skew:       A column vector of skewness of the series. [12,1] if the 
-                    series consider monthly data and [1,1] if the series 
-                    consider annual data.
-        
-        skewy:      A column vector of skewness of the logarithm of the series.
-                    [12,1] if the series consider monthly data and [1,1] if the
-                    series consider annual data.
-        
-        var:        A flag that identifies if data are temperature or
-                    precipitation. This flag tells the getDist function if it
-                    has to discard distribution functions that allow negative
-                    numbers.
-                        Temperature:   var = 0
-                        Precipitation: var = 1
+        mu:         A vector with mean values of each sub-period.
+
+        sigma:      A vector with standard deviation values of each sub-period.
+
+        skew:       A vector with skewness values of each sub-period.
+
+        skewy:      A vector with skewness values of the logarithm of the series
+                    of each sub-period.
 
     Output:
-        PDF:    A column vector with an ID for the resulting distribution from
-                the KS test. [12,1] if the series consider monthly data and 
-                [1,1] if the series consider annual data. The ID is related to 
-                the numeration of the distribution listed in the description of
-                this function. This ID is used in the getCDF and getCDFinv 
-                functions of the climQMBC package.
-                
-        mu_obs:         If monthly frequency is specified, a column vector of 
-                        monthly mean of observed data [12,1]. If annual 
-                        frequency is specified, the mean of the observed data 
-                        (float).
-        
-        mu_mod:         If monthly frequency is specified, a column vector of 
-                        monthly mean of modeled data of the historical period 
-                        [12,1]. If annual frequency is specified, the mean of 
-                        the modeled data of the historical period(float).
-        
-        sigma_obs:      If monthly frequency is specified, a column vector of 
-                        monthly standard deviation of observed data [12,1]. If
-                        annual frequency is specified, the standard deviation 
-                        of the observed data (float).
-        
-        sigma_mod:      If monthly frequency is specified, a column vector of 
-                        monthly standard deviation of modeled data of the 
-                        historical period [12,1]. If annual frequency is 
-                        specified, the standard deviation of the modeled data 
-                        of the historical period(float).
-        
-        skew_obs:       If monthly frequency is specified, a column vector of 
-                        monthly skewness of observed data [12,1]. If annual 
-                        frequency is specified, the skewness of the observed 
-                        data (float).
-        
-        skew_mod:       If monthly frequency is specified, a column vector of 
-                        monthly skewness of modeled data of the historical 
-                        period [12,1]. If annual frequency is specified, the 
-                        skewness of the modeled data of the historical period
-                        (float).
-        
-        skewy_obs:      If monthly frequency is specified, a column vector of 
-                        monthly skewness of the logarithm of observed data 
-                        [12,1]. If annual frequency is specified, the skewness
-                        of the logarithm of the observed data (float).
-        
-        skewy_mod:      If monthly frequency is specified, a column vector of 
-                        monthly skewness of the logarithm of modeled data of 
-                        the historical period [12,1]. If annual frequency is 
-                        specified, the skewness of the logarithm of the modeled
-                        data of the historical period(float).
+        pdf:    A vector with an ID for the resulting distribution from
+                the KS test. The ID is related to  the numeration of the
+                distribution listed in the description of this function. This ID
+                is used in the getCDF and getCDFinv  functions of the climQMBC
+                package.
     """
     
-    # 1) Get the number of years to compute the empirical distribution in step 
-    #    3) and get the number of rows of the input series.
-    y_series = series.shape[1]
-    n = series.shape[0]
+    # Get the number of rows of the input series.
+    nrows = series.shape[0]
     
-    # 2) Initialize column vectors for the statistics needed for the available
-    #    probability distribution functions.
-    PDF = np.zeros(n)
+    # Initialize column vectors for the statistics needed for the available
+    # probability distribution functions.
+    pdf = np.zeros(nrows)
+    
+    # Initialize a counter of failures of the KS test
     ks_fail = 0
     
-    # 3) Perform the Kolmogorov-Smirnov test for each row.
-    for m in range(n):
-        series_sub = series[m,:]
+    # Perform the Kolmogorov-Smirnov test for sub-period or row.
+    for sp in range(nrows):
+        series_sub = series[sp,:]
         
-        ######
+        # Get the number of years with valid data (for allow_negatives=0, the 
+        # series might have nan values to ignore them)
         series_sub = series_sub[~np.isnan(series_sub)]
         y_series = len(series_sub)
-        #####
+
         
         # a) Get empirical distribution.
         sortdata = np.sort(series_sub) 
-        probEmp = np.arange(1/(y_series+1),
-                            y_series/(y_series+1) + 1/(y_series+1),
-                            1/(y_series+1))
-        
         probEmp = np.linspace(1/(y_series+1),
                               y_series/(y_series+1) + 1/(y_series+1),
                               y_series)
 
         # b) Compare distributions.
         # i) Normal distribution.
-        normal = stat.norm.cdf(sortdata, mu[m], sigma[m])
+        normal = stat.norm.cdf(sortdata, mu[sp], sigma[sp])
         KSnormal = max(abs(normal-probEmp))
 
         # ii) Log Normal distribution.
         if (series_sub<0).any():
             KSlognormal = 1
         else:
-            sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
-            muy = np.log(mu[m]) - (sigmay**2)/2
+            sigmay = np.sqrt(np.log(1 + (sigma[sp]/mu[sp])**2))
+            muy = np.log(mu[sp]) - (sigmay**2)/2
             lognormal = stat.lognorm.cdf(sortdata, scale=np.exp(muy), s=sigmay)
             KSlognormal = max(abs(lognormal-probEmp))
         
@@ -449,16 +407,16 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
         if (series_sub<0).any():
             KSgammaII = 1
         else:
-            A = (sigma[m]**2)/mu[m] 
-            B = (mu[m]/sigma[m])**2
+            A = (sigma[sp]**2)/mu[sp] 
+            B = (mu[sp]/sigma[sp])**2
             GammaII = stat.gamma.cdf(sortdata, a=B, scale=A)
             KSgammaII = max(abs(GammaII-probEmp))
     
         # iv) Gamma 3 parameters distribution.
         #     (Pearson 3 parameters distribution)
-        Bet = (2/skew[m])**2
-        Alp = sigma[m]/np.sqrt(Bet)
-        Gam = mu[m] - (Alp*Bet)
+        Bet = (2/skew[sp])**2
+        Alp = sigma[sp]/np.sqrt(Bet)
+        Gam = mu[sp] - (Alp*Bet)
         GammaIII = stat.gamma.cdf(sortdata-Gam, a=Bet, scale=Alp)
         KSgammaIII = max(abs(GammaIII-probEmp))
     
@@ -467,8 +425,8 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
         if (series_sub<0).any():
             KSLpIII = 1
         else:
-            sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
-            Bety = (2/skewy[m])**2
+            sigmay = np.sqrt(np.log(1 + (sigma[sp]/mu[sp])**2))
+            Bety = (2/skewy[sp])**2
             Alpy = sigmay/np.sqrt(Bety)
             Gamy = muy-(Alpy*Bety)
             sortdata_log = np.log(sortdata)
@@ -479,19 +437,19 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
         # vi) Gumbel distribution.
         Sn = np.pi/np.sqrt(6)
         yn = 0.5772
-        a = Sn/sigma[m]
-        u = mu[m] - (yn/a)
+        a = Sn/sigma[sp]
+        u = mu[sp] - (yn/a)
         gumbel = np.exp(-np.exp(-a*(sortdata - u)))
         KSgumbel = max(abs(gumbel-probEmp))
     
         # vii) Exponential distribution.
-        gamexp = mu[m] - sigma[m]
-        exponential = 1-np.exp(-1/sigma[m]*(sortdata - gamexp))
+        gamexp = mu[sp] - sigma[sp]
+        exponential = 1-np.exp(-1/sigma[sp]*(sortdata - gamexp))
         exponential[exponential<0] = 0
         KSexponential= max(abs(exponential-probEmp))
         
-        # c) If variable is precipitation, set KS=1 to distributions that allow
-        #    negative values (this will discard those distributions).        
+        # c) allow_negatives=0, set KS=1 to distributions that allow
+        #    negative values (this will discard those distributions).
         if not allow_negatives:
             KSnormal = 1
             KSgammaIII = 1
@@ -505,228 +463,206 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
         ks_crit = stat.ksone.ppf(1-0.05/2, y_series)
         ks_fail = ks_fail + (np.sign(min(KS_vals)-ks_crit)+1)/2
 
-        PDF[m] = bestPDF
+        pdf[sp] = bestPDF
     
     # # Check if ks-test failures
     # if ks_fail>0:
     #     print(f'KS-Test failed: {int(ks_fail)} times out of {int(n)}')
         
-    return PDF
+    return pdf
 
 
-def getCDF(PDF, series, mu, sigma, skew, skewy):
+def getCDF(pdf, series, mu, sigma, skew, skewy):
     """
     This function evaluates each row of the series in the respective cumulative
     distribution function assigned by the Kolmogorov-Smirnov (KS) test in the 
     getDist function of the climQMBC package. The available distributions are:
-        1) Normal distribution
-        2) Log-Normal distribution
-        3) Gamma 2 parameters distribution
-        4) Gamma 3 parameters distribution
-           (Pearson 3 parameters distribution)
-        5) Log-Gamma 3 parameters distribution
-           (Log-Pearson 3 parameters distribution)
-        6) Gumbel distribution
-        7) Exponential distribution
+        1) Normal
+        2) Log-Normal
+        3) Gamma 2 parameters
+        4) Gamma 3 parameters
+           (Pearson 3 parameters)
+        5) Log-Gamma 3 parameters
+           (Log-Pearson 3 parameters)
+        6) Gumbel
+        7) Exponential
 
     Note that each row is associated to an independent distribution function.
 
     Input:
-        PDF:        A column vector with an ID for the resulting distribution 
-                    from the KS test. [12,1] if the series consider monthly 
-                    data and [1,1] if the series consider annual data. The ID 
-                    is related to the numeration of the distribution listed in 
-                    the description of this function. 
+        pdf:     A vector with an ID for the resulting distribution from
+                 the KS test. The ID is related to  the numeration of the
+                 distribution listed in the description of this function.
         
-        series:     A matrix of monthly or annual data (temperature or 
-                    precipitation). If the series consider monthly data, it 
-                    will have 12 rows and each row will represent a month. For
-                    annual data the series will have only one row.
+        series:  An array of daily, monthly or annual data, without 
+                 considering leap days. Possible input dimensions:
+                 2D array:
+                     [sub-periods, years]
+                     [sub-periods + days window, years]
         
-        mu:         A column vector of mean values of the series. [12,1] if the
-                    series consider monthly data and [1,1] if the series
-                    consider annual data.
-        
-        sigma:      A column vector of standard deviation of the series. [12,1]
-                    if the series consider monthly data and [1,1] if the series
-                    consider annual data.
-        
-        skew:       A column vector of skewness of the series. [12,1] if the 
-                    series consider monthly data and [1,1] if the series 
-                    consider annual data.
-        
-        skewy:      A column vector of skewness of the logarithm of the series.
-                    [12,1] if the series consider monthly data and [1,1] if the
-                    series consider annual data.
+        mu:      A vector with mean values of each sub-period.
+
+        sigma:   A vector with standard deviation values of each sub-period.
+
+        skew:    A vector with skewness values of each sub-period.
+
+        skewy:   A vector with skewness values of the logarithm of the series
+                 of each sub-period.
 
     Output:
-        Taot:   A column vector with the non-exceedance probability for each
-                row of the input series. [12,1] if the series consider monthly
-                data and [1,1] if the series consider annual data.
-
+        Taot:   A matrix with the non-exceedance probability for value
+                row of the input series.
     """
 
-    # 1) Get the number of rows and years of the series.
-    n_m = series.shape[0]
-    n_y = series.shape[1]
+    # Get the number of rows and columns of the series.
+    rows = series.shape[0]
+    cols = series.shape[1]
     
-    # 2) Compute the cumulative distribution function to the values of each 
-    #    row, based on the distribution assigned in the getDist function of the
-    #    climQMBC package.
-    Taot = np.zeros((n_m,n_y))
-    for m in range (n_m):
-        series_sub = series[m,:]
+    # Compute the cumulative distribution function to the values of each 
+    # row, based on the distribution assigned in the getDist function of the
+    # climQMBC package.
+    prob = np.zeros((rows,cols))
+    for sp in range(rows):
+        series_sub = series[sp,:]
         
-        if PDF[m]==0: # i) Normal distribution.
-            Taot[m,:] = stat.norm.cdf(series_sub, mu[m], sigma[m])
+        if pdf[sp]==0: # i) Normal distribution.
+            prob[sp,:] = stat.norm.cdf(series_sub, mu[sp], sigma[sp])
             
-        elif PDF[m]==1: # ii) Log-Normal distribution.
-            sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
-            muy   = np.log(mu[m])-(sigmay**2)/2
-            Taot[m,:] = stat.lognorm.cdf(series_sub, scale=np.exp(muy), s=sigmay)
+        elif pdf[sp]==1: # ii) Log-Normal distribution.
+            sigmay = np.sqrt(np.log(1 + (sigma[sp]/mu[sp])**2))
+            muy = np.log(mu[sp])-(sigmay**2)/2
+            prob[sp,:] = stat.lognorm.cdf(series_sub, scale=np.exp(muy), s=sigmay)
             
-        elif PDF[m]==2: # iii) Gamma 2 parameters distribution.
-            A = (sigma[m]**2)/mu[m] 
-            B = (mu[m]/sigma[m])**2
-            Taot[m,:] = stat.gamma.cdf(series_sub, a=B, scale=A)
+        elif pdf[sp]==2: # iii) Gamma 2 parameters distribution.
+            A = (sigma[sp]**2)/mu[sp] 
+            B = (mu[sp]/sigma[sp])**2
+            prob[sp,:] = stat.gamma.cdf(series_sub, a=B, scale=A)
             
-        elif PDF[m]==3: # iv) Gamma 3 parameters distribution.
-            Bet = (2/skew[m])**2
-            Alp = sigma[m]/np.sqrt(Bet)
-            Gam = mu[m]-(Alp*Bet)
-            Taot[m,:] = stat.gamma.cdf(series_sub-Gam, a=Bet, scale=Alp)
+        elif pdf[sp]==3: # iv) Gamma 3 parameters distribution.
+            Bet = (2/skew[sp])**2
+            Alp = sigma[sp]/np.sqrt(Bet)
+            Gam = mu[sp]-(Alp*Bet)
+            prob[sp,:] = stat.gamma.cdf(series_sub-Gam, a=Bet, scale=Alp)
             
-        elif PDF[m]==4: # v) Log-Gamma 3 parameters distribution.
-            sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
+        elif pdf[sp]==4: # v) Log-Gamma 3 parameters distribution.
+            sigmay = np.sqrt(np.log(1 + (sigma[sp]/mu[sp])**2))
             
-            muy = np.log(mu[m]) - (sigmay**2)/2
-            Bety = (2/skewy[m])**2
+            muy = np.log(mu[sp]) - (sigmay**2)/2
+            Bety = (2/skewy[sp])**2
             Alpy = sigmay/np.sqrt(Bety)
             Gamy = muy - (Alpy*Bety)
             Lnsortdata = np.log(series_sub)
             Lnsortdata[np.isinf(Lnsortdata)] = np.log(np.random.rand(np.isinf(Lnsortdata).sum())*0.01)
-            Taot[m,:]  = stat.gamma.cdf(Lnsortdata-Gamy,a=Bety,scale=Alpy)
+            prob[sp,:]  = stat.gamma.cdf(Lnsortdata-Gamy,a=Bety,scale=Alpy)
             
-        elif PDF[m]==5: # vi) Gumbel distribution.
+        elif pdf[sp]==5: # vi) Gumbel distribution.
             Sn = np.pi/np.sqrt(6)
             yn = 0.5772
-            a = Sn/sigma[m]
-            u = mu[m]-(yn/a)
-            Taot[m,:] = np.exp(-np.exp(-a*(series_sub - u)))
+            a = Sn/sigma[sp]
+            u = mu[sp]-(yn/a)
+            prob[sp,:] = np.exp(-np.exp(-a*(series_sub - u)))
     
-        elif PDF[m]==6: # vii) Exponential distribution.
-            gamexp = mu[m]-sigma[m]
-            exponential = 1-np.exp(-1/sigma[m]*(series_sub-gamexp))
+        elif pdf[sp]==6: # vii) Exponential distribution.
+            gamexp = mu[sp]-sigma[sp]
+            exponential = 1-np.exp(-1/sigma[sp]*(series_sub-gamexp))
             exponential[exponential<0] = 0
-            Taot[m,:] = exponential
+            prob[sp,:] = exponential
     
     # 3) Tail probabilities are set to (0 +  threshold) and (1 - threshold) to
     #    avoid numerical errors.
     th = 1e-3
-    Taot[Taot>1-th] = 1-th
-    Taot[Taot<th] = th
+    prob[prob>1-th] = 1-th
+    prob[prob<th] = th
     
-    return Taot
+    return prob
 
 
-def getCDFinv(PDF, Taot, mu, sigma, skew, skewy):
+def getCDFinv(PDF, prob, mu, sigma, skew, skewy):
     """
-    This function evaluates the probability, Taot, in the respective inverse
+    This function evaluates the probability, prob, in the respective inverse
     cumulative distribution function assigned by the Kolmogorov-Smirnov (KS)
     test in the getDist function of the climQMBC package. The available
     distributions are:
-        1) Normal distribution
-        2) Log-Normal distribution
-        3) Gamma 2 parameters distribution
-        4) Gamma 3 parameters distribution
-           (Pearson 3 parameters distribution)
-        5) Log-Gamma 3 parameters distribution
-           (Log-Pearson 3 parameters distribution)
-        6) Gumbel distribution
-        7) Exponential distribution
+        1) Normal
+        2) Log-Normal
+        3) Gamma 2 parameters
+        4) Gamma 3 parameters
+           (Pearson 3 parameters)
+        5) Log-Gamma 3 parameters
+           (Log-Pearson 3 parameters)
+        6) Gumbel
+        7) Exponential
         
     Note that each row is associated to an independent distribution function.
         
     Input:
-        PDF:    A column vector with an ID for the resulting distribution from
-                the KS test. [12,1] if the series consider monthly data and 
-                [1,1] if the series consider annual data. The ID is related to
-                the numeration of the distribution listed in the description 
-                of this function. 
+        pdf:     A vector with an ID for the resulting distribution from
+                 the KS test. The ID is related to  the numeration of the
+                 distribution listed in the description of this function.
         
-        Taot:   A column vector with the non-exceedance probability for each 
-                row of the input series. [12,1] if the series consider monthly 
-                data and [1,1] if the series consider annual data.
+        prob:    A matrix with the non-exceedance probability for value
+                 row of the input series.
         
-        mu:     A column vector of mean values of the series. [12,1] if the 
-                series consider monthly data and [1,1] if the series consider 
-                annual data.
-        
-        sigma:  A column vector of standard deviation of the series. [12,1] if 
-                the series consider monthly data and [1,1] if the series 
-                consider annual data.
-        
-        skew:   A column vector of skewness of the series. [12,1] if the serie
-                s consider monthly data and [1,1] if the series consider annual
-                data.
-        
-        skewy:  A column vector of skewness of the logarithm of the series. 
-                [12,1] if the series consider monthly data and [1,1] if the 
-                series consider annual data.
+        mu:      A vector with mean values of each sub-period.
+
+        sigma:   A vector with standard deviation values of each sub-period.
+
+        skew:    A vector with skewness values of each sub-period.
+
+        skewy:   A vector with skewness values of the logarithm of the series
+                 of each sub-period.
             
     Output:
-        xhat:   A column vector with the values obtained when the inverse
-                cumulative distribution function is applied. [12,1] if the
-                series consider monthly data and [1,1] if the series consider
-                annual data.
+        xhat:   A matrix with the values obtained when the inverse
+                cumulative distribution function is applied to prob.
     """
 
-    # 1) Get the number of rows and years of the series.
-    n_m = Taot.shape[0]
-    n_y = Taot.shape[1]
+    # Get the number of rows and columns of the series.
+    rows = prob.shape[0]
+    cols = prob.shape[1]
     
-    # 2) Compute the cumulative distribution function to the values of each 
-    #    row, based on the distribution assigned in the getDist function of the
-    #    climQMBC package.
-    xhat = np.zeros((n_m,n_y))
-    for m in range (n_m):
+    # Compute the cumulative distribution function to the values of each 
+    # row, based on the distribution assigned in the getDist function of the
+    # climQMBC package.
+    xhat = np.zeros((rows,cols))
+    for sp in range(rows):
         
-        if PDF[m]==0: # i) Normal distribution.
-            xhat[m,:] = stat.norm.ppf(Taot[m,:],mu[m],sigma[m])
+        if PDF[sp]==0: # i) Normal distribution.
+            xhat[sp,:] = stat.norm.ppf(prob[sp,:],mu[sp],sigma[sp])
             
-        elif PDF[m]==1: # ii) Log-Normal distribution.
-            sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
-            muy = np.log(mu[m])-(sigmay**2)/2
-            xhat[m,:] = stat.lognorm.ppf(Taot[m,:],scale=np.exp(muy),s=sigmay)
+        elif PDF[sp]==1: # ii) Log-Normal distribution.
+            sigmay = np.sqrt(np.log(1 + (sigma[sp]/mu[sp])**2))
+            muy = np.log(mu[sp])-(sigmay**2)/2
+            xhat[sp,:] = stat.lognorm.ppf(prob[sp,:],scale=np.exp(muy),s=sigmay)
             
-        elif PDF[m]==2: # iii) Gamma 2 parameters distribution.
-            A = (sigma[m]**2)/mu[m] 
-            B = (mu[m]/sigma[m])**2    
-            xhat[m,:] = stat.gamma.ppf(Taot[m,:],a=B,scale=A)
+        elif PDF[sp]==2: # iii) Gamma 2 parameters distribution.
+            A = (sigma[sp]**2)/mu[sp] 
+            B = (mu[sp]/sigma[sp])**2    
+            xhat[sp,:] = stat.gamma.ppf(prob[sp,:],a=B,scale=A)
             
-        elif PDF[m]==3: # iv) Gamma 3 parameters distribution.
-            Bet = (2/skew[m])**2
-            Alp = sigma[m]/np.sqrt(Bet)
-            Gam = mu[m]-(Alp*Bet)
-            xhat[m,:] = stat.gamma.ppf(Taot[m,:],a=Bet,scale=Alp) + Gam
+        elif PDF[sp]==3: # iv) Gamma 3 parameters distribution.
+            Bet = (2/skew[sp])**2
+            Alp = sigma[sp]/np.sqrt(Bet)
+            Gam = mu[sp]-(Alp*Bet)
+            xhat[sp,:] = stat.gamma.ppf(prob[sp,:],a=Bet,scale=Alp) + Gam
             
-        elif PDF[m]==4: # v) Log-Gamma 3 parameters distribution.
-            sigmay = np.sqrt(np.log(1 + (sigma[m]/mu[m])**2))
-            muy = np.log(mu[m])-(sigmay**2)/2
-            Bety = (2/skewy[m])**2
+        elif PDF[sp]==4: # v) Log-Gamma 3 parameters distribution.
+            sigmay = np.sqrt(np.log(1 + (sigma[sp]/mu[sp])**2))
+            muy = np.log(mu[sp])-(sigmay**2)/2
+            Bety = (2/skewy[sp])**2
             Alpy = sigmay/np.sqrt(Bety)
             Gamy = muy-(Alpy*Bety)
-            xhat[m,:]  = np.exp(stat.gamma.ppf(Taot[m,:],a=Bety,scale=Alpy) + Gamy)
+            xhat[sp,:]  = np.exp(stat.gamma.ppf(prob[sp,:],a=Bety,scale=Alpy) + Gamy)
             
-        elif PDF[m]==5: # vi) Gumbel distribution.
+        elif PDF[sp]==5: # vi) Gumbel distribution.
             Sn = np.pi/np.sqrt(6)
             yn = 0.5772
-            a = Sn/sigma[m]
-            u = mu[m]-(yn/a)
-            xhat[m,:] = (u - np.log(-np.log(Taot[m,:]))/a)
+            a = Sn/sigma[sp]
+            u = mu[sp]-(yn/a)
+            xhat[sp,:] = (u - np.log(-np.log(prob[sp,:]))/a)
     
-        elif PDF[m]==6: # vii) Exponential distribution.
-            gamexp = mu[m]-sigma[m]
-            xhat[m,:] = (gamexp - (sigma[m]*np.log(1 - Taot[m,:])))
+        elif PDF[sp]==6: # vii) Exponential distribution.
+            gamexp = mu[sp]-sigma[sp]
+            xhat[sp,:] = (gamexp - (sigma[sp]*np.log(1 - prob[sp,:])))
     
     return xhat

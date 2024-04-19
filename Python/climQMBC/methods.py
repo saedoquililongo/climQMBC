@@ -119,15 +119,15 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100,
                          Default: None
                          
         NOTE: The available distributions for pdf_obs and pdf_mod are:
-            0) Normal distribution
-            1) Log-Normal distribution
-            2) Gamma 2 parameters distribution
-            3) Gamma 3 parameters distribution
-               (Pearson 3 parameters distribution)
-            4) Log-Gamma 3 parameters distribution
-               (Log-Pearson 3 parameters distribution)
-            5) Gumbel distribution
-            6) Exponential distribution
+            0) Normal
+            1) Log-Normal
+            2) Gamma 2 parameters
+            3) Gamma 3 parameters
+               (Pearson 3 parameters)
+            4) Log-Gamma 3 parameters
+               (Log-Pearson 3 parameters)
+            5) Gumbel
+            6) Exponential
 
     Output:
         QM_series: A column vector of data bias corrected with the QM method.
@@ -300,15 +300,15 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
                          Default: None
 
         NOTE: The available distributions for pdf_obs and pdf_mod are:
-            0) Normal distribution
-            1) Log-Normal distribution
-            2) Gamma 2 parameters distribution
-            3) Gamma 3 parameters distribution
-               (Pearson 3 parameters distribution)
-            4) Log-Gamma 3 parameters distribution
-               (Log-Pearson 3 parameters distribution)
-            5) Gumbel distribution
-            6) Exponential distribution
+            0) Normal
+            1) Log-Normal
+            2) Gamma 2 parameters
+            3) Gamma 3 parameters
+               (Pearson 3 parameters)
+            4) Log-Gamma 3 parameters
+               (Log-Pearson 3 parameters)
+            5) Gumbel
+            6) Exponential
 
     Output:
         DQM_series: A column vector of data bias corrected with the DQM method.
@@ -527,15 +527,15 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
                          Default: None
 
         NOTE: The available distributions for pdf_obs and pdf_mod are:
-            0) Normal distribution
-            1) Log-Normal distribution
-            2) Gamma 2 parameters distribution
-            3) Gamma 3 parameters distribution
-               (Pearson 3 parameters distribution)
-            4) Log-Gamma 3 parameters distribution
-               (Log-Pearson 3 parameters distribution)
-            5) Gumbel distribution
-            6) Exponential distribution
+            0) Normal
+            1) Log-Normal
+            2) Gamma 2 parameters
+            3) Gamma 3 parameters
+               (Pearson 3 parameters)
+            4) Log-Gamma 3 parameters
+               (Log-Pearson 3 parameters)
+            5) Gumbel
+            6) Exponential
 
     Output:
         QDM_series: A column vector of data bias corrected with the QDM method.
@@ -765,15 +765,15 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
                          Default: None
 
         NOTE: The available distributions for pdf_obs and pdf_mod are:
-            0) Normal distribution
-            1) Log-Normal distribution
-            2) Gamma 2 parameters distribution
-            3) Gamma 3 parameters distribution
-               (Pearson 3 parameters distribution)
-            4) Log-Gamma 3 parameters distribution
-               (Log-Pearson 3 parameters distribution)
-            5) Gumbel distribution
-            6) Exponential distribution
+            0) Normal
+            1) Log-Normal
+            2) Gamma 2 parameters
+            3) Gamma 3 parameters
+               (Pearson 3 parameters)
+            4) Log-Gamma 3 parameters
+               (Log-Pearson 3 parameters)
+            5) Gumbel
+            6) Exponential
 
     Output:
         UQM_series: A column vector of data bias corrected with the UQM method.
