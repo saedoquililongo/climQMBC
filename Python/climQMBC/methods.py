@@ -358,7 +358,8 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
         if not allow_negatives:
             obs_series_moving = set_norain_to_nan(obs_series_moving, pp_threshold, pp_factor)
             modh_series_moving = set_norain_to_nan(modh_series_moving, pp_threshold_mod, pp_factor)
-            mod_series[mod_series<pp_threshold_mod] = np.nanwin_series_moving = set_norain_to_nan(win_series_moving, pp_threshold_mod, pp_factor)
+            mod_series[mod_series<pp_threshold_mod] = np.nan
+            win_series_moving = set_norain_to_nan(win_series_moving, pp_threshold_mod, pp_factor)
 
         # Get the statistics for each row
         mu_obs, std_obs, skew_obs, skewy_obs = getStats(obs_series_moving)
