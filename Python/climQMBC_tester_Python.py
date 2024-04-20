@@ -51,9 +51,7 @@ Revision: 1, updated Apr 2024
 
 from climQMBC.methods import QM, DQM, QDM, UQM, SDM
 from climQMBC.report import report
-import matplotlib.pylab as plt
 import pandas as pd
-import numpy as np
 
 
 # =============================================================================
