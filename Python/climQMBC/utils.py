@@ -153,7 +153,6 @@ def getStats(series):
                             [sub_periods, projected periods window, years]
                             [sub-periods + days window, projected periods window, years]
 
-
     Output:
         mu:         Mean values of each sub-period (and projected period if
                     input is a 3D array).
@@ -458,18 +457,15 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
 
         # d) The distribution with lower KS value is considered for each month.
         KS_vals = [KSnormal, KSlognormal, KSgammaII, KSgammaIII, KSLpIII, KSgumbel, KSexponential]
+        min_KS = min(KS_vals)
         bestPDF = np.argmin(KS_vals)
         
-        ks_crit = stat.ksone.ppf(1-0.05/2, y_series)
-        ks_fail = ks_fail + (np.sign(min(KS_vals)-ks_crit)+1)/2
+        ks_crit = stat.kstwo.ppf(1-0.05/2, y_series)
+        ks_fail = ks_fail + (np.sign(min_KS-ks_crit)+1)/2
 
         pdf[sp] = bestPDF
-    
-    # # Check if ks-test failures
-    # if ks_fail>0:
-    #     print(f'KS-Test failed: {int(ks_fail)} times out of {int(n)}')
-        
-    return pdf
+
+    return pdf, ks_fail
 
 
 def getCDF(pdf, series, mu, sigma, skew, skewy):

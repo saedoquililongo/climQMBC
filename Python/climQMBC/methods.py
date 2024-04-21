@@ -186,11 +186,11 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100,
     #    observed and modeled data in the historical period.
     if user_pdf==False:
         if frq=='D':
-            pdf_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
-            pdf_mod = getDist(modh_series_moving, allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+            pdf_obs, ks_fail_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod, ks_fail_mod = getDist(modh_series_moving, allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
         else:
-            pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
-            pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+            pdf_obs, ks_fail_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod, ks_fail_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
     else:
         pdf_obs = np.zeros(obs_series.shape[0])*pdf_obs
         pdf_mod = np.zeros(mod_series.shape[0])*pdf_mod
@@ -214,6 +214,11 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100,
     if not allow_negatives:
         QM_series[np.isnan(QM_series)] = 0
         QM_series[QM_series<pp_threshold] = 0
+    
+    # Check if ks-test failures
+    ks_fail = ks_fail_obs + ks_fail_mod
+    if ks_fail>0:
+        print('QM: Selections of some probability distribution functions did not pass the KS-Test')
 
     return QM_series
 
@@ -379,11 +384,11 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     #    observed and modeled data in the historical period.
     if user_pdf==False:
         if frq=='D':
-            pdf_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
-            pdf_mod = getDist(modh_series_moving, allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+            pdf_obs, ks_fail_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod, ks_fail_mod = getDist(modh_series_moving, allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
         else:
-            pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
-            pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+            pdf_obs, ks_fail_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod, ks_fail_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
     else:
         pdf_obs = np.zeros(obs_series.shape[0])*pdf_obs
         pdf_mod = np.zeros(mod_series.shape[0])*pdf_mod
@@ -431,6 +436,11 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     if not allow_negatives:
         DQM_series[np.isnan(DQM_series)] = 0
         DQM_series[DQM_series<pp_threshold] = 0
+        
+    # Check if ks-test failures
+    ks_fail = ks_fail_obs + ks_fail_mod
+    if ks_fail>0:
+        print('QDM: Selections of some probability distribution functions did not pass the KS-Test')
     
     return DQM_series
 
@@ -611,11 +621,11 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     #    observed and modeled data in the historical period.
     if user_pdf==False:
         if frq=='D':
-            pdf_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
-            pdf_mod = getDist(modh_series_moving, allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+            pdf_obs, ks_fail_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod, ks_fail_mod = getDist(modh_series_moving, allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
         else:
-            pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
-            pdf_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
+            pdf_obs, ks_fail_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_mod, ks_fail_mod = getDist(mod_series[:,:y_obs], allow_negatives, mu_mod, std_mod, skew_mod, skewy_mod)
     else:
         pdf_obs = np.zeros(obs_series.shape[0])*pdf_obs
         pdf_mod = np.zeros(mod_series.shape[0])*pdf_mod
@@ -623,15 +633,17 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     # 4) For each projected period assign a probability distribution function to
     #    to each sub-period and apply the cumulative distribution function to
     #    the modeled data.
+    ks_fail_win = 0
     pdf_win = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))
     prob = np.zeros((mod_series.shape[0], y_mod-y_obs))
     for j in range(prob.shape[1]):
         # Assign a probability distribution function to each month.
         if user_pdf==False:
             if frq=='D':
-                pdf_win[:,j] = getDist(win_series_moving[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+                pdf_win[:,j], ks_fail_wtemp = getDist(win_series_moving[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
             else:
-                pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+                pdf_win[:,j], ks_fail_wtemp = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+            ks_fail_win = ks_fail_win + ks_fail_wtemp
         else:
             pdf_win[:,j] = pdf_mod
         
@@ -680,6 +692,11 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     if not allow_negatives:
         QDM_series[np.isnan(QDM_series)] = 0
         QDM_series[QDM_series<pp_threshold] = 0
+        
+    # Check if ks-test failures
+    ks_fail = ks_fail_obs + ks_fail_mod + ks_fail_win
+    if ks_fail>0:
+        print('QDM: Selections of some probability distribution functions did not pass the KS-Test')
     
     return QDM_series
 
@@ -844,9 +861,9 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     #    observed and modeled data in the historical period.
     if user_pdf==False:
         if frq=='D':
-            pdf_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_obs, ks_fail_obs = getDist(obs_series_moving, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
         else:
-            pdf_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
+            pdf_obs, ks_fail_obs = getDist(obs_series, allow_negatives, mu_obs, std_obs, skew_obs, skewy_obs)
     else:
         pdf_obs = np.zeros(obs_series.shape[0])*pdf_obs
         pdf_mod = np.zeros(mod_series.shape[0])*pdf_mod
@@ -879,6 +896,7 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     # 5) For each projected period assign a probability distribution function to
     #    to each sub-period and apply the cumulative distribution function to
     #    the modeled data.
+    ks_fail_win = 0
     pdf_win = np.zeros((mod_series.shape[0], y_mod-y_obs))
     prob = np.zeros((mod_series.shape[0], y_mod-y_obs))
     UQM_series = np.zeros((mod_series.shape[0], y_mod-y_obs))
@@ -890,9 +908,10 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
         # Assign a probability distribution function to each month.
         if user_pdf==False:
             if frq=='D':
-                pdf_win[:,j] = getDist(win_series_moving[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+                pdf_win[:,j], ks_fail_wtemp = getDist(win_series_moving[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
             else:
-                pdf_win[:,j] = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+                pdf_win[:,j], ks_fail_wtemp = getDist(win_series[:,:,j], allow_negatives, mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])
+            ks_fail_win = ks_fail_win + ks_fail_wtemp
         else:
             pdf_win[:,j] = pdf_mod
         
@@ -926,6 +945,11 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     if not allow_negatives:
         UQM_series[np.isnan(UQM_series)] = 0
         UQM_series[UQM_series<pp_threshold] = 0
+        
+    # Check if ks-test failures
+    ks_fail = ks_fail_obs + ks_fail_win
+    if ks_fail>0:
+        print('UQM: Selections of some probability distribution functions did not pass the KS-Test')
     
     return UQM_series
 
