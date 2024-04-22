@@ -88,11 +88,11 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100,
                              Annual:    frq = 'A' (default)
 
         pp_threshold:    A float indicating the threshold to consider no-rain
-                         values.
+                         values. Default is 1.
                 
         pp_factor:       A float which multiplied to pp_threshold indicates the
                          maximum value of the random values that replace no-rain
-                         values.
+                         values. Default is 1/100.
 
         day_win:         (only for frq='D') An integer indicating how many days
                          to consider backwards and forward to get the statistics
@@ -218,7 +218,7 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100,
     # Check if ks-test failures
     ks_fail = ks_fail_obs + ks_fail_mod
     if ks_fail>0:
-        print('QM: Selections of some probability distribution functions did not pass the KS-Test')
+        print('QM: Some of the probability distribution functions did not pass the KS-Test')
 
     return QM_series
 
@@ -274,11 +274,11 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
                              Annual:    frq = 'A' (default)
 
         pp_threshold:    A float indicating the threshold to consider no-rain
-                         values.
+                         values. Default is 1.
                 
         pp_factor:       A float which multiplied to pp_threshold indicates the
                          maximum value of the random values that replace no-rain
-                         values.
+                         values. Default is 1/100.
 
         day_win:         (only for frq='D') An integer indicating how many days
                          to consider backwards and forward to get the statistics
@@ -440,7 +440,7 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     # Check if ks-test failures
     ks_fail = ks_fail_obs + ks_fail_mod
     if ks_fail>0:
-        print('QDM: Selections of some probability distribution functions did not pass the KS-Test')
+        print('DQM: Some of the probability distribution functions did not pass the KS-Test')
     
     return DQM_series
 
@@ -497,11 +497,11 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
                              Annual:    frq = 'A' (default)
 
         pp_threshold:    A float indicating the threshold to consider no-rain
-                         values.
-
+                         values. Default is 1.
+                
         pp_factor:       A float which multiplied to pp_threshold indicates the
                          maximum value of the random values that replace no-rain
-                         values.
+                         values. Default is 1/100.
 
         rel_change_th:    A float indicating the maximum scaling factor 
                           (Equation 4 of Cannon et al. (2015)) when the
@@ -696,7 +696,7 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     # Check if ks-test failures
     ks_fail = ks_fail_obs + ks_fail_mod + ks_fail_win
     if ks_fail>0:
-        print('QDM: Selections of some probability distribution functions did not pass the KS-Test')
+        print('QDM: Some of the probability distribution functions did not pass the KS-Test')
     
     return QDM_series
 
@@ -752,11 +752,11 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
                              Annual:    frq = 'A' (default)
 
         pp_threshold:    A float indicating the threshold to consider no-rain
-                         values.
-
+                         values. Default is 1.
+                
         pp_factor:       A float which multiplied to pp_threshold indicates the
                          maximum value of the random values that replace no-rain
-                         values.
+                         values. Default is 1/100.
 
         day_win:         (only for frq='D') An integer indicating how many days
                          to consider backwards and forward to get the statistics
@@ -949,16 +949,16 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     # Check if ks-test failures
     ks_fail = ks_fail_obs + ks_fail_win
     if ks_fail>0:
-        print('UQM: Selections of some probability distribution functions did not pass the KS-Test')
+        print('UQM: Some of the probability distribution functions did not pass the KS-Test')
     
     return UQM_series
 
 
-def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100):
+def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100, day_win=1):
     """
     This function performs bias correction of modeled series based on observed
     data by the Scaled Distribution Mapping (SDM) method, as described by 
-    Switanek et al. (2017). Correction is performed to monthly or annual 
+    Switanek et al. (2017). Correction is performed to daily, monthly or annual 
     precipitation or temperature data in a single location. The historical 
     period of the modeled series is bias corrected as a scenario where the 
     complete series is replaced by the bias corrected series. On the other 
@@ -970,52 +970,48 @@ def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100):
     series.
     
     Inputs:
-        obs:    A column vector of monthly or annual observed data (temperature
-                or precipitation). If monthly frequency is specified, 
-                the length of this vector is 12 times the number of observed 
-                years [12 x y_obs, 1]. If annual frequency is specified, the 
-                length of this vector is equal to the number of observed years
-                [y_obs, 1].
+        obs:     A column vector of daily, monthly or annual observed data,
+                 without considering leap days. If daily frequency is specified,
+                 the length of the column vector should by a multiple of 365 and
+                 for monthly frequency, it should be a multiple of 12.
+                 [ndata_obs, 1]
 
-        mod:    A column vector of monthly or annual modeled data (temperature
-                or precipitation). If monthly frequency is specified, 
-                the length of this vector is 12 times the number of observed
-                years [12 x y_mod, 1]. If annual frequency is specified, the 
-                length of this vector is equal to the number of observed years
-                [y_mod, 1].
+        mod:     A column vector of daily, monthly or annual modeled or GCM data,
+                 without considering leap days. If daily frequency is specified,
+                 the length of the column vector should by a multiple of 365 and
+                 for monthly frequency, it should be a multiple of 12.
+                 [ndata_mod, 1]
 
-        var:    A flag that identifies if data are temperature or 
-                precipitation. This flag tells the getDist function if it has 
-                to discard distribution functions that allow negative numbers,
-                and if the terms in the correction equations are
-                multiplied/divided or added/subtracted.
-                    Temperature:   var = 0
-                    Precipitation: var = 1
+        SDM_var: A flag that identifies if data are temperature or precipitation.
+                     Temperature:   var = 0
+                     Precipitation: var = 1
 
-        NOTE: This routine considers that obs and mod series start in january
-        of the first year and ends in december of the last year.
+        NOTE: This routine considers that obs and mod series start in the same
+        day/month/year and are continuous until the end day/month/year.
 
     Optional inputs:
-        frq:    A string specifying if the input is annual or monthly data. If
-                not specified, it is set monthly as default.
-                    Monthly:   frq = 'M'
-                    Annual:    frq = 'A'
-                    
-        pp_threshold:    A float indicating the threshold to consider 
-                         physically null precipitation values.
+        frq:             A string specifying if the input frequency is daily,
+                         monthly or annual.
+                             Daily:     frq = 'D'
+                             Monthly:   frq = 'M'
+                             Annual:    frq = 'A' (default)
+
+        pp_threshold:    A float indicating the threshold to consider no-rain
+                         values. Default is 1.
                 
-        pp_factor:       A float indicating the maximum value of the random
-                         values that replace physically null precipitation 
-                         values.
+        pp_factor:       A float which multiplied to pp_threshold indicates the
+                         maximum value of the random values that replace no-rain
+                         values. Default is 1/100.
+                         
+        day_win:         (only for frq='D') An integer indicating how many days
+                         to consider backwards and forward to get the statistics
+                         of each calendar day.The length of the window will be 
+                         (2*win_day-1). For example, day_win=15 -> window of 29.
+                         Default: win = 1
 
     Output:
-        SDM_series:  A column vector of monthly or annual modeled data 
-                    (temperature or precipitation) corrected by the SDM method. 
-                    If monthly frequency is specified, the length of this 
-                    vector is 12 times the number of observed years 
-                    [12 x y_mod, 1]. If annual frequency is specified, the 
-                    length of this vector is equal to the number of observed 
-                    years [y_mod, 1].
+        SDM_series: A column vector of data bias corrected with the QM method.
+                    [ndata_mod, 1]
     
     References:
         Switanek, B. M., Troch, P., Castro, L. C., Leuprecht, A., Chang, H. I.,
@@ -1023,19 +1019,50 @@ def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100):
         mapping: A bias correction method that preserves raw climate model
         projected changes. Hydrology &amp; Earth System Sciences, 21,
         2649-2666, https://doi.org/10.5194/hess-21-2649-2017.
- 
     """
-    
+    # Define the no-rain value and the threshold to truncate the tail of the
+    # probability ditribution functions
     lower_lim = pp_threshold
     CDF_th = 1e-3
     
-    # 0) Format inputs and get statistics of the observed and modeled series of
-    #    the historical period (formatQM function of the climQMBC package).
+    # 0) Format series to matrix with rows as sub-periods and columns as years
+    #    and, if needed, replace no-rain values with random small values 
     y_obs, obs_series = formatQM(obs, SDM_var, frq, pp_threshold, pp_factor)
     y_mod, mod_series = formatQM(mod, SDM_var, frq, pp_threshold, pp_factor)
+    modh_series= mod_series[:,:y_obs]
     
-    SDM_series = np.zeros((mod_series.shape[0], mod_series.shape[1]-y_obs))    
-    SDM_h_series = np.zeros((obs_series.shape[0], y_obs))    
+    # If frequency is daily, consider a moving window for each day to fit
+    # the statistics
+    if frq=='D':
+        # Get a 3D array with a moving window centered on each day
+        obs_series = day_centered_moving_window(obs_series, win=day_win)
+        mod_series = day_centered_moving_window(mod_series, win=day_win)
+        
+        # Get a 4D array with a backward moving window for each projected period
+        win_series = projected_backward_moving_window(mod_series, y_obs, frq)
+        
+        # Reshape to 2D in order to have all the days of the window in each row
+        obs_series= obs_series.reshape(365,(2*day_win-1)*y_obs)
+        modh_series= mod_series[:,:,:y_obs].reshape(365,(2*day_win-1)*y_obs)
+        
+        # Reshape to 3D in order to have all the days of the window in each row
+        win_series= win_series.reshape(365,(2*day_win-1)*y_obs,y_mod-y_obs)
+        
+        # Add the historical period to the moving window
+        win_series_= np.dstack([modh_series, win_series])
+        
+    else:
+        # For non-daily frequency, make sure that day_win=1
+        day_win=1
+
+        # Get a 3D array with a backward moving window for each projected period
+        win_series = projected_backward_moving_window(mod_series, y_obs, frq)
+        
+        # Add the historical period to the moving window
+        win_series_= np.dstack([modh_series, win_series])
+    
+    SDM_series = np.zeros((mod_series.shape[0], y_mod-y_obs))    
+    SDM_h_series = np.zeros((obs_series.shape[0], y_obs))
     for m in range(mod_series.shape[0]):
         # 1) Historical period:
 
@@ -1047,16 +1074,16 @@ def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100):
          
         if SDM_var==0: # Temperature
             D_obs = detrend(obs_series[m])
-            D_mod = detrend(mod_series[m,:y_obs])
+            D_mod = detrend(modh_series[m])
             
             mu_obs = np.nanmean(obs_series[m])
-            mu_mod = np.nanmean(mod_series[m,:y_obs])
+            mu_mod = np.nanmean(modh_series[m])
         else:       # Precipitation
             D_obs = np.sort(obs_series[m][obs_series[m]>lower_lim])
-            D_mod = np.sort(mod_series[m,:y_obs][mod_series[m,:y_obs]>lower_lim])
+            D_mod = np.sort(modh_series[m][modh_series[m]>lower_lim])
             
             freq_obs = D_obs.shape[0]/obs_series.shape[1]
-            freq_mod = D_mod.shape[0]/mod_series[m,:y_obs].shape[0]
+            freq_mod = D_mod.shape[0]/modh_series[m].shape[0]
             
             if freq_mod==0:
                 freq_mod = 1/(365*y_obs)
@@ -1097,12 +1124,12 @@ def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100):
             CDF_mod[CDF_mod>1-CDF_th] = 1 - CDF_th
             
         # 2) Projected periods:
-        for j in range(-1, mod_series.shape[1]-y_obs):
+        for j in range(-1, y_mod-y_obs):
             # c) Initialize correction array.
-            corr_temp = np.zeros(y_obs)
+            corr_temp = np.zeros(y_obs*(2*day_win-1))
         
             # d) Define projected window.
-            win_series = mod_series[m,j+1:y_obs+j+1]
+            win_series = win_series_[m,:,j+1]
             
             # e) [Switanek et al. (2017), step 1)]
             #    For temperature, get the detrended series of the projected
@@ -1222,18 +1249,23 @@ def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100):
             if SDM_var==0:
                 corr_temp = corr_temp + diff_win - mu_win
                 
-            # l) If the projected period is the historical period (period 0,
-            #    j=0) save the complete bias corrected series.
-            #    If the projected period is not the historical period (j>0),
+            # l) If the projected period is the historical period (period -1,
+            #    j=-1) save the complete bias corrected series.
+            #    If the projected period is not the historical period (j>-1),
             #    save the value of the last year.
             if j==-1:
-                SDM_h_series[m] = corr_temp
+                SDM_h_series[m] = corr_temp[(day_win-1)::(2*day_win-1)]
             else:
                 SDM_series[m,j] = corr_temp[-1]
-            
+    
+    # Reshape to a column vector
     SDM_h_series = SDM_h_series.reshape(-1, order='F')
     SDM_series = SDM_series.reshape(-1, order='F')
+    
+    # Concat historical and future
     SDM_series = np.hstack([SDM_h_series, SDM_series])
+    
+    # If precipitation, replace no-rain values with 0
     if SDM_var==1:
         SDM_series[SDM_series<pp_threshold] = 0
 

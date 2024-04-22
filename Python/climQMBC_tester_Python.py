@@ -75,9 +75,9 @@ import pandas as pd
 #    - 'A': Anual data
 
 variable = 'tas'
-mult_change = 0
-allow_negatives = 1
-SDM_var = 1
+mult_change = 1
+allow_negatives = 0
+SDM_var = 0
 
 # Load observed and model data.
 obs = pd.read_csv(f'../Sample_data/obs_{variable}_M.csv')[[variable]].values
@@ -106,12 +106,13 @@ mod = pd.read_csv(f'../Sample_data/mod_{variable}_M.csv')[[variable]].values
 # climQMBC package should be called. The outputs of each function are
 # columns vector with monthly corrected data.
 
-frq = 'M' # 'M' or 'A''
-qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq)
-dqm_series = DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq=frq)
-qdm_series = QDM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq=frq)
-uqm_series = UQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq=frq)
-# sdm_series = SDM(obs, mod, SDM_var=1, frq=frq)
+# frq = 'M' # 'M' or 'A''
+# qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq)
+# dqm_series = DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq=frq)
+# qdm_series = QDM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq=frq)
+# uqm_series = UQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq=frq)
+# sdm_series = SDM(obs, mod, SDM_var=SDM_var, frq=frq)
+
 
 
 # %%
@@ -140,13 +141,15 @@ uqm_series = UQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negati
 # pp_threshold: A float to define the threshold to consider rain or no-rain values
 # pp_factor: A float to scale pp_threshold and set as limit of the random low
 #            values to replace no-rain values
+frq = 'D'
+
 variable = 'pr'
 mult_change = 1
 allow_negatives = 0
-frq = 'D'
+SDM_var = 1
 
 day_win = 15
-pp_threshold=0
+pp_threshold=1
 pp_factor=1/10000
 
 # Load observed and model data.
@@ -157,10 +160,9 @@ mod = pd.read_csv(f'../Sample_data/mod_{variable}_D.csv')[[variable]].values
 # Example 4 shows how each bias correction method available in the
 # climQMBC package should be called. The outputs of each function are
 # columns vector with daily corrected data.
-# Note that SDM at daily scale should be used with frq='A'
 
 # qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
 # dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
 # qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
 # uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
-# sdm_series = SDM(obs, mod, SDM_var, frq='A', pp_threshold=pp_threshold, pp_factor=pp_factor)
+# sdm_series = SDM(obs, mod, SDM_var, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
