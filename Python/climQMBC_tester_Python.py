@@ -166,3 +166,5 @@ mod = pd.read_csv(f'../Sample_data/mod_{variable}_D.csv')[[variable]].values
 # qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
 # uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
 # sdm_series = SDM(obs, mod, SDM_var, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+
+
