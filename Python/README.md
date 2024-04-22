@@ -48,6 +48,7 @@ We suggest the user to look at the climQMBC_tester_Python.py script. This script
 - **All but SDM:** A warning will be print when the probability distribution function defined by the KS-test fails the test (being the better does not mean it is good). Only one warning per use of the function.
 - **SDM:** The `var` argument is replaced by `SDM_var`.
 - **SDM:** Fixed bugs related to dry periods.
+- **General:** Updated the sample data with daily and monthly data for the same location.
 
 
 ### Version 0.1.1 (No changes in Python since version 0.1.0)
