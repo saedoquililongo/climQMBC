@@ -1,3 +1,15 @@
+get_pp_threshold_mod <- function(obs, mod, pp_threshold){
+  
+  obs_rainday_hist <- sum(obs>pp_threshold)
+  mod_sort_descending <- sort(mod[1:length(obs)], decreasing=TRUE)
+  days_kept <- min(obs_rainday_hist, length(obs))
+  
+  pp_threshold_mod <- mod_sort_descending[days_kept+1]
+  
+  return(pp_threshold_mod)
+}
+
+
 #' formatQM
 #'
 #'This function formats the inputs and gets basic statistics for the different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available in the climQMBC package. If monthly data is specified, the input series will be reshaped to a matrix of 12 rows and several columns equal to the number of years of each series. If annual data is specified, the input is reshaped to a row vector with same entries as the input series. For precipitation, physically null values (values below pp_threshold) are replaced by random positive values below pp_factor.
@@ -41,7 +53,7 @@ formatQM <- function(series_, allow_negatives, frq, pp_threshold, pp_factor){
   # 1) If variable is precipitation, replace low values with random values.
   if (allow_negatives==0) {
     bool_low <- series<pp_threshold
-    series[bool_low] <- runif(sum(bool_low))*pp_factor
+    series[bool_low] <- runif(sum(bool_low))*pp_factor*pp_threshold
   }
 
   # 2) Get number of years of the observed period.
@@ -88,14 +100,35 @@ getStats <- function(series, frq){
   
   mu <- apply(series, dim_stats, mean, na.rm = TRUE)         # Mean
   sigma <- apply(series, dim_stats, sd, na.rm = TRUE)        # Standard deviation
-  skew <- apply(series,dim_stats,e1071::skewness,na.rm=TRUE,type=2) # Skewness
+  skew <- apply(series,dim_stats,e1071::skewness,na.rm=TRUE,type=1) # Skewness
   series_log <- log(series)
-  series_log[!is.finite(series_log)] = log(0.01)
-  skewy <- apply(series_log,dim_stats,e1071::skewness,na.rm=TRUE,type=2) # Log-Skewness
+  series_log[!is.finite(series_log)] <- log(runif(sum(!is.finite(series_log)))*0.01)
+  skewy <- apply(series_log,dim_stats,e1071::skewness,na.rm=TRUE,type=1) # Log-Skewness
 
   return(list(mu,sigma,skew,skewy))
 }
 
+
+set_norain_to_nan <- function(series_moving, pp_threshold, pp_factor, min_rainday){
+  
+  if(missing(min_rainday)) {
+    min_rainday <- 30
+  }
+  
+  if (length(dim(series_moving))==2) {
+    rainday_count <- apply(series_moving>pp_threshold,1,sum)
+    for (per in 1:length(rainday_count)){
+      bool_low <- series_moving[per,]<pp_threshold
+      replace_values_nans <-runif(sum(bool_low))*pp_factor*pp_threshold
+      replace_values_nans[max(1,min_rainday-rainday_count[per]):length(replace_values_nans)] <- NaN
+      series_moving[per,bool_low] <- replace_values_nans
+    }
+  } else {
+    rainday_count <- apply(series_moving>pp_threshold,1,sum)
+  }
+  
+  return(series_moving)
+}
 
 #' Get probability distribution function for each month of the period
 #'
@@ -120,7 +153,6 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
 
   # 1) Get the number of years to compute the empirical distribution in step
   #    3) and get the number of rows of the input series.
-  y_series <- dim(series)[2]
   n <- dim(series)[1]
 
   # 2) Initialize column vectors for the statistics needed for the available
@@ -138,12 +170,19 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
   Gamy   <- matrix(0,n,1)
   a      <- matrix(0,n,1)
   u      <- matrix(0,n,1)
+  
+  ks_fail <- 0
 
   # 3) Perform the Kolmogorov-Smirnov test for each row.
   for (m in 1:n){
+    series_sub <- series[m,]
+    series_sub <- series_sub[!is.nan(series_sub)]
+      
+      
+    y_series <- length(series_sub)
 
     # a) Get empirical distribution.
-    sortdata <- sort(series[m,])
+    sortdata <- sort(series_sub)
     probEmp  <- seq(from = 1/(y_series+1), to = y_series/(y_series+1), by = 1/(y_series+1))
 
     # b) Compare distributions.
@@ -152,7 +191,7 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
     KSnormal <- max(abs(normal-probEmp))
 
     # ii) Log Normal distribution.
-    if (any(series[m,] < 0)){
+    if (any(series_sub < 0)){
       KSlognormal <- 1
     }else{
       sigmay[m] <- sqrt(log(1+(sigma[m]/mu[m])^2))
@@ -162,7 +201,7 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
     }
 
     # iii) Gamma 2 parameters distribution.
-    if (any(series[m,] < 0)){
+    if (any(series_sub < 0)){
       KSgammaII <- 1
     }else{
       A[m]    <- (sigma[m]^2)/mu[m]
@@ -181,14 +220,15 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
 
     # v) Log-Gamma 3 parameters distribution.
     #    (Log-Pearson 3 parameters distribution)
-    if (any(series[m,] < 0)){
+    if (any(series_sub < 0)){
       KSLpIII <- 1
     }else{
+      sigmay[m] <- sqrt(log(1+(sigma[m]/mu[m])^2))
+      muy[m]    <- log(mu[m])-(sigmay[m]^2)/2
       Bety[m] <- (2/skewy[m])^2
       Alpy[m] <- sigmay[m]/sqrt(Bety[m])
       Gamy[m] <- muy[m]-(Alpy[m]*Bety[m])
       Lnsortdata = log(sortdata)
-      Lnsortdata[Im(Lnsortdata)!=0] <- 0
       Lnsortdata[!is.finite(Lnsortdata)] <- log(0.01)
       LpIII <- pgamma((Lnsortdata-Gamy[m]),shape=Bety[m],scale=Alpy[m])
       KSLpIII <- max(abs(LpIII-probEmp))
@@ -206,7 +246,7 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
     gamexp <- mu[m]-sigma[m]
     exponential <- pmax(1-exp(-1/sigma[m]*(sortdata-gamexp)),0)
     KSexponential <- max(abs(exponential-probEmp))
-
+    
     # c) If variable is precipitation, set KS=1 to distributions that allow
     #    negative values (this will discard those distributions).
     if (allow_negatives==0){
@@ -217,12 +257,17 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
     }
 
     # d) The distribution with lower KS value is considered for each month.
-    bestPDF <- which.min(c(KSnormal,KSlognormal,KSgammaII,KSgammaIII,KSLpIII,KSgumbel,KSexponential))
+    KS_vals <- c(KSnormal,KSlognormal,KSgammaII,KSgammaIII,KSLpIII,KSgumbel,KSexponential)
+    bestPDF <- which.min(KS_vals)
+    min_KS <- min(KS_vals)
+    
+    ks_crit <- 1.3581/sqrt(y_series)
+    ks_fail <- ks_fail + (sign(min_KS-ks_crit)+1)/2
 
     PDF[m] <- bestPDF
   }
 
-  return(PDF)
+  return(list(PDF, ks_fail))
 }
 
 #' Get probability of a set of values

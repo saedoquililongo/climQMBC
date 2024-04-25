@@ -74,10 +74,10 @@ import pandas as pd
 #    - 'M': Monthly data (report function works only with 'M')
 #    - 'A': Anual data
 
-variable = 'tas'
+variable = 'pr'
 mult_change = 1
 allow_negatives = 0
-SDM_var = 0
+SDM_var = 1
 
 # Load observed and model data.
 obs = pd.read_csv(f'../Sample_data/obs_{variable}_M.csv')[[variable]].values
@@ -106,7 +106,7 @@ mod = pd.read_csv(f'../Sample_data/mod_{variable}_M.csv')[[variable]].values
 # climQMBC package should be called. The outputs of each function are
 # columns vector with monthly corrected data.
 
-# frq = 'M' # 'M' or 'A''
+# frq = 'A' # 'M' or 'A''
 # qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq)
 # dqm_series = DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq=frq)
 # qdm_series = QDM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq=frq)
@@ -161,10 +161,21 @@ mod = pd.read_csv(f'../Sample_data/mod_{variable}_D.csv')[[variable]].values
 # climQMBC package should be called. The outputs of each function are
 # columns vector with daily corrected data.
 
-# qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
+qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=4, pdf_mod=4)
 # dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
 # qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
 # uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
 # sdm_series = SDM(obs, mod, SDM_var, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
 
 
+import matplotlib.pylab as plt
+
+plt.plot(qm_series, 'o')
+
+# %%
+
+df__ = pd.read_csv('../../A.csv', index_col=0)
+
+df__['V2'] = qm_series
+
+df__.plot.scatter(x='V1',y='V2')

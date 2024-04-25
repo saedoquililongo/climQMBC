@@ -71,15 +71,15 @@ source(paste(getwd(),'/climQMBC/R/utils.R',sep=''))
 # #   agg <- mean
 # # }
 # 
-# var_txt <- 'pp'
-# 
-# obs <- read.csv(paste(getwd(),'/../Sample_data/obs_',var_txt,'.csv',sep=''),header=FALSE)
-# obs <- matrix(obs$V1)
-# 
-# mod <- read.csv(paste(getwd(),'/../Sample_data/mod_',var_txt,'.csv',sep=''),header=FALSE)
-# mod <- matrix(mod$V1)
-# 
-# frq <- 'A' #'M' for monthly data; 'A' for annually data
+var_txt <- 'pr'
+
+obs <- read.csv(paste(getwd(),'/../Sample_data/obs_',var_txt,'_M.csv',sep=''))
+obs <- matrix(obs[,var_txt])
+
+mod <- read.csv(paste(getwd(),'/../Sample_data/mod_',var_txt,'_M.csv',sep=''))
+mod <- matrix(mod[,var_txt])
+
+# frq <- 'D' #'M' for monthly data; 'A' for annually data
 # QM_series <- QM(obs,mod,allow_negatives=0,frq=frq)
 # DQM_series <- DQM(obs,mod,mult_change=1,allow_negatives=0,frq=frq)
 # QDM_series <- QDM(obs,mod,mult_change=1,allow_negatives=0,frq=frq)
@@ -87,22 +87,7 @@ source(paste(getwd(),'/climQMBC/R/utils.R',sep=''))
 # SDM_series <- SDM(obs,mod,SDM_var=1,frq=frq)
 
 
-# Casos diarios
-obs <- read.csv(paste(getwd(),'/../Sample_data/obs_pr_D.csv',sep=''))
-obs <- matrix(obs$pr)
 
-mod <- read.csv(paste(getwd(),'/../Sample_data/mod_pr_D.csv',sep=''))
-mod <- matrix(mod$pr)
-
-
-frq <- 'D' #'M' for monthly data; 'A' for annually data
-QM_series <- QM(obs,mod,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
-DQM_series <- DQM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
-QDM_series <- QDM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
-UQM_series <- UQM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
-# SDM_series <- SDM(obs,mod,SDM_var=1,frq=frq)
-
-plot(UQM_series)
 
 
 ## Example 1
@@ -147,3 +132,35 @@ plot(UQM_series)
 # QDM_series <- QDM(obs,mod,var,frq)
 # UQM_series <- UQM(obs,mod,var,frq)
 # SDM_series <- SDM(obs,mod,var,frq)
+
+
+
+
+###########
+frq <- 'D'
+variable <- 'pr'
+allow_negatives <- 0
+SDM_var <- 1
+
+day_win <- 15
+pp_threshold <- 1
+pp_factor <- 1/10000
+
+# Casos diarios
+obs <- read.csv(paste(getwd(),'/../Sample_data/obs_pr_D.csv',sep=''))
+obs <- matrix(obs$pr)
+
+mod <- read.csv(paste(getwd(),'/../Sample_data/mod_pr_D.csv',sep=''))
+mod <- matrix(mod$pr)
+# 
+# 
+frq <- 'D' #'M' for monthly data; 'A' for annually data
+qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor,day_win=day_win, user_pdf=TRUE, pdf_obs=5, pdf_mod=5)
+# DQM_series <- DQM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
+# QDM_series <- QDM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
+# UQM_series <- UQM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
+# # SDM_series <- SDM(obs,mod,SDM_var=1,frq=frq)
+# 
+plot(qm_series)
+
+write.csv(qm_series, "../../A.csv")

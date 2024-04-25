@@ -261,7 +261,7 @@ def projected_backward_moving_window(series, projected_win, frq):
     return win_series
 
 
-def set_norain_to_nan(series_moving, pp_factor, pp_threshold, min_rainday=30):
+def set_norain_to_nan(series_moving, pp_threshold, pp_factor, min_rainday=30):
     """
     This function replace no-rain values with nans, leaving a minimum amout
     of values (min_rainday) to fit a distribution. If fewer than min_rainday
@@ -385,7 +385,7 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
         # a) Get empirical distribution.
         sortdata = np.sort(series_sub) 
         probEmp = np.linspace(1/(y_series+1),
-                              y_series/(y_series+1) + 1/(y_series+1),
+                              y_series/(y_series+1),
                               y_series)
 
         # b) Compare distributions.
@@ -425,6 +425,7 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
             KSLpIII = 1
         else:
             sigmay = np.sqrt(np.log(1 + (sigma[sp]/mu[sp])**2))
+            muy = np.log(mu[sp]) - (sigmay**2)/2
             Bety = (2/skewy[sp])**2
             Alpy = sigmay/np.sqrt(Bety)
             Gamy = muy-(Alpy*Bety)
@@ -460,7 +461,7 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
         min_KS = min(KS_vals)
         bestPDF = np.argmin(KS_vals)
         
-        ks_crit = stat.kstwo.ppf(1-0.05/2, y_series)
+        ks_crit = 1.3581/np.sqrt(y_series)
         ks_fail = ks_fail + (np.sign(min_KS-ks_crit)+1)/2
 
         pdf[sp] = bestPDF
