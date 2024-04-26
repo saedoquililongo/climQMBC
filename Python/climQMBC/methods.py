@@ -424,7 +424,7 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     
     # 8) Perform QM for the historical period.
     mod_h = mod[:obs.shape[0]]
-    QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor, day_win)
+    QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor, day_win, user_pdf, pdf_obs, pdf_mod)
     
     # 9) Reshape to a column vector
     DQM_series = DQM_series.reshape(-1, order='F')
@@ -681,7 +681,7 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     
     # 7) Perform QM for the historical period.
     mod_h = mod[:obs.shape[0]]
-    QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor, day_win)
+    QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor, day_win, user_pdf, pdf_obs, pdf_mod)
     
     # 8) Reshape to a column vector
     QDM_series = QDM_series.reshape(-1,order='F')
@@ -935,7 +935,7 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     
     # 7) Perform QM for the historical period.
     mod_h = mod[:obs.shape[0]]
-    QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor,day_win)
+    QM_series = QM(obs, mod_h, allow_negatives, frq,pp_threshold, pp_factor, day_win, user_pdf, pdf_obs, pdf_mod)
     
     # 8) Reshape to a column vector
     UQM_series = UQM_series.reshape(-1, order='F')

@@ -74,15 +74,11 @@ QM <- function(obs, mod, allow_negatives, frq, pp_threshold, pp_factor, day_win,
   mod_series <- format_list_mod[[2]]
   
   if (frq=='D') {
-    
-    obs_series_moving <- rbind(obs_series[(dim(obs_series)[1]-day_win+1):dim(obs_series)[1],],rep(1,day_win*2) %x% obs_series,obs_series[1:day_win,])
-    obs_series_moving <- array(obs_series_moving, c(dim(obs_series)[1]+1, day_win*2, dim(obs_series)[2]))[1:dim(obs_series)[1],2:(day_win*2),]
-    
-    mod_series_moving <- rbind(mod_series[(dim(mod_series)[1]-day_win+1):dim(mod_series)[1],],rep(1,day_win*2) %x% mod_series,mod_series[1:day_win,])
-    mod_series_moving <- array(mod_series_moving, c(dim(mod_series)[1]+1, day_win*2, dim(mod_series)[2]))[1:dim(mod_series)[1],2:(day_win*2),]
-    
+    obs_series_moving <- day_centered_moving_window(obs_series, day_win)
+    mod_series_moving <- day_centered_moving_window(mod_series, day_win)
+
     obs_series_moving <- array(aperm(obs_series_moving, c(1,3,2)), c(365,(2*day_win-1)*y_obs))
-    modh_series_moving <- array(aperm(mod_series_moving[,,1:y_obs],c(1,3,2)), c(365,(2*day_win-1)*y_obs))
+    modh_series_moving <- array(aperm(mod_series_moving,c(1,3,2))[,1:y_obs,], c(365,(2*day_win-1)*y_obs))
     
     
     if (allow_negatives==FALSE) {
@@ -251,29 +247,29 @@ DQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
   y_obs <- format_list_obs[[1]]
   obs_series <- format_list_obs[[2]]
   
-  format_list_mod <- formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
+  format_list_mod <- formatQM(mod, allow_negatives, frq, pp_threshold_mod, pp_factor)
   y_mod <- format_list_mod[[1]]
   mod_series <- format_list_mod[[2]]
   
   if (frq=='D') {
     
-    obs_series_moving <- rbind(obs_series[(dim(obs_series)[1]-day_win+1):dim(obs_series)[1],],rep(1,day_win*2) %x% obs_series,obs_series[1:day_win,])
-    obs_series_moving <- array(obs_series_moving, c(dim(obs_series)[1]+1, day_win*2, dim(obs_series)[2]))[1:dim(obs_series)[1],2:(day_win*2),]
+    obs_series_moving <- day_centered_moving_window(obs_series, day_win)
+    mod_series_moving <- day_centered_moving_window(mod_series, day_win)
     
-    mod_series_moving <- rbind(mod_series[(dim(mod_series)[1]-day_win+1):dim(mod_series)[1],],rep(1,day_win*2) %x% mod_series,mod_series[1:day_win,])
-    mod_series_moving <- array(mod_series_moving, c(dim(mod_series)[1]+1, day_win*2, dim(mod_series)[2]))[1:dim(mod_series)[1],2:(day_win*2),]
-    
+    win_series <- projected_backward_moving_window(mod_series_moving, y_obs, frq)
+
     obs_series_moving <- array(aperm(obs_series_moving, c(1,3,2)), c(365,(2*day_win-1)*y_obs))
-    modh_series_moving <- array(aperm(mod_series_moving[,,1:y_obs],c(1,3,2)), c(365,(2*day_win-1)*y_obs))
-    
+    modh_series_moving <- array(aperm(mod_series_moving,c(1,3,2))[,1:y_obs,], c(365,(2*day_win-1)*y_obs))
+    win_series_moving <- array(aperm(win_series,c(1,4,2,3)), c(365, (2*day_win-1)*y_obs, y_mod-y_obs))
+
     
     if (allow_negatives==FALSE) {
       obs_series_moving <- set_norain_to_nan(obs_series_moving, pp_threshold, pp_factor)
       modh_series_moving <- set_norain_to_nan(modh_series_moving, pp_threshold_mod, pp_factor)
       mod_series[mod_series<pp_threshold_mod] <- NaN
+      win_series_moving <- set_norain_to_nan(win_series_moving, pp_threshold_mod, pp_factor)
     }
-    
-    
+
     stats_list_obs <- getStats(obs_series_moving, frq)
     mu_obs <- stats_list_obs[[1]]
     std_obs <- stats_list_obs[[2]]
@@ -286,7 +282,11 @@ DQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     skew_mod <- stats_list_mod[[3]]
     skewy_mod <- stats_list_mod[[4]]
     
+    mu_win <- apply(win_series_moving,c(1,3),mean, na.rm=TRUE)
+    
   } else {
+    win_series <- projected_backward_moving_window(mod_series_moving, y_obs, frq)
+    
     stats_list_obs <- getStats(obs_series, frq)
     mu_obs <- stats_list_obs[[1]]
     std_obs <- stats_list_obs[[2]]
@@ -298,6 +298,8 @@ DQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     std_mod <- stats_list_mod[[2]]
     skew_mod <- stats_list_mod[[3]]
     skewy_mod <- stats_list_mod[[4]]
+    
+    mu_win <- apply(win_series,c(1,2),mean, na.rm=TRUE)
   }
   
 
@@ -307,13 +309,11 @@ DQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
   #    period (getDist function of the climQMBC package).
   if (user_pdf==FALSE){
     if (frq=='D') {
-      list_getdist <- getDist(array(obs_series_moving, c(dim(obs_series_moving)[1],(2*win-1)*y_obs)),
-                              allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
+      list_getdist <- getDist(obs_series_moving, allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
       pdf_obs <- list_getdist[[1]] 
       ks_fail_obs <- list_getdist[[2]]
       
-      list_getdist <- getDist(array(mod_series_moving[,,1:y_obs], c(dim(mod_series_moving)[1],(2*win-1)*y_obs)),
-                              allow_negatives, mu_mod,std_mod,skew_mod,skewy_mod)
+      list_getdist <- getDist(modh_series_moving, allow_negatives, mu_mod,std_mod,skew_mod,skewy_mod)
       pdf_mod <- list_getdist[[1]] 
       ks_fail_mod <- list_getdist[[2]] 
     } else {
@@ -331,26 +331,6 @@ DQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     pdf_mod <- array(0, dim(mod_series)[1]) + pdf_mod
   }
 
-  # 3) Extract the long-term trend from the modeled data:
-  #    a) Get the monthly mean of the historical period. If annually
-  #       frequency is specified, this is applied to the complete period).
-  if (frq=='D') { 
-    win_series <- abind::abind(array(rep(1,y_obs), c(1,1,y_obs)) %x% mod_series_moving,
-                               array(0, c(dim(mod_series)[1],win*2-1,y_obs)), along=3)
-                                          
-    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod+1,y_obs))[,,2:(y_mod-y_obs+1),]
-    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod-y_obs,y_obs))
-
-    mu_win <- apply(win_series,c(1,3),mean, na.rm=TRUE)
-    
-  } else {
-    win_series <- cbind(array(rep(mod_series,y_obs), c(dim(mod_series)[1],dim(mod_series)[2]*y_obs)),
-                       array(0, c(dim(mod_series)[1],y_obs)))
-    win_series <- array(win_series, c(dim(mod_series)[1],y_mod+1,y_obs))[,2:(y_mod-y_obs+1),]
-    win_series <- array(win_series, c(dim(mod_series)[1],y_mod-y_obs,y_obs))
-    
-    mu_win <- apply(win_series,c(1,2),mean, na.rm=TRUE)
-  }
 
   mu_mod_repeated <- array(rep(mu_mod,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
   
@@ -370,6 +350,7 @@ DQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
   #    modeled data (getCDF function of the climQMBC package). Equation 2 of
   #    Cannon et al. (2015).
   prob <- getCDF(pdf_mod,detrended_series,mu_mod,std_mod,skew_mod,skewy_mod)
+  prob[is.nan(detrended_series)] <- NaN
 
   # 6) Apply the inverse cumulative distribution function of the observed
   #    data, evaluated with the statistics of the observed data in the
@@ -389,11 +370,12 @@ DQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
   DQM <- matrix(DQM)
 
   # 8) Perform QM for the historical period.
-  mod_h <- mod_series[,1:y_obs]
+  mod_h <- mod[1:length(obs)]
   mod_h <- matrix(mod_h)
-  QM_series <- QM(obs, mod_h, allow_negatives,frq,pp_threshold, pp_factor, win)
-  DQM_series <- c(QM_series,DQM)
+  QM_series <- QM(obs, mod_h, allow_negatives,frq,pp_threshold, pp_factor, day_win, user_pdf, pdf_obs, pdf_mod)
+  DQM_series <- matrix(c(QM_series,DQM))
   if (allow_negatives == 0){
+    DQM_series[is.nan(DQM_series)] <- 0
     DQM_series[DQM_series<pp_threshold] <- 0
   }
   
@@ -496,28 +478,28 @@ QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
   y_obs <- format_list_obs[[1]]
   obs_series <- format_list_obs[[2]]
   
-  format_list_mod <- formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
+  format_list_mod <- formatQM(mod, allow_negatives, frq, pp_threshold_mod, pp_factor)
   y_mod <- format_list_mod[[1]]
   mod_series <- format_list_mod[[2]]
   
   if (frq=='D') {
     
-    obs_series_moving <- rbind(obs_series[(dim(obs_series)[1]-day_win+1):dim(obs_series)[1],],rep(1,day_win*2) %x% obs_series,obs_series[1:day_win,])
-    obs_series_moving <- array(obs_series_moving, c(dim(obs_series)[1]+1, day_win*2, dim(obs_series)[2]))[1:dim(obs_series)[1],2:(day_win*2),]
+    obs_series_moving <- day_centered_moving_window(obs_series, day_win)
+    mod_series_moving <- day_centered_moving_window(mod_series, day_win)
     
-    mod_series_moving <- rbind(mod_series[(dim(mod_series)[1]-day_win+1):dim(mod_series)[1],],rep(1,day_win*2) %x% mod_series,mod_series[1:day_win,])
-    mod_series_moving <- array(mod_series_moving, c(dim(mod_series)[1]+1, day_win*2, dim(mod_series)[2]))[1:dim(mod_series)[1],2:(day_win*2),]
+    win_series <- projected_backward_moving_window(mod_series_moving, y_obs, frq)
     
     obs_series_moving <- array(aperm(obs_series_moving, c(1,3,2)), c(365,(2*day_win-1)*y_obs))
-    modh_series_moving <- array(aperm(mod_series_moving[,,1:y_obs],c(1,3,2)), c(365,(2*day_win-1)*y_obs))
+    modh_series_moving <- array(aperm(mod_series_moving,c(1,3,2))[,1:y_obs,], c(365,(2*day_win-1)*y_obs))
+    win_series_moving <- array(aperm(win_series,c(1,4,2,3)), c(365, (2*day_win-1)*y_obs, y_mod-y_obs))
     
     
     if (allow_negatives==FALSE) {
       obs_series_moving <- set_norain_to_nan(obs_series_moving, pp_threshold, pp_factor)
       modh_series_moving <- set_norain_to_nan(modh_series_moving, pp_threshold_mod, pp_factor)
       mod_series[mod_series<pp_threshold_mod] <- NaN
+      win_series_moving <- set_norain_to_nan(win_series_moving, pp_threshold_mod, pp_factor)
     }
-    
     
     stats_list_obs <- getStats(obs_series_moving, frq)
     mu_obs <- stats_list_obs[[1]]
@@ -531,7 +513,15 @@ QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     skew_mod <- stats_list_mod[[3]]
     skewy_mod <- stats_list_mod[[4]]
     
+    stats_list_win <- getStats(win_series_moving, frq)
+    mu_win <- stats_list_win[[1]]
+    std_win <- stats_list_win[[2]]
+    skew_win <- stats_list_win[[3]]
+    skewy_win <- stats_list_win[[4]]
+    
   } else {
+    win_series <- projected_backward_moving_window(mod_series_moving, y_obs, frq)
+    
     stats_list_obs <- getStats(obs_series, frq)
     mu_obs <- stats_list_obs[[1]]
     std_obs <- stats_list_obs[[2]]
@@ -543,6 +533,12 @@ QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     std_mod <- stats_list_mod[[2]]
     skew_mod <- stats_list_mod[[3]]
     skewy_mod <- stats_list_mod[[4]]
+    
+    stats_list_win <- getStats(win_series, frq)
+    mu_win <- stats_list_win[[1]]
+    std_win <- stats_list_win[[2]]
+    skew_win <- stats_list_win[[3]]
+    skewy_win <- stats_list_win[[4]]
   }
   
 
@@ -552,13 +548,11 @@ QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
   #    period (getDist function of the climQMBC package).
   if (user_pdf==FALSE){
     if (frq=='D') {
-      list_getdist <- getDist(array(obs_series_moving, c(dim(obs_series_moving)[1],(2*win-1)*y_obs)),
-                              allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
+      list_getdist <- getDist(obs_series_moving, allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
       pdf_obs <- list_getdist[[1]] 
       ks_fail_obs <- list_getdist[[2]]
       
-      list_getdist <- getDist(array(mod_series_moving[,,1:y_obs], c(dim(mod_series_moving)[1],(2*win-1)*y_obs)),
-                              allow_negatives, mu_mod,std_mod,skew_mod,skewy_mod)
+      list_getdist <- getDist(modh_series_moving, allow_negatives, mu_mod,std_mod,skew_mod,skewy_mod)
       pdf_mod <- list_getdist[[1]] 
       ks_fail_mod <- list_getdist[[2]] 
     } else {
@@ -576,26 +570,6 @@ QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     pdf_mod <- array(0, dim(mod_series)[1]) + pdf_mod
   }
   
-  if (frq=='D') { 
-    win_series <- abind::abind(array(rep(1,y_obs), c(1,1,y_obs)) %x% mod_series_moving,
-                               array(0, c(dim(mod_series)[1],win*2-1,y_obs)), along=3)
-    
-    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod+1,y_obs))[,,2:(y_mod-y_obs+1),]
-    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod-y_obs,y_obs))
-    
-  } else {
-    win_series <- cbind(array(rep(mod_series,y_obs), c(dim(mod_series)[1],dim(mod_series)[2]*y_obs)),
-                        array(0, c(dim(mod_series)[1],y_obs)))
-    win_series <- array(win_series, c(dim(mod_series)[1],y_mod+1,y_obs))[,2:(y_mod-y_obs+1),]
-    win_series <- array(win_series, c(dim(mod_series)[1],y_mod-y_obs,y_obs))
-  }
-  
-
-  stats_list_win <- getStats(win_series, frq)
-  mu_win <- stats_list_win[[1]]
-  std_win <- stats_list_win[[2]]
-  skew_win <- stats_list_win[[3]]
-  skewy_win <- stats_list_win[[4]]
 
   # 3) For each projected period:
   ks_fail_win <- 0
@@ -608,7 +582,7 @@ QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     #    period (getDist function of the climQMBC package).
     if (user_pdf==FALSE){
       if (frq=='D') {
-        list_getdist <- getDist(array(win_series[,,j,], c(365, (2*win-1)*y_obs)),
+        list_getdist <- getDist(array(win_series[,,j,], c(365, (2*day_win-1)*y_obs)),
                                allow_negatives,mu_win[,j],std_win[,j],skew_win[,j],skewy_win[,j])
         pdf_win[,j] <-list_getdist[[1]] 
         ks_fail_wtemp <- list_getdist[[2]]
@@ -628,7 +602,8 @@ QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     #    data of the period (getCDF function of the climQMBC package).
     #    Equation 3 of Cannon et al. (2015).
     if (frq=='D') {
-      prob[,j] <- getCDF(pdf_win[,j],matrix(win_series[,win,j,y_obs]),mu_win[,j],std_win[,j],skew_win[,j],skewy_win[,j])
+      prob[,j] <- getCDF(pdf_win[,j],matrix(win_series[,day_win,j,y_obs]),mu_win[,j],std_win[,j],skew_win[,j],skewy_win[,j])
+      prob[is.nan(matrix(win_series[,day_win,j,y_obs])),j] <- NaN
     } else {
       prob[,j] <- getCDF(pdf_win[,j],matrix(mod_series[,y_obs+j]),mu_win[,j],std_win[,j],skew_win[,j],skewy_win[,j])
     }
@@ -662,12 +637,13 @@ QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
   QDM <- matrix(QDM)
 
   # 6) Perform QM for the historical period.
-  mod_h <- mod_series[,1:y_obs]
+  mod_h <- mod[1:length(obs)]
   mod_h <- matrix(mod_h)
-  QM_series <- QM(obs, mod_h, allow_negatives,frq,pp_threshold, pp_factor, win)
+  QM_series <- QM(obs, mod_h, allow_negatives,frq,pp_threshold, pp_factor, day_win, user_pdf, pdf_obs, pdf_mod)
   
-  QDM_series <- c(QM_series,QDM)
+  QDM_series <- matrix(c(QM_series,QDM))
   if (allow_negatives == 0){
+    QDM_series[is.nan(QDM_series)] <- 0
     QDM_series[QDM_series<pp_threshold] <- 0
   }
   
@@ -759,28 +735,28 @@ UQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
   y_obs <- format_list_obs[[1]]
   obs_series <- format_list_obs[[2]]
   
-  format_list_mod <- formatQM(mod, allow_negatives, frq, pp_threshold, pp_factor)
+  format_list_mod <- formatQM(mod, allow_negatives, frq, pp_threshold_mod, pp_factor)
   y_mod <- format_list_mod[[1]]
   mod_series <- format_list_mod[[2]]
   
   if (frq=='D') {
     
-    obs_series_moving <- rbind(obs_series[(dim(obs_series)[1]-day_win+1):dim(obs_series)[1],],rep(1,day_win*2) %x% obs_series,obs_series[1:day_win,])
-    obs_series_moving <- array(obs_series_moving, c(dim(obs_series)[1]+1, day_win*2, dim(obs_series)[2]))[1:dim(obs_series)[1],2:(day_win*2),]
+    obs_series_moving <- day_centered_moving_window(obs_series, day_win)
+    mod_series_moving <- day_centered_moving_window(mod_series, day_win)
     
-    mod_series_moving <- rbind(mod_series[(dim(mod_series)[1]-day_win+1):dim(mod_series)[1],],rep(1,day_win*2) %x% mod_series,mod_series[1:day_win,])
-    mod_series_moving <- array(mod_series_moving, c(dim(mod_series)[1]+1, day_win*2, dim(mod_series)[2]))[1:dim(mod_series)[1],2:(day_win*2),]
+    win_series <- projected_backward_moving_window(mod_series_moving, y_obs, frq)
     
     obs_series_moving <- array(aperm(obs_series_moving, c(1,3,2)), c(365,(2*day_win-1)*y_obs))
-    modh_series_moving <- array(aperm(mod_series_moving[,,1:y_obs],c(1,3,2)), c(365,(2*day_win-1)*y_obs))
+    modh_series_moving <- array(aperm(mod_series_moving,c(1,3,2))[,1:y_obs,], c(365,(2*day_win-1)*y_obs))
+    win_series_moving <- array(aperm(win_series,c(1,4,2,3)), c(365, (2*day_win-1)*y_obs, y_mod-y_obs))
     
     
     if (allow_negatives==FALSE) {
       obs_series_moving <- set_norain_to_nan(obs_series_moving, pp_threshold, pp_factor)
       modh_series_moving <- set_norain_to_nan(modh_series_moving, pp_threshold_mod, pp_factor)
       mod_series[mod_series<pp_threshold_mod] <- NaN
+      win_series_moving <- set_norain_to_nan(win_series_moving, pp_threshold_mod, pp_factor)
     }
-    
     
     stats_list_obs <- getStats(obs_series_moving, frq)
     mu_obs <- stats_list_obs[[1]]
@@ -794,7 +770,15 @@ UQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     skew_mod <- stats_list_mod[[3]]
     skewy_mod <- stats_list_mod[[4]]
     
+    stats_list_win <- getStats(win_series_moving, frq)
+    mu_win <- stats_list_win[[1]]
+    std_win <- stats_list_win[[2]]
+    skew_win <- stats_list_win[[3]]
+    skewy_win <- stats_list_win[[4]]
+    
   } else {
+    win_series <- projected_backward_moving_window(mod_series_moving, y_obs, frq)
+    
     stats_list_obs <- getStats(obs_series, frq)
     mu_obs <- stats_list_obs[[1]]
     std_obs <- stats_list_obs[[2]]
@@ -806,6 +790,12 @@ UQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     std_mod <- stats_list_mod[[2]]
     skew_mod <- stats_list_mod[[3]]
     skewy_mod <- stats_list_mod[[4]]
+    
+    stats_list_win <- getStats(win_series, frq)
+    mu_win <- stats_list_win[[1]]
+    std_win <- stats_list_win[[2]]
+    skew_win <- stats_list_win[[3]]
+    skewy_win <- stats_list_win[[4]]
   }
 
 
@@ -815,44 +805,22 @@ UQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
   #    period (getDist function of the climQMBC package).
   if (user_pdf==FALSE){
     if (frq=='D') {
-      list_getdist <- getDist(array(obs_series_moving, c(dim(obs_series_moving)[1],(2*win-1)*y_obs)),
-                              allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
+      list_getdist <- getDist(obs_series_moving, allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
       pdf_obs <- list_getdist[[1]] 
       ks_fail_obs <- list_getdist[[2]]
+      
     } else {
       list_getdist <- getDist(obs_series, allow_negatives, mu_obs,std_obs,skew_obs,skewy_obs)
       pdf_obs <- list_getdist[[1]] 
       ks_fail_obs <- list_getdist[[2]]
+
     }
     
   } else {
     pdf_obs <- array(0, dim(obs_series)[1]) + pdf_obs
     pdf_mod <- array(0, dim(mod_series)[1]) + pdf_mod
   }
-  
-  if (frq=='D') { 
-    win_series <- abind::abind(array(rep(1,y_obs), c(1,1,y_obs)) %x% mod_series_moving,
-                               array(0, c(dim(mod_series)[1],win*2-1,y_obs)), along=3)
-    
-    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod+1,y_obs))[,,2:(y_mod-y_obs+1),]
-    win_series <- array(win_series, c(dim(mod_series)[1],win*2-1,y_mod-y_obs,y_obs))
-    
-  } else {
-    win_series <- cbind(array(rep(mod_series,y_obs), c(dim(mod_series)[1],dim(mod_series)[2]*y_obs)),
-                        array(0, c(dim(mod_series)[1],y_obs)))
-    win_series <- array(win_series, c(dim(mod_series)[1],y_mod+1,y_obs))[,2:(y_mod-y_obs+1),]
-    win_series <- array(win_series, c(dim(mod_series)[1],y_mod-y_obs,y_obs))
-  }
 
-  # 3) For each projected period, get the delta factor (delta) and time
-  #    dependent (aster) statistics (mean, standard deviation, skewness, and
-  #    log skewness). Equations X to X in Chadwick et al. (2021).
-  stats_list_win <- getStats(win_series, frq)
-  mu_win <- stats_list_win[[1]]
-  std_win <- stats_list_win[[2]]
-  skew_win <- stats_list_win[[3]]
-  skewy_win <- stats_list_win[[4]]
-  
   mu_mod_repeated <- array(rep(mu_mod,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
   std_mod_repeated <- array(rep(std_mod,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
   skew_mod_repeated <- array(rep(skew_mod,(y_mod-y_obs)),c(dim(mod_series)[1],(y_mod-y_obs)))
@@ -898,7 +866,7 @@ UQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     #    period (getDist function of the climQMBC package).
     if (user_pdf==FALSE){
       if (frq=='D') {
-        list_getdist <- getDist(array(win_series[,,j,], c(365, (2*win-1)*y_obs)),
+        list_getdist <- getDist(array(win_series[,,j,], c(365, (2*day_win-1)*y_obs)),
                                 allow_negatives,mu_win[,j],std_win[,j],skew_win[,j],skewy_win[,j])
         pdf_win[,j] <-list_getdist[[1]] 
         ks_fail_wtemp <- list_getdist[[2]]
@@ -918,28 +886,23 @@ UQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     #    data of the period (getCDF function of the climQMBC package).
     #    Equation 3 of Cannon et al. (2015).
     if (frq=='D') {
-      prob[,j] <- getCDF(pdf_win[,j],matrix(win_series[,win,j,y_obs]),mu_win[,j],std_win[,j],skew_win[,j],skewy_win[,j])
+      prob[,j] <- getCDF(pdf_win[,j],matrix(win_series[,day_win,j,y_obs]),mu_win[,j],std_win[,j],skew_win[,j],skewy_win[,j])
     } else {
       prob[,j] <- getCDF(pdf_win[,j],matrix(mod_series[,y_obs+j]),mu_win[,j],std_win[,j],skew_win[,j],skewy_win[,j])
     }
-  }
 
-  # 5) Apply the inverse cumulative distribution function of the observed
-  #    data, evaluated with the time dependent statistics, to the values
-  #    obtained in 4b) (getCDFinv function of the climQMBC package). Equation
-  #    X of Chadwick et al. (2021).
-  for (yr in 1:dim(prob)[2]){
-    UQM[,yr] <- getCDFinv(pdf_obs,matrix(prob[,yr]),matrix(mu_projected[,yr]),matrix(sigma_projected[,yr]),matrix(skew_projected[,yr]),matrix(skewy_projected[,yr]))
+    UQM[,j] <- getCDFinv(pdf_obs,matrix(prob[,j]),matrix(mu_projected[,j]),matrix(sigma_projected[,j]),matrix(skew_projected[,j]),matrix(skewy_projected[,j]))
   }
 
   UQM <- matrix(UQM)
 
   # 6) Perform QM for the historical period
-  mod_h <- mod_series[,1:y_obs]
+  mod_h <- mod[1:length(obs)]
   mod_h <- matrix(mod_h)
-  QM_series <- QM(obs, mod_h, allow_negatives,frq,pp_threshold, pp_factor, win)
-  UQM_series <- c(QM_series,UQM)
+  QM_series <- QM(obs, mod_h, allow_negatives,frq,pp_threshold, pp_factor, day_win, user_pdf, pdf_obs, pdf_mod)
+  UQM_series <- matrix(c(QM_series,UQM))
   if (allow_negatives == 0){
+    UQM_series[is.nan(UQM_series)] <- 0
     UQM_series[UQM_series<pp_threshold] <- 0
   }
   

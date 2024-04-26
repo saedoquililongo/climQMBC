@@ -46,7 +46,6 @@ Written by Sebastian Aedo Quililongo (1*)
       
 *Maintainer contact: sebastian.aedo.q@gmail.com
 Revision: 1, updated Apr 2024
-
 """
 
 from climQMBC.methods import QM, DQM, QDM, UQM, SDM
@@ -161,21 +160,25 @@ mod = pd.read_csv(f'../Sample_data/mod_{variable}_D.csv')[[variable]].values
 # climQMBC package should be called. The outputs of each function are
 # columns vector with daily corrected data.
 
-qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=4, pdf_mod=4)
-# dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
-# qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
-# uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
+# qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=2, pdf_mod=2)
+# dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=2, pdf_mod=2)
+# qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=2, pdf_mod=2)
+uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=2, pdf_mod=2)
 # sdm_series = SDM(obs, mod, SDM_var, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
 
 
 import matplotlib.pylab as plt
 
-plt.plot(qm_series, 'o')
+plt.plot(uqm_series, 'o')
 
 # %%
 
-df__ = pd.read_csv('../../A.csv', index_col=0)
+df__ = pd.read_csv('../../G.csv', index_col=0)
+df__['R'] = df__['V1']
 
-df__['V2'] = qm_series
+df__['Python'] = uqm_series
 
-df__.plot.scatter(x='V1',y='V2')
+df__.plot.scatter(x='R',y='Python')
+plt.grid()
+# plt.xlim(0,4)
+# plt.ylim(0,4)

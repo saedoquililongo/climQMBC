@@ -155,12 +155,12 @@ mod <- matrix(mod$pr)
 # 
 # 
 frq <- 'D' #'M' for monthly data; 'A' for annually data
-qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor,day_win=day_win, user_pdf=TRUE, pdf_obs=5, pdf_mod=5)
-# DQM_series <- DQM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
-# QDM_series <- QDM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
-# UQM_series <- UQM(obs,mod,mult_change=1,allow_negatives=0,frq=frq,pp_threshold=1, pp_factor=1/(100*100), win=15)
+# qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor,day_win=day_win, user_pdf=TRUE, pdf_obs=3, pdf_mod=3)
+# dqm_series <- DQM(obs,mod,mult_change=1,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor,day_win=day_win, user_pdf=TRUE, pdf_obs=3, pdf_mod=3)
+# qdm_series <- QDM(obs,mod,mult_change=1,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor,day_win=day_win, user_pdf=TRUE, pdf_obs=3, pdf_mod=3)
+uqm_series <- UQM(obs,mod,mult_change=1,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor,day_win=day_win, user_pdf=TRUE, pdf_obs=3, pdf_mod=3)
 # # SDM_series <- SDM(obs,mod,SDM_var=1,frq=frq)
 # 
-plot(qm_series)
+plot(uqm_series)
 
-write.csv(qm_series, "../../A.csv")
+write.csv(uqm_series, "../../G.csv")

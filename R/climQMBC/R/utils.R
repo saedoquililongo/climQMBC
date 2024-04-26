@@ -82,9 +82,9 @@ formatQM <- function(series_, allow_negatives, frq, pp_threshold, pp_factor){
 #'
 #' @examples getStats(series)
 getStats <- function(series, frq){
-  
+
   if (frq=='D') {
-    if (length(dim(series))==4) {
+    if (length(dim(series))==3) {
       dim_stats <- c(1,3)
     } else {
       dim_stats <- 1
@@ -109,6 +109,40 @@ getStats <- function(series, frq){
 }
 
 
+day_centered_moving_window <- function(series, day_win){
+  
+  series_moving <- rbind(series[(dim(series)[1]-day_win+1):dim(series)[1],],rep(1,day_win*2) %x% series,series[1:day_win,])
+  series_moving <- array(series_moving, c(dim(series)[1]+1, day_win*2, dim(series)[2]))[1:dim(series)[1],2:(day_win*2),]
+  series_moving <- array(series_moving, c(dim(series)[1], day_win*2-1, dim(series)[2]))
+  
+  return(series_moving)
+}
+
+
+
+projected_backward_moving_window <- function(series, projected_win, frq){
+  
+  y_mod <- dim(series)[length(dim(series))]
+  
+  if (frq=='D') {
+    day_win <- as.integer(dim(series)[2]+1)/2
+    
+    win_series <- abind::abind(array(rep(1,projected_win), c(1,1,projected_win)) %x% series,
+                               array(0, c(dim(series)[1],day_win*2-1,projected_win)), along=3)
+    win_series <- array(win_series, c(dim(series)[1],day_win*2-1,y_mod+1,projected_win))[,,2:(y_mod-projected_win+1),]
+    win_series <- array(win_series, c(dim(series)[1],day_win*2-1,y_mod-projected_win,projected_win))
+    
+  } else {
+    win_series <- cbind(array(rep(series,projected_win), c(dim(eries)[1],dim(mod_series)[2]*projected_win)),
+                        array(0, c(dim(mod_series)[1],projected_win)))
+    win_series <- array(win_series, c(dim(mod_series)[1],y_mod+1,projected_win))[,2:(y_mod-projected_win+1),]
+    win_series <- array(win_series, c(dim(mod_series)[1],y_mod-projected_win,projected_win))
+  }
+  
+  return(win_series)
+}
+
+
 set_norain_to_nan <- function(series_moving, pp_threshold, pp_factor, min_rainday){
   
   if(missing(min_rainday)) {
@@ -124,7 +158,15 @@ set_norain_to_nan <- function(series_moving, pp_threshold, pp_factor, min_rainda
       series_moving[per,bool_low] <- replace_values_nans
     }
   } else {
-    rainday_count <- apply(series_moving>pp_threshold,1,sum)
+    rainday_count <- apply(series_moving>pp_threshold,c(1,3),sum)
+    for (per1 in 1:dim(rainday_count)[1]) {
+      for (per2 in 1:dim(rainday_count)[2]) { 
+        bool_low <- series_moving[per1,,per2]<pp_threshold
+        replace_values_nans <-runif(sum(bool_low))*pp_factor*pp_threshold
+        replace_values_nans[max(1,min_rainday-rainday_count[per1,per2]):length(replace_values_nans)] <- NaN
+        series_moving[per1,bool_low, per2] <- replace_values_nans
+      }
+    }
   }
   
   return(series_moving)
