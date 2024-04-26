@@ -939,8 +939,12 @@ UQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
 #' @examples SDM(obs,mod,var,frq='M',pp_threshold=0.1)
 #' @examples SDM(obs,mod,var,frq='M',pp_factor=1/1000)
 #' @examples SDM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
-SDM <- function(obs,mod,SDM_var,frq,pp_threshold,pp_factor){
+SDM <- function(obs ,mod, SDM_var, frq, pp_threshold, pp_factor, day_win){
 
+  if(missing(frq)) {
+    frq <- 'A'
+  }
+  
   if(missing(pp_threshold)) {
     pp_threshold <- 1
   }
@@ -948,14 +952,13 @@ SDM <- function(obs,mod,SDM_var,frq,pp_threshold,pp_factor){
   if(missing(pp_factor)) {
     pp_factor <- 1/100
   }
+  
+  if(missing(day_win)) {
+    day_win <- 1
+  }
 
   lower_lim <- pp_threshold
   CDF_th <- 10^-3
-
-  # 0) Check if annually or monthly data is specified.
-  if(missing(frq)) {
-    frq <- 'M'
-  }
 
   # 1) Format inputs and get statistics of the observed and modeled series of
   #    the historical period (formatQM function of the climQMBC package).
@@ -966,10 +969,34 @@ SDM <- function(obs,mod,SDM_var,frq,pp_threshold,pp_factor){
   format_list_mod <- formatQM(mod, SDM_var, frq, pp_threshold, pp_factor)
   y_mod <- format_list_mod[[1]]
   mod_series <- format_list_mod[[2]]
+  
+  modh_series <- mod_series[,1:y_obs]
+  
+  
+  if (frq=='D') {
+    
+    obs_series <- day_centered_moving_window(obs_series, day_win)
+    mod_series <- day_centered_moving_window(mod_series, day_win)
+    
+    win_series <- projected_backward_moving_window(mod_series, y_obs, frq)
+    
+    obs_series <- array(aperm(obs_series, c(1,3,2)), c(365,(2*day_win-1)*y_obs))
+    modh_series <- array(aperm(mod_series,c(1,3,2))[,1:y_obs,], c(365,(2*day_win-1)*y_obs))
+    win_series <- array(aperm(win_series,c(1,4,2,3)), c(365, (2*day_win-1)*y_obs, y_mod-y_obs))
+    
+    win_series_ <- abind::abind(modh_series, win_series, along=3)
+    
+    
+  } else {
+    day_win <- 1
+    win_series <- projected_backward_moving_window(mod_series, y_obs, frq)
+    win_series_ <- abind::abind(modh_series, win_series, along=3)
+  }
 
-  SDM  <- matrix(0,dim(mod_series)[1],dim(mod_series)[2]-y_obs)
+  SDM  <- matrix(0,dim(mod_series)[1],y_mod-y_obs)
   SDM_h  <- matrix(0,dim(obs_series)[1],y_obs)
   for (m in 1:dim(mod_series)[1]){
+    print(m)
     # 2) Historical period:
 
     # a) [Switanek et al. (2017), step 1)]
@@ -979,16 +1006,16 @@ SDM <- function(obs,mod,SDM_var,frq,pp_threshold,pp_factor){
     #     the modeled and observed series in the historical period.
     if (SDM_var == 0){
       D_obs <- pracma::detrend(obs_series[m,])
-      D_mod <- pracma::detrend(mod_series[m,1:y_obs])
+      D_mod <- pracma::detrend(modh_series[m,])
 
       mu_obs <- mean(obs_series[m,])
-      mu_mod <- mean(mod_series[m,1:y_obs])
+      mu_mod <- mean(modh_series[m,])
     } else{
       D_obs <- sort(obs_series[m,obs_series[m,]>lower_lim])
-      D_mod <- sort(mod_series[m,1:y_obs][mod_series[m,1:y_obs]>lower_lim])
+      D_mod <- sort(modh_series[m,][modh_series[m,]>lower_lim])
 
       freq_obs <- length(D_obs)/dim(obs_series)[2]
-      freq_mod <- length(D_mod)/length(mod_series[m,1:y_obs])
+      freq_mod <- length(D_mod)/length(modh_series[m,])
       
       if (freq_mod==0) {
         freq_mod <- 1/(365*y_obs)
@@ -1029,12 +1056,12 @@ SDM <- function(obs,mod,SDM_var,frq,pp_threshold,pp_factor){
     }
 
     # 3) Projected periods:
-    for (j in 0:(dim(mod_series)[2]-y_obs)){
+    for (j in 0:(y_mod-y_obs)){
       # c) Initialize correction array.
-      corr_temp <- matrix(0,y_obs,1)
+      corr_temp <- matrix(0,y_obs*(2*day_win-1),1)
 
       # d) Define projected window.
-      win_series <- mod_series[m,(1+j):(y_obs+j)]
+      win_series <- win_series_[m,,j+1]
 
       # e) [Switanek et al. (2017), step 1)]
       #    For temperature, get the detrended series of the projected
@@ -1160,7 +1187,7 @@ SDM <- function(obs,mod,SDM_var,frq,pp_threshold,pp_factor){
       #    If the projected period is not the historical period (j>0),
       #    save the value of the last year.
       if (j == 0){
-        SDM_h[m,] <- corr_temp
+        SDM_h[m,] <- corr_temp[seq(day_win,length(corr_temp),(2*day_win-1))]
       } else {
         SDM[m,j] <- corr_temp[length(corr_temp)]
       }
@@ -1169,7 +1196,7 @@ SDM <- function(obs,mod,SDM_var,frq,pp_threshold,pp_factor){
 
   SDM <- matrix(SDM)
   SDM_h <- matrix(SDM_h)
-  SDM_series <- c(SDM_h,SDM)
+  SDM_series <- matrix(c(SDM_h,SDM))
   if (SDM_var == 1){
     SDM_series[SDM_series<pp_threshold] <- 0
   }

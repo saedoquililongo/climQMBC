@@ -1046,7 +1046,7 @@ def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100, day_win=1):
         win_series = projected_backward_moving_window(mod_series, y_obs, frq)
         
         # Reshape to 2D in order to have all the days of the window in each row
-        obs_series= obs_series.reshape(365,(2*day_win-1)*y_obs)
+        obs_series = obs_series.reshape(365,(2*day_win-1)*y_obs)
         modh_series= mod_series[:,:,:y_obs].reshape(365,(2*day_win-1)*y_obs)
         
         # Reshape to 3D in order to have all the days of the window in each row
