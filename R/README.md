@@ -10,7 +10,7 @@ Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzale
 
 *Maintainer contact: sebastian.aedo.q@gmail.com\
 Version: 1.0, updated Apr 2024\
-Written in R version 3.6.1
+Written in R version 4.2.2.
 
 ## Dependencies
 Imports needed:
