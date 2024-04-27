@@ -51,7 +51,6 @@
 # # as this script. The following lines will install the package and import it.
 # install.packages(paste(getwd(),'/','climQMBC_0.1.1.tar.gz',sep=''),repos=NULL,type='source')
 
-
 # library(climQMBC)
 source(paste(getwd(),'/climQMBC/R/methods.R',sep=''))
 source(paste(getwd(),'/climQMBC/R/utils.R',sep=''))
@@ -179,8 +178,8 @@ mod <- matrix(mod[,variable])
 #  climQMBC package should be called. The outputs of each function are
 #  columns vector with daily corrected data.
 # 
-qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-dqm_series <- DQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-qdm_series <- QDM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-uqm_series <- UQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-sdm_series <- SDM(obs,mod,SDM_var=SDM_var,frq=frq,pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+# qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+# dqm_series <- DQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+# qdm_series <- QDM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+# uqm_series <- UQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+# sdm_series <- SDM(obs,mod,SDM_var=SDM_var,frq=frq,pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)

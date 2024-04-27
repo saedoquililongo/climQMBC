@@ -1047,8 +1047,18 @@ SDM <- function(obs ,mod, SDM_var, frq, pp_threshold, pp_factor, day_win){
       CDF_obs[CDF_obs>1-CDF_th] <- 1-CDF_th
       CDF_mod[CDF_mod>1-CDF_th] <- 1-CDF_th
     } else {
-      fit_obs <- fitdistrplus::fitdist(D_obs, distr = "gamma", method = "mle")
-      fit_mod <- fitdistrplus::fitdist(D_mod, distr = "gamma", method = "mle")
+      if (length(D_mod)>0){
+        fit_mod <- fitdistrplus::fitdist(D_mod, distr = "gamma", method = "mle")
+      } else {
+        fit_mod <- fitdistrplus::fitdist(runif(2)*pp_threshold*pp_factor, distr = "gamma", method = "mle")
+      }
+      
+      if (length(D_obs)>0){
+        fit_obs <- fitdistrplus::fitdist(D_obs, distr = "gamma", method = "mle")
+      } else {
+        fit_obs <- fitdistrplus::fitdist(runif(2)*pp_threshold*pp_factor, distr = "gamma", method = "mle")
+      }
+
       CDF_obs <- pgamma(D_obs,shape=fit_obs[[1]][1],rate=fit_obs[[1]][2])
       CDF_mod <- pgamma(D_mod,shape=fit_mod[[1]][1],rate=fit_mod[[1]][2])
       CDF_obs[CDF_obs>1-CDF_th] <- 1-CDF_th
@@ -1102,7 +1112,12 @@ SDM <- function(obs ,mod, SDM_var, frq, pp_threshold, pp_factor, day_win){
         CDF_win[CDF_win<CDF_th] <- CDF_th
         CDF_win[CDF_win>1-CDF_th] <- 1-CDF_th
       } else {
-        fit_win <- fitdistrplus::fitdist(D_win, distr = "gamma", method = "mle")
+        if (length(D_win)>0){
+          fit_win <- fitdistrplus::fitdist(D_win, distr = "gamma", method = "mle")
+        } else {
+          fit_win <- fitdistrplus::fitdist(runif(2)*pp_threshold*pp_factor, distr = "gamma", method = "mle")
+        }
+        
         CDF_win <- pgamma(D_win,shape=fit_win[[1]][1],rate=fit_win[[1]][2])
         CDF_win[CDF_win>1-CDF_th] <- 1-CDF_th
       }
@@ -1177,7 +1192,9 @@ SDM <- function(obs ,mod, SDM_var, frq, pp_threshold, pp_factor, day_win){
       #    corrected values with the higher rainday or detrended values.
       #    For temperature, the trend of the projected period is added
       #    back.
-      corr_temp[win_argsort[(length(win_argsort)-exp_D+1):length(win_argsort)]] <- matrix(xvals)
+      if (length(xvals)>0){
+        corr_temp[win_argsort[(length(win_argsort)-exp_D+1):length(win_argsort)]] <- matrix(xvals)
+      }
       if (SDM_var == 0){
         corr_temp <- corr_temp + diff_win - mu_win
       }
