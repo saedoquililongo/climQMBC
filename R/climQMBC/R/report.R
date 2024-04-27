@@ -18,7 +18,7 @@
 #'
 #' @examples report(obs, mod, var)
 #' @examples report(obs, mod, var,fun=['QDM','UQM','SDM'],y_init = 1979,y_wind = [2035,2060,2080])
-report <- function(obs,mod,var,fun,y_init,y_wind){
+report <- function(obs, mod ,SDM_var, mult_change, allow_negatives, fun, y_init, y_wind, user_pdf, pdf_obs, pdf_mod){
 
   # 0) Get the number of observed and modeled years
   n_obs <- length(obs)
@@ -28,6 +28,12 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
   y_mod = n_mod/12
 
   # 1) Set non-declared arguments
+  if(missing(mult_change)) {
+    mult_change <- 1
+  }
+  if(missing(allow_negatives)) {
+    allow_negatives <- 1
+  }
   if(missing(fun)) {
     fun <- c('QM','DQM','QDM','UQM','SDM')
   }
@@ -46,15 +52,31 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
       w_label = c(w_label,pracma::num2str(y_wind[w],0))
     }
   }
+  if(missing(user_pdf)) {
+    user_pdf <- FALSE
+  }
+  
+  if(missing(pdf_obs)) {
+    pdf_obs <- FALSE
+  }
+  
+  if(missing(pdf_mod)) {
+    pdf_mod <- FALSE
+  }
 
   y_wind <- y_wind - y_init
 
   # 2) Apply QM methods
-  QM_series <- QM(obs,mod,var)
-  DQM_series <- DQM(obs,mod,var)
-  QDM_series <- QDM(obs,mod,var)
-  UQM_series <- UQM(obs,mod,var)
-  SDM_series <- SDM(obs,mod,var)
+  QM_series <- QM(obs, mod, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+  print('QM')
+  DQM_series <- DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+  print('DQM')
+  QDM_series <- QDM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+  print('QDM')
+  UQM_series <- UQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+  print('UQM')
+  SDM_series <- SDM(obs, mod, SDM_var=SDM_var, frq='M')
+  print('SDM')
 
   # 3) Get observed, modeled and bias corrected statistics
   # a) Get obs, mod, and QMs as [12 x n] matrix
@@ -208,7 +230,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
   ds_UQM_Mw <- matrix(0,12,length(y_wind))
   ds_SDM_Mw <- matrix(0,12,length(y_wind))
 
-  if (var == 1){
+  if (mult_change==1){
     dm_obs <- mu_QM_h/mu_obs
     dm_mod <- mu_mod_f/mu_mod_h
     dm_QM <- mu_QM_f/mu_QM_h
@@ -463,7 +485,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
   # Plot empirical cumulative distribution function
   dev.new()
   par(mfrow=c(1,2))
-  plot(xo,fo,col='red',type='l',xlab=c('Temperature (C)','Precipitation (mm)')[var+1],ylab='Probability',main='Empirical cumulative distribution function',ylim=c(0,1),xlim=c(series_mn,series_mx))
+  plot(xo,fo,col='red',type='l',xlab=c('Temperature (C)','Precipitation (mm)')[mult_change+1],ylab='Probability',main='Empirical cumulative distribution function',ylim=c(0,1),xlim=c(series_mn,series_mx))
   grid()
   par(new=TRUE)
   lines(xm,fm,col='blue')
@@ -511,7 +533,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
   lgnd <- c('Mod')
   clr <- c('blue')
   # Plot series
-  plot(mod,col='blue',type='l',xlab='Month since starting date',ylab=c('Temperature (°C)','Precipitation (mm)')[var+1],main=paste(c('Temperature','Precipitation')[var+1],'time series'), ylim=c(series_mn,series_mx))
+  plot(mod,col='blue',type='l',xlab='Month since starting date',ylab=c('Temperature (°C)','Precipitation (mm)')[mult_change+1],main=paste(c('Temperature','Precipitation')[mult_change+1],'time series'), ylim=c(series_mn,series_mx))
   grid()
   if ('QM' %in% fun){
     par(new=TRUE)
@@ -601,7 +623,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
     clr <- c(clr,'magenta')
   }
   par(new=TRUE)
-  if (var==1){
+  if (mult_change==1){
     lines(mu_obs_M*dm_mod_M,col='red')
   } else {
     lines(mu_obs_M+dm_mod_M,col='red')
@@ -648,7 +670,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
       clr <- c(clr,'magenta')
     }
     par(new=TRUE)
-    if (var==1){
+    if (mult_change==1){
       lines(mu_obs_M*dm_mod_Mw[,w],col='red')
     } else {
       lines(mu_obs_M+dm_mod_Mw[,w],col='red')
@@ -710,7 +732,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
     clr <- c(clr,'magenta')
   }
   par(new=TRUE)
-  if (var==1){
+  if (mult_change==1){
     lines(s_obs_M*ds_mod_M,col='red')
   } else {
     lines(s_obs_M+ds_mod_M,col='red')
@@ -757,7 +779,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
       clr <- c(clr,'magenta')
     }
     par(new=TRUE)
-    if (var==1){
+    if (mult_change==1){
       lines(s_obs_M*ds_mod_Mw[,w],col='red')
     } else {
       lines(s_obs_M+ds_mod_Mw[,w],col='red')

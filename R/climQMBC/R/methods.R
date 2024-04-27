@@ -285,7 +285,7 @@ DQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     mu_win <- apply(win_series_moving,c(1,3),mean, na.rm=TRUE)
     
   } else {
-    win_series <- projected_backward_moving_window(mod_series_moving, y_obs, frq)
+    win_series <- projected_backward_moving_window(mod_series, y_obs, frq)
     
     stats_list_obs <- getStats(obs_series, frq)
     mu_obs <- stats_list_obs[[1]]
@@ -520,7 +520,7 @@ QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     skewy_win <- stats_list_win[[4]]
     
   } else {
-    win_series <- projected_backward_moving_window(mod_series_moving, y_obs, frq)
+    win_series <- projected_backward_moving_window(mod_series, y_obs, frq)
     
     stats_list_obs <- getStats(obs_series, frq)
     mu_obs <- stats_list_obs[[1]]
@@ -777,7 +777,7 @@ UQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
     skewy_win <- stats_list_win[[4]]
     
   } else {
-    win_series <- projected_backward_moving_window(mod_series_moving, y_obs, frq)
+    win_series <- projected_backward_moving_window(mod_series, y_obs, frq)
     
     stats_list_obs <- getStats(obs_series, frq)
     mu_obs <- stats_list_obs[[1]]
@@ -970,7 +970,7 @@ SDM <- function(obs ,mod, SDM_var, frq, pp_threshold, pp_factor, day_win){
   y_mod <- format_list_mod[[1]]
   mod_series <- format_list_mod[[2]]
   
-  modh_series <- mod_series[,1:y_obs]
+  modh_series <- array(mod_series[,1:y_obs], c(dim(mod_series)[1],y_obs))
   
   
   if (frq=='D') {
@@ -990,13 +990,13 @@ SDM <- function(obs ,mod, SDM_var, frq, pp_threshold, pp_factor, day_win){
   } else {
     day_win <- 1
     win_series <- projected_backward_moving_window(mod_series, y_obs, frq)
-    win_series_ <- abind::abind(modh_series, win_series, along=3)
+    
+    win_series_ <- abind::abind(modh_series, aperm(win_series,c(1,3,2)), along=3)
   }
 
   SDM  <- matrix(0,dim(mod_series)[1],y_mod-y_obs)
   SDM_h  <- matrix(0,dim(obs_series)[1],y_obs)
   for (m in 1:dim(mod_series)[1]){
-    print(m)
     # 2) Historical period:
 
     # a) [Switanek et al. (2017), step 1)]

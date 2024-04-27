@@ -4,8 +4,12 @@ get_pp_threshold_mod <- function(obs, mod, pp_threshold){
   mod_sort_descending <- sort(mod[1:length(obs)], decreasing=TRUE)
   days_kept <- min(obs_rainday_hist, length(obs))
   
-  pp_threshold_mod <- mod_sort_descending[days_kept+1]
-  
+  if (days_kept!=obs_rainday_hist){
+    pp_threshold_mod <- mod_sort_descending[days_kept+1]
+  } else {
+    pp_threshold_mod <- 0
+  }
+
   return(pp_threshold_mod)
 }
 
@@ -133,10 +137,10 @@ projected_backward_moving_window <- function(series, projected_win, frq){
     win_series <- array(win_series, c(dim(series)[1],day_win*2-1,y_mod-projected_win,projected_win))
     
   } else {
-    win_series <- cbind(array(rep(series,projected_win), c(dim(eries)[1],dim(mod_series)[2]*projected_win)),
-                        array(0, c(dim(mod_series)[1],projected_win)))
-    win_series <- array(win_series, c(dim(mod_series)[1],y_mod+1,projected_win))[,2:(y_mod-projected_win+1),]
-    win_series <- array(win_series, c(dim(mod_series)[1],y_mod-projected_win,projected_win))
+    win_series <- cbind(array(rep(series,projected_win), c(dim(series)[1],dim(series)[2]*projected_win)),
+                        array(0, c(dim(series)[1],projected_win)))
+    win_series <- array(win_series, c(dim(series)[1],y_mod+1,projected_win))[,2:(y_mod-projected_win+1),]
+    win_series <- array(win_series, c(dim(series)[1],y_mod-projected_win,projected_win))
   }
   
   return(win_series)
@@ -271,7 +275,7 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
       Alpy[m] <- sigmay[m]/sqrt(Bety[m])
       Gamy[m] <- muy[m]-(Alpy[m]*Bety[m])
       Lnsortdata = log(sortdata)
-      Lnsortdata[!is.finite(Lnsortdata)] <- log(0.01)
+      Lnsortdata[!is.finite(Lnsortdata)] <- log(runif(sum(!is.finite(Lnsortdata)))*0.01)
       LpIII <- pgamma((Lnsortdata-Gamy[m]),shape=Bety[m],scale=Alpy[m])
       KSLpIII <- max(abs(LpIII-probEmp))
     }
@@ -288,6 +292,8 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
     gamexp <- mu[m]-sigma[m]
     exponential <- pmax(1-exp(-1/sigma[m]*(sortdata-gamexp)),0)
     KSexponential <- max(abs(exponential-probEmp))
+    
+    # KSLpIII <- 1
     
     # c) If variable is precipitation, set KS=1 to distributions that allow
     #    negative values (this will discard those distributions).
@@ -366,8 +372,7 @@ getCDF <- function(PDF,series,mu,sigma,skew,skewy){
       muy    <- log(mu[m])-(sigmay^2)/2
       Gamy   <- muy - (Alpy*Bety)
       Lnsortdata <- log(series[m,])
-      Lnsortdata[Im(Lnsortdata)!=0] <- log(0.01)
-      Lnsortdata[!is.finite(Lnsortdata)] <- log(0.01)
+      Lnsortdata[!is.finite(Lnsortdata)] <- log(runif(sum(!is.finite(Lnsortdata)))*0.01)
       Taot[m,]  <- pgamma((Lnsortdata-Gamy),shape=Bety,scale=Alpy)
 
     } else if (PDF[m] == 6){ # vi) Gumbel distribution.

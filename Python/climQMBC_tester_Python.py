@@ -57,7 +57,7 @@ import pandas as pd
 # I) Montly and annual data
 # =============================================================================
 # variable:
-#    - pr  (precipitacion)
+#    - pr  (precipitation)
 #    - tas (temperature)
 # allow_negatives:
 #    - 0 (variables like precipitation)
@@ -96,7 +96,8 @@ mod = pd.read_csv(f'../Sample_data/mod_{variable}_M.csv')[[variable]].values
 # Example 2 shows how to use the report function for specific bias
 # correction methods and projected periods. The Quantile Delta Mapping
 # (QDM), Unbiased Quantile Mapping (UQM), and Scaled Distribution Mapping
-# (SDM) methods will be reported. The report will analyze the projected
+# (SDM) methods will be reported. The report will analyze the projected periods
+# centered in 2035 2060 and 2080.
 
 # qm_series,dqm_series,qdm_series,uqm_series,sdm_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives, y_init = 1979,y_wind = [2035,2060,2080])
 
@@ -119,7 +120,7 @@ mod = pd.read_csv(f'../Sample_data/mod_{variable}_M.csv')[[variable]].values
 # II) Daily data
 # =============================================================================
 # variable:
-#    - pr  (precipitacion)
+#    - pr  (precipitation)
 #    - tas (temperature)
 # allow_negatives:
 #    - 0 (variables like precipitation)
@@ -163,22 +164,22 @@ mod = pd.read_csv(f'../Sample_data/mod_{variable}_D.csv')[[variable]].values
 # qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=2, pdf_mod=2)
 # dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=2, pdf_mod=2)
 # qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=2, pdf_mod=2)
-# uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=2, pdf_mod=2)
-sdm_series = SDM(obs, mod, SDM_var, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
+# sdm_series = SDM(obs, mod, SDM_var, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
 
 
 import matplotlib.pylab as plt
 
-plt.plot(sdm_series, 'o')
+plt.plot(uqm_series, 'o')
 
-# %%
+# # %%
 
-df__ = pd.read_csv('../../SDM.csv', index_col=0)
-df__['R'] = df__['V1']
+# df__ = pd.read_csv('../../SDM.csv', index_col=0)
+# df__['R'] = df__['V1']
 
-df__['Python'] = sdm_series
+# df__['Python'] = sdm_series
 
-df__.plot.scatter(x='R',y='Python')
-plt.grid()
-plt.xlim(0,4)
-plt.ylim(0,4)
+# df__.plot.scatter(x='R',y='Python')
+# plt.grid()
+# plt.xlim(0,4)
+# plt.ylim(0,4)
