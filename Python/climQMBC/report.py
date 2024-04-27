@@ -55,52 +55,35 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
            package.
     
         2) This report function was built for monthly data.
-    
-    Description:
-        0) Get the number of observed and modeled years.
-        
-        1) Set non-declared arguments.
-        
-        2) Apply bias correction methods.
-        
-        3) Get observed, modeled and bias corrected statistics of the 
-           historical and complete future period.
-        
-        4) Get observed, modeled and bias corrected statistics of the projected
-           periods.
-        
-        5) Get delta mean and delta standard deviation.
-        
-        6) Display report:
-            a) Report description.
-            b) Table.
-            c) Figures.
             
     Input:
-        obs:    A column vector of monthly or annual observed data (temperature
-                or precipitation). If monthly frequency is specified, 
-                the length of this vector is 12 times the number of observed 
-                years [12 x y_obs, 1]. If annual frequency is specified, the 
-                length of this vector is equal to the number of observed years
-                [y_obs, 1].
+        obs:    A column vector of monthly observed data. The length of the 
+                column vector should by a multiple of 12. [ndata_obs, 1]
 
-        mod:    A column vector of monthly or annual modeled data (temperature
-                or precipitation). If monthly frequency is specified, 
-                the length of this vector is 12 times the number of observed
-                years [12 x y_mod, 1]. If annual frequency is specified, the 
-                length of this vector is equal to the number of observed years
-                [y_mod, 1].
+        mod:    A column vector of monthly modeled or GCM data.The length of the
+                column vector should by a multiple of 12. [ndata_obs, 1]
+                
+        SDM_var: A flag that identifies if data are temperature or precipitation.
+                     Temperature:   var = 0
+                     Precipitation: var = 1
 
-        var:    A flag that identifies if data are temperature or 
-                precipitation. This flag tells the getDist function if it has 
-                to discard distribution functions that allow negative numbers,
-                and if the terms in the correction equations are
-                multiplied/divided or added/subtracted.
-                    Temperature:   var = 0
-                    Precipitation: var = 1
-    
+        NOTE: This routine considers that obs and mod series start in the same
+        day/month/year and are continuous until the end day/month/year.
     
     Optional inputs:
+        mult_change:     A flag that indicates if projected changes should be
+                         computed as multiplicative (fut = hist*delta) or 
+                         additive (fut = hist + delta) changes.
+                             mult_change = 1 or True: Multiplicative (default)
+                             mult_change = 0 or False: Additive
+
+        allow_negatives: A flag that identifies if data allows negative values
+                         and also to replace no-rain values with random small 
+                         values (Chadwick et al., 2023) to avoid numerical
+                         problems with the probability distribution functions.
+                             allow_negatives = 1 or True: Allow negatives (default)
+                             allow_negatives = 0 or False: Do not allow negative
+        
         fun:    A list of strings with the desired bias correction methods to
         be reported. If this input is not recieved by the function, all bias
         correction methods available in the climQMBC package will be reported.
@@ -120,47 +103,51 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
                     This value sets a first projected period just after the end 
                     of historical period, and a second projected period just 
                     before the end of the modeled series.
+                    
+        user_pdf:        A flag indicating if the user will define the
+                         probability distribution functions (pdf) for the
+                         observed and modeled series. The distributions will be
+                         the same for all periods and sub-periods.
+                            user_pdf = 1 or True: User defines the pdf
+                            user_pdf = 0 or False: pdf defined by the Kolmogorov
+                                                   -Smirnov test (default)
+
+        pdf_obs:         An integer indicating the probability distribution 
+                         function (pdf) to be used for the observed data. The
+                         pdf will be the same for all periods and sub-periods.
+                         Default: None
+
+        pdf_mod:         An integer indicating the probability distribution 
+                         function (pdf) to be used for the modeled data. The
+                         pdf will be the same for all periods and sub-periods.
+                         Default: None
+
+        NOTE: The available distributions for pdf_obs and pdf_mod are:
+            0) Normal
+            1) Log-Normal
+            2) Gamma 2 parameters
+            3) Gamma 3 parameters
+               (Pearson 3 parameters)
+            4) Log-Gamma 3 parameters
+               (Log-Pearson 3 parameters)
+            5) Gumbel
+            6) Exponential
     
     Output:
-        QM_series:  A column vector of monthly or annual modeled data 
-                    (temperature or precipitation) corrected by the QM method. 
-                    If monthly frequency is specified, the length of this 
-                    vector is 12 times the number of observed years 
-                    [12 x y_mod, 1]. If annual frequency is specified, the 
-                    length of this vector is equal to the number of observed 
-                    years [y_mod, 1].
-                    
-        DQM_series: A column vector of monthly or annual modeled data 
-                    (temperature or precipitation) corrected by the DQM method. 
-                    If monthly frequency is specified, the length of this 
-                    vector is 12 times the number of observed years 
-                    [12 x y_mod, 1]. If annual frequency is specified, the 
-                    length of this vector is equal to the number of observed 
-                    years [y_mod, 1].
-                    
-        QDM_series: A column vector of monthly or annual modeled data 
-                    (temperature or precipitation) corrected by the QDM method. 
-                    If monthly frequency is specified, the length of this 
-                    vector is 12 times the number of observed years 
-                    [12 x y_mod, 1]. If annual frequency is specified, the 
-                    length of this vector is equal to the number of observed 
-                    years [y_mod, 1].
-                    
-        UQM_series: A column vector of monthly or annual modeled data 
-                    (temperature or precipitation) corrected by the UQM method. 
-                    If monthly frequency is specified, the length of this 
-                    vector is 12 times the number of observed years 
-                    [12 x y_mod, 1]. If annual frequency is specified, the 
-                    length of this vector is equal to the number of observed 
-                    years [y_mod, 1].
-                    
-        SDM_series: A column vector of monthly or annual modeled data 
-                    (temperature or precipitation) corrected by the SDM method. 
-                    If monthly frequency is specified, the length of this 
-                    vector is 12 times the number of observed years 
-                    [12 x y_mod, 1]. If annual frequency is specified, the 
-                    length of this vector is equal to the number of observed 
-                    years [y_mod, 1].
+        QM_series:  A column vector of data bias corrected with the QM method.
+                   [ndata_mod, 1]
+                   
+        DQM_series: A column vector of data bias corrected with the DQM method.
+                   [ndata_mod, 1]
+                   
+        QDM_series: A column vector of data bias corrected with the QDM method.
+                   [ndata_mod, 1]
+                   
+        UQM_series: A column vector of data bias corrected with the UQM method.
+                   [ndata_mod, 1]
+                   
+        SDM_series: A column vector of data bias corrected with the SDM method.
+                   [ndata_mod, 1]
     
         NOTE: This function returns all five bias correction methods,
               independently of which methods are specified for this report.
