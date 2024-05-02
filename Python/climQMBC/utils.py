@@ -81,14 +81,14 @@ def formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor):
                          and also to replace no-rain values with random small 
                          values (Chadwick et al., 2023) to avoid numerical
                          problems with the probability distribution functions.
-                             allow_negatives = 1 or True: Allow negatives (default)
+                             allow_negatives = 1 or True: Allow negatives
                              allow_negatives = 0 or False: Do not allow negative
 
         frq:             A string specifying if the input frequency is daily,
                          monthly or annual.
                              Daily:     frq = 'D'
                              Monthly:   frq = 'M'
-                             Annual:    frq = 'A' (default)
+                             Annual:    frq = 'A'
 
         pp_threshold:    A float indicating the threshold to consider no-rain
                          values.
@@ -198,7 +198,6 @@ def day_centered_moving_window(series, win):
                         backwards and forward to get the statistics of each 
                         calendar day.The length of the window will be 
                         (2*win_day-1). For example, day_win=15 -> window of 29.
-                        Default: win = 1
 
     Output:
         series_moving:  A 3D array of daily data, without considering leap days,
@@ -235,7 +234,7 @@ def projected_backward_moving_window(series, projected_win, frq):
                          monthly or annual.
                              Daily:     frq = 'D'
                              Monthly:   frq = 'M'
-                             Annual:    frq = 'A' (default)
+                             Annual:    frq = 'A'
 
     Output:
         win_series:     An array of daily, monthly or annual future data,
@@ -283,6 +282,7 @@ def set_norain_to_nan(series_moving, pp_threshold, pp_factor, min_rainday=30):
         pp_threshold:    A float indicating the threshold to consider no-rain
                          values.
 
+    Optional inputs:
         min_rainday:    Minimum amount of values to keep for each sub-period and
                         projected period, to ensure a minimum amount to fit a 
                         distribution. Default is 30
@@ -342,7 +342,7 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
                          and also to replace no-rain values with random small 
                          values (Chadwick et al., 2023) to avoid numerical
                          problems with the probability distribution functions.
-                             allow_negatives = 1 or True: Allow negatives (default)
+                             allow_negatives = 1 or True: Allow negatives
                              allow_negatives = 0 or False: Do not allow negative
         
         mu:         A vector with mean values of each sub-period.
@@ -381,7 +381,6 @@ def getDist(series, allow_negatives, mu, sigma, skew, skewy):
         series_sub = series_sub[~np.isnan(series_sub)]
         y_series = len(series_sub)
 
-        
         # a) Get empirical distribution.
         sortdata = np.sort(series_sub) 
         probEmp = np.linspace(1/(y_series+1),

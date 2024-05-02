@@ -1,6 +1,22 @@
+#' get_pp_threshold_mod
+#'
+#' This functions gets a no-rain value threshold for the modeled series by mathcing the no-rain days of the modeled series in the historical period with the observed series.
+#'
+#' @param obs A column vector of daily observed data, without  considering leap  days. The length of the column vector  should by a multiple of 365. [ndata_obs, 1]
+#' @param mod A column vector of daily modeled data, without  considering leap  days. The length of the column vector should by a multiple of 365. [ndata_mod, 1]
+#' @param pp_threshold A float indicating the threshold to consider no-rain values in the observed data.
+#'
+#' @return pp_threshold_mod: A float indicating the threshold to consider no-rain values in the modeled data.
+#' @export
+#'
+#' @examples get_pp_threshold_mod(obs, mod, pp_threshold)
 get_pp_threshold_mod <- function(obs, mod, pp_threshold){
   
+  # Get the rain days of the observed series
   obs_rainday_hist <- sum(obs>pp_threshold)
+  
+  # Define the pp_threshold of the modeled series by matching the rain days
+  # of the observed series
   mod_sort_descending <- sort(mod[1:length(obs)], decreasing=TRUE)
   days_kept <- min(obs_rainday_hist, length(obs))
   
@@ -16,34 +32,26 @@ get_pp_threshold_mod <- function(obs, mod, pp_threshold){
 
 #' formatQM
 #'
-#'This function formats the inputs and gets basic statistics for the different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available in the climQMBC package. If monthly data is specified, the input series will be reshaped to a matrix of 12 rows and several columns equal to the number of years of each series. If annual data is specified, the input is reshaped to a row vector with same entries as the input series. For precipitation, physically null values (values below pp_threshold) are replaced by random positive values below pp_factor.
+#' This function formats a time series from a column vector to a matrix. The number of rows depends on the frequency of the data (1, 12 and 365 for annual, monthyl and daily data, respectively). If negative values are not allowed, determined by allow_negatives=1, no-rain values (values below pp_threshold) are replaced by random positive values below the product pp_threshold*pp_factor.
 #'
-#' @param obs A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_obs, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_obs, 1].
-#' @param mod A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].
-#' @param var A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1
-#' @param frq A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'
-#' @param pp_threshold A float indicating the threshold to consider physically null precipitation values.
-#' @param pp_factor A float indicating the maximum value of the random values that replace physically null precipitation values.
+#' @param series_ A column vector of daily data, without considering leap days. The length of the column vector should by a multiple of 365. [ndata_obs, 1]
+#' @param allow_negatives A flag that identifies if data allows negative values and also to replace no-rain values with random small values (Chadwick et al., 2023) to avoid numerical problems with the probability distribution functions. allow_negatives = 1 or True: Allow negatives ; allow_negatives = 0 or False: Do not allow negative
+#' @param frq A string specifying if the input frequency is daily, monthly or annual. Daily:     frq = 'D' ; Monthly:   frq = 'M' ; Annual:    frq = 'A'
+#' @param pp_threshold A float indicating the threshold to consider no-rain values.
+#' @param pp_factor A float which multiplied to pp_threshold indicates the maximum value of the random values that replace no-rain values.
 #'
-#' @return y_obs:          Number of observed years.
-#' @return obs_series:     A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12, y_obs]. If annual frequency is specified, the length of this vector is equal to the number of observed years [1, y_obs].
-#' @return mod_series:     A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12, y_mod]. If annual frequency is specified, the length of this vector is equal to the number of observed years [1, y_mod].
-#' @return mu_obs:         If monthly frequency is specified, a column vector of monthly mean of observed data [12,1]. If annual frequency is specified, the mean of the observed data (float).
-#' @return mu_mod:         If monthly frequency is specified, a column vector of monthly mean of modeled data of the historical period [12,1]. If annual frequency is specified, the mean of the modeled data of the historical period(float).
-#' @return sigma_obs:      If monthly frequency is specified, a column vector of monthly standard deviation of observed data [12,1]. If annual frequency is specified, the standard deviation of the observed data (float).
-#' @return sigma_mod:      If monthly frequency is specified, a column vector of monthly standard deviation of modeled data of the historical period [12,1]. If annual frequency is specified, the standard deviation of the modeled data of the historical period(float).
-#' @return skew_obs:       If monthly frequency is specified, a column vector of monthly skewness of observed data [12,1]. If annual frequency is specified, the skewness of the observed data (float).
-#' @return skew_mod:       If monthly frequency is specified, a column vector of monthly skewness of modeled data of the historical period [12,1]. If annual frequency is specified, the skewness of the modeled data of the historical period (float).
-#' @return skewy_obs:      If monthly frequency is specified, a column vector of monthly skewness of the logarithm of observed data [12,1]. If annual frequency is specified, the skewness of the logarithm of the observed data (float).
-#' @return skewy_mod:      If monthly frequency is specified, a column vector of monthly skewness of the logarithm of modeled data of the historical period [12,1]. If annual frequency is specified, the skewness of the logarithm of the modeled data of the historical period(float).
+#' @return years: Number of years of the series.
+#' @return series_matrix: A matrix of daily, monthly or annual observed data, without considering leap days. For daily, monthly and annual frequency, the number of rows will be 365, 12 and 1, respectively. The number of columns will be equal to the number of years. [1, 12 or 365, years]
 #' @export
 #'
 #' @examples formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor)
 formatQM <- function(series_, allow_negatives, frq, pp_threshold, pp_factor){
   
+  # This prevents modyfing the original input passed by reference
+  ## Must look for a more elegant way to skip this step
   series <- series_
 
-  # 0) Check if annually or monthly data is specified.
+  # Check frequency and define the number of rows
   if (frq=='D') {
     I <- 365
   } else if (frq=='M') {
@@ -54,37 +62,36 @@ formatQM <- function(series_, allow_negatives, frq, pp_threshold, pp_factor){
     I <- 1
   }
 
-  # 1) If variable is precipitation, replace low values with random values.
+  # If variable is precipitation, determined by allow_negatives=1, replace low
+  # values with random values.
   if (allow_negatives==0) {
     bool_low <- series<pp_threshold
     series[bool_low] <- runif(sum(bool_low))*pp_factor*pp_threshold
   }
 
-  # 2) Get number of years of the observed period.
+  # Get number of years of the series.
   years <- length(series)/I
 
-  # 3) If monthly data is specified, reshape the input series to a matrix of
-  #    12 rows and several columns equal to the number of years of each
-  #    series. If annually data is specified, reshape the input to a row
-  #    vector with same entries as the input series.
+  # Reshape to get a matrix of shape [I , years]
   series <- matrix(series, nrow=I, ncol=length(series)/I)
 
   return(list(years, series))
 }
 
+
 #' getStats
 #'
-#'This function computes the mean, standard deviation, skewness and skewness of the logarithmic values, for each sub-period within the year, according to the frequency initially defined.
+#' This function computes the mean, standard deviation, skewness and skewness of the logarithmic values, for each sub-period within the year, according to the frequency initially defined. Statistics are computed along axis 1. NOTE: If input series is a 2D array, outputs will be a column vector. If input series is a 3D array, outputs will be a 2D array.
 #'
-#' @param series A matrix of monthly or annual data. If monthly frequency is specified, the number of rows of the matrix is 12 and the number of columns is the number of years [12, years]. If annual frequency is specified, the number of rows of the matrix is 1 and the number of columns is the number of years [1, years].
+#' @param series An array of daily, monthly or annual data, without considering leap days. Possible input dimensions: 2D array: [sub-periods, years] or [sub-periods + days window, years] ; 3D array: [sub_periods, projected periods window, years] or [sub-periods + days window, projected periods window, years]
 #'
-#' @return mu:         If monthly frequency is specified, a column vector of monthly mean of observed data [12,1]. If annual frequency is specified, the mean of the observed data (float).
-#' @return sigma:      If monthly frequency is specified, a column vector of monthly standard deviation of observed data [12,1]. If annual frequency is specified, the standard deviation of the observed data (float).
-#' @return skew:       If monthly frequency is specified, a column vector of monthly skewness of observed data [12,1]. If annual frequency is specified, the skewness of the observed data (float).
-#' @return skewy:     If monthly frequency is specified, a column vector of monthly skewness of observed data [12,1]. If annual frequency is specified, the skewness of the observed data (float).
+#' @return mu: Mean values of each sub-period (and projected period if input is a 3D array).
+#' @return sigma: Standar deviation values of each sub-period (and projected  period if input is a 3D array).
+#' @return skew: Skewness values of each sub-period (and projected period if input is a 3D array).
+#' @return skewy: Skewness values of the logarithm of theseries of each sub-period (and projected period if input is a 3D array).
 #' @export
 #'
-#' @examples getStats(series)
+#' @examples getStats(series, frq)
 getStats <- function(series, frq){
 
   if (frq=='D') {
@@ -101,7 +108,8 @@ getStats <- function(series, frq){
     }
   }
 
-  
+  # Get the mean, standard deviation, skewness and skewness of the
+  # logarithmic values of each year sub-period of the series.
   mu <- apply(series, dim_stats, mean, na.rm = TRUE)         # Mean
   sigma <- apply(series, dim_stats, sd, na.rm = TRUE)        # Standard deviation
   skew <- apply(series,dim_stats,e1071::skewness,na.rm=TRUE,type=1) # Skewness
@@ -113,17 +121,41 @@ getStats <- function(series, frq){
 }
 
 
+#' day_centered_moving_window
+#'
+#' This function transform a 2D matrix of dimension [days in year, years] to a 3D array, where the new dimension is a centered moving window for each day of the year.
+#'
+#' @param series_matrix A matrix of daily data, without considering leap days. The number of rows is 365 and number of columns is the  number of years of the series. [365, years]
+#' @param day_win An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be (2*win_day-1). For example, day_win=15 -> window of 29.
+#' 
+#' @return series_moving: A 3D array of daily data, without considering leap days, with a dimension that considers a centered moving window for each day of the year. [365, 2*win-1, years]
+#' @export
+#'
+#' @examples day_centered_moving_window(series, day_win)
 day_centered_moving_window <- function(series, day_win){
   
   series_moving <- rbind(series[(dim(series)[1]-day_win+1):dim(series)[1],],rep(1,day_win*2) %x% series,series[1:day_win,])
   series_moving <- array(series_moving, c(dim(series)[1]+1, day_win*2, dim(series)[2]))[1:dim(series)[1],2:(day_win*2),]
+  
+  # Avoid dropping dimensions of length 1
   series_moving <- array(series_moving, c(dim(series)[1], day_win*2-1, dim(series)[2]))
   
   return(series_moving)
 }
 
 
-
+#' projected_backward_moving_window
+#'
+#' This function transform a 2D or 3D array of dimensions [days in year, year] or [days in year, centered window for each day, years] to a 3D or 4D array adding a new dimension to represent a backward moving window for each  projected period.
+#'
+#' @param series A 2D or 3D array of daily, monthly or annual observed data, without considering leap days. For daily, monthly and annual frequency, the number of rows will be 365, 12 and 1, respectively. If daily data, it is a 3D array that has a  dimension with a centered moving window for each day of the year. [1, 12 or 365, years] or [365, day centered window, years]
+#' @param projected_win An integer the length of the backward moving window.
+#' @param frq A string specifying if the input frequency is daily, monthly or annual. Daily:     frq = 'D' ; Monthly:   frq = 'M' ; Annual:    frq = 'A'
+#' 
+#' @return win_series: An array of daily, monthly or annual future data, without considering leap days, with a dimension associated to a backward moving window for each projected period. Possible dimensions: 3D array: [sub-periods, projected periods window, years] ; 4D array: [sub-periods, days window, projected periods window, years]
+#' @export
+#'
+#' @examples projected_backward_moving_window(series, projected_win, frq)
 projected_backward_moving_window <- function(series, projected_win, frq){
   
   y_mod <- dim(series)[length(dim(series))]
@@ -134,12 +166,16 @@ projected_backward_moving_window <- function(series, projected_win, frq){
     win_series <- abind::abind(array(rep(1,projected_win), c(1,1,projected_win)) %x% series,
                                array(0, c(dim(series)[1],day_win*2-1,projected_win)), along=3)
     win_series <- array(win_series, c(dim(series)[1],day_win*2-1,y_mod+1,projected_win))[,,2:(y_mod-projected_win+1),]
+    
+    # Avoid dropping dimensions of length 1
     win_series <- array(win_series, c(dim(series)[1],day_win*2-1,y_mod-projected_win,projected_win))
     
   } else {
     win_series <- cbind(array(rep(series,projected_win), c(dim(series)[1],dim(series)[2]*projected_win)),
                         array(0, c(dim(series)[1],projected_win)))
     win_series <- array(win_series, c(dim(series)[1],y_mod+1,projected_win))[,2:(y_mod-projected_win+1),]
+    
+    # Avoid dropping dimensions of length 1
     win_series <- array(win_series, c(dim(series)[1],y_mod-projected_win,projected_win))
   }
   
@@ -147,6 +183,20 @@ projected_backward_moving_window <- function(series, projected_win, frq){
 }
 
 
+#' projected_backward_moving_window
+#'
+#' This function replace no-rain values with nans, leaving a minimum amout of values (min_rainday) to fit a distribution. If fewer than min_rainday values are above pp_threshold, random small values will be added.
+#'
+#' @param series_moving A 2D or 3D array of daily, monthly or annual observed data, without considering leap days. For daily, monthly and annual frequency, the number of rows will be 365, 12 and 1, respectively. If daily data, it is a 3D array that has a  dimension with a centered moving window for each day of the year. [1, 12 or 365, years] or [365, day centered window, years]
+#' @param pp_factor A float which multiplied to pp_threshold indicates the maximum value of the random values that replace no-rain values.
+#' @param pp_threshold A float indicating the threshold to consider no-rain values.
+#' @param min_rainday (Optional) Minimum amount of values to keep for each sub-period and projected period, to ensure a minimum amount to fit a  distribution. Default is 30
+#' 
+#' @return series_moving: The input, but with no-rain values replaced with nans.
+#' @export
+#'
+#' @examples set_norain_to_nan(series_moving, pp_threshold, pp_factor)
+#' @examples set_norain_to_nan(series_moving, pp_threshold, pp_factor, min_rainday=20)
 set_norain_to_nan <- function(series_moving, pp_threshold, pp_factor, min_rainday){
   
   if(missing(min_rainday)) {
@@ -176,55 +226,44 @@ set_norain_to_nan <- function(series_moving, pp_threshold, pp_factor, min_rainda
   return(series_moving)
 }
 
-#' Get probability distribution function for each month of the period
+
+#' getDist
+#' This function assigns an independent probability distribution function to each row of the input series by comparing the empirical probability distribution function with seven distributions based on the Kolmogorov-Smirnov (KS) test.
 #'
-#' This function assigns an independent probability distribution function to each row of the input series by comparing the empirical probability distribution function with seven distributions based on the Kolmogorov-Smirnov (KS) test. If the series consider monthly data, it will have 12 rows and each row will represent a month. For annual data the series will have only one row. Only strictly positive distributions are considered for precipitation and strictly positive distributions are discarded if the series has negative values.
+#' The available distributions are: 1) Normal ; 2) Log-Normal ; 3) Gamma 2 parameters ; 4) Gamma 3 parameters ; (Pearson 3 parameters) ; 5) Log-Gamma 3 parameters ; 6) Gumbel ; 7) Exponential
 #'
-#' The available distributions are: 1) Normal distribution; 2) Log-Normal distribution; 3) Gamma 2 parameters distribution; 4) Gamma 3 parameters distribution (Pearson 3 parameters distribution); 5) Log-Gamma 3 parameters distribution (Log-Pearson 3 parameters distribution); 6) Gumbel distribution; 7) Exponential distribution
+#' For allow_negatives=0, only 2), 3) and 5) are considered (1, 4, 6, and 7 are discarded). For series with negative values, only 1), 3), 4), 6), and 7) are considered (2, 3 and 5 are discarded).
 #'
-#' For precipitation, only 2), 3) and 5) are considered (1, 4, 6, and 7 are discarded). For series with negative values, only 1), 3), 4), 6), and 7) are considered (2, 3 and 5 are discarded).
-#'
-#' @param series A matrix of monthly or annual data (temperature or precipitation). If the series consider monthly data, it will have 12 rows and each row will represent a month. For annual data the series will have only one row.
-#' @param mu A column vector of mean values of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.
-#' @param sigma A column vector of standard deviation of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.
-#' @param skew A column vector of skewness of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.
-#' @param skewy A column vector of skewness of the logarithm of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.
-#' @param var A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers. Temperature:   var = 0; Precipitation: var = 1
-#'
-#' @return PDF: A column vector with an ID for the resulting distribution from the KS test. [12,1] if the series consider monthly data and [1,1] if the series consider annual data. The ID is related to the numeration of the distribution listed in the description of this function. This ID is used in the getCDF and getCDFinv functions of the climQMBC package.
+#' @param series An array of daily, monthly or annual data, without considering leap days. Possible input dimensions: 2D array: [sub-periods, years] or [sub-periods + days window, years]
+#' @param allow_negatives A flag that identifies if data allows negative values and also to replace no-rain values with random small values (Chadwick et al., 2023) to avoid numerical problems with the probability distribution functions. allow_negatives = 1 or True: Allow negatives ; allow_negatives = 0 or False: Do not allow negative
+#' @param mu A vector with mean values of each sub-period.
+#' @param sigma A vector with standard deviation values of each sub-period.
+#' @param skew A vector with skewness values of each sub-period.
+#' @param skewy A vector with skewness values of the logarithm of the series of each sub-period.
+#' 
+#' @return pdf: A vector with an ID for the resulting distribution from the KS test. The ID is related to  the numeration of the distribution listed in the description of this function. This ID is used in the getCDF and getCDFinv  functions of the climQMBC package.
 #' @export
 #'
-#' @examples getDist(series,mu,sigma,skew,skewy,var)
+#' @examples getDist(series, allow_negatives, mu, sigma, skew, skewy)
 getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
 
-  # 1) Get the number of years to compute the empirical distribution in step
-  #    3) and get the number of rows of the input series.
-  n <- dim(series)[1]
+  # Get the number of rows of the input series.
+  nrows <- dim(series)[1]
 
-  # 2) Initialize column vectors for the statistics needed for the available
-  #    probability distribution functions.
-  PDF    <- matrix(0,n,1)
-  sigmay <- matrix(0,n,1)
-  muy    <- matrix(0,n,1)
-  A      <- matrix(0,n,1)
-  B      <- matrix(0,n,1)
-  Alp    <- matrix(0,n,1)
-  Bet    <- matrix(0,n,1)
-  Gam    <- matrix(0,n,1)
-  Alpy   <- matrix(0,n,1)
-  Bety   <- matrix(0,n,1)
-  Gamy   <- matrix(0,n,1)
-  a      <- matrix(0,n,1)
-  u      <- matrix(0,n,1)
+  # Initialize column vectors for the statistics needed for the available
+  # probability distribution functions.
+  pdf    <- matrix(0,nrows,1)
   
+  # Initialize a counter of failures of the KS test
   ks_fail <- 0
 
-  # 3) Perform the Kolmogorov-Smirnov test for each row.
-  for (m in 1:n){
-    series_sub <- series[m,]
+  # Perform the Kolmogorov-Smirnov test for sub-period or row.
+  for (sp in 1:nrows){
+    series_sub <- series[sp,]
+    
+    # Get the number of years with valid data (for allow_negatives=0, the 
+    # series might have nan values to ignore them)
     series_sub <- series_sub[!is.nan(series_sub)]
-      
-      
     y_series <- length(series_sub)
 
     # a) Get empirical distribution.
@@ -233,16 +272,16 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
 
     # b) Compare distributions.
     # i) Normal distribution.
-    normal   <- pnorm(sortdata,mu[m],sigma[m])
+    normal   <- pnorm(sortdata,mu[sp],sigma[sp])
     KSnormal <- max(abs(normal-probEmp))
 
     # ii) Log Normal distribution.
     if (any(series_sub < 0)){
       KSlognormal <- 1
     }else{
-      sigmay[m] <- sqrt(log(1+(sigma[m]/mu[m])^2))
-      muy[m]    <- log(mu[m])-(sigmay[m]^2)/2
-      lognormal <- plnorm(sortdata,muy[m],sigmay[m])
+      sigmay <- sqrt(log(1+(sigma[sp]/mu[sp])^2))
+      muy <- log(mu[sp])-(sigmay^2)/2
+      lognormal <- plnorm(sortdata,muy,sigmay)
       KSlognormal = max(abs(lognormal-probEmp))
     }
 
@@ -250,18 +289,18 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
     if (any(series_sub < 0)){
       KSgammaII <- 1
     }else{
-      A[m]    <- (sigma[m]^2)/mu[m]
-      B[m]    <- (mu[m]/sigma[m])^2
-      GammaII <- pgamma(sortdata,shape=B[m],scale=A[m])
+      A <- (sigma[sp]^2)/mu[sp]
+      B <- (mu[sp]/sigma[sp])^2
+      GammaII <- pgamma(sortdata,shape=B,scale=A)
       KSgammaII <- max(abs(GammaII-probEmp))
     }
 
     #% iv) Gamma 3 parameters distribution.
     #     (Pearson 3 parameters distribution)
-    Bet[m]   <- (2/skew[m])^2
-    Alp[m]   <- sigma[m]/sqrt(Bet[m])
-    Gam[m]   <- mu[m]-(Alp[m]*Bet[m])
-    GammaIII <- pgamma((sortdata-Gam[m]),shape=Bet[m],scale=Alp[m])
+    Bet <- (2/skew[sp])^2
+    Alp <- sigma[sp]/sqrt(Bet)
+    Gam <- mu[sp]-(Alp*Bet)
+    GammaIII <- pgamma((sortdata-Gam),shape=Bet,scale=Alp)
     KSgammaIII <- max(abs(GammaIII-probEmp))
 
     # v) Log-Gamma 3 parameters distribution.
@@ -269,28 +308,28 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
     if (any(series_sub < 0)){
       KSLpIII <- 1
     }else{
-      sigmay[m] <- sqrt(log(1+(sigma[m]/mu[m])^2))
-      muy[m]    <- log(mu[m])-(sigmay[m]^2)/2
-      Bety[m] <- (2/skewy[m])^2
-      Alpy[m] <- sigmay[m]/sqrt(Bety[m])
-      Gamy[m] <- muy[m]-(Alpy[m]*Bety[m])
+      sigmay <- sqrt(log(1+(sigma[sp]/mu[sp])^2))
+      muy <- log(mu[sp])-(sigmay^2)/2
+      Bety <- (2/skewy[sp])^2
+      Alpy <- sigmay/sqrt(Bety)
+      Gamy <- muy-(Alpy*Bety)
       Lnsortdata = log(sortdata)
       Lnsortdata[!is.finite(Lnsortdata)] <- log(runif(sum(!is.finite(Lnsortdata)))*0.01)
-      LpIII <- pgamma((Lnsortdata-Gamy[m]),shape=Bety[m],scale=Alpy[m])
+      LpIII <- pgamma((Lnsortdata-Gamy),shape=Bety,scale=Alpy)
       KSLpIII <- max(abs(LpIII-probEmp))
     }
 
     # vi) Gumbel distribution.
-    Sn    <- pi/sqrt(6)
-    yn    <- 0.5772
-    a[m] <- Sn/sigma[m]
-    u[m] <- mu[m]-(yn/a[m])
-    gumbel <- exp(-exp(-a[m]*(sortdata-u[m])))
+    Sn <- pi/sqrt(6)
+    yn <- 0.5772
+    a <- Sn/sigma[sp]
+    u <- mu[sp]-(yn/a)
+    gumbel <- exp(-exp(-a*(sortdata-u)))
     KSgumbel <- max(abs(gumbel-probEmp))
 
     # vii) Exponential distribution.
-    gamexp <- mu[m]-sigma[m]
-    exponential <- pmax(1-exp(-1/sigma[m]*(sortdata-gamexp)),0)
+    gamexp <- mu[sp]-sigma[sp]
+    exponential <- pmax(1-exp(-1/sigma[sp]*(sortdata-gamexp)),0)
     KSexponential <- max(abs(exponential-probEmp))
     
     # KSLpIII <- 1
@@ -312,10 +351,10 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
     ks_crit <- 1.3581/sqrt(y_series)
     ks_fail <- ks_fail + (sign(min_KS-ks_crit)+1)/2
 
-    PDF[m] <- bestPDF
+    pdf[sp] <- bestPDF
   }
-
-  return(list(PDF, ks_fail))
+  
+  return(list(pdf, ks_fail))
 }
 
 #' Get probability of a set of values
