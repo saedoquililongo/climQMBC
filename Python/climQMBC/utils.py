@@ -563,8 +563,8 @@ def getCDF(pdf, series, mu, sigma, skew, skewy):
             exponential[exponential<0] = 0
             prob[sp,:] = exponential
     
-    # 3) Tail probabilities are set to (0 +  threshold) and (1 - threshold) to
-    #    avoid numerical errors.
+    # Tail probabilities are set to (0 +  threshold) and (1 - threshold) to
+    # avoid numerical errors.
     th = 1e-3
     prob[prob>1-th] = 1-th
     prob[prob<th] = th

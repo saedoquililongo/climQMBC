@@ -228,6 +228,7 @@ set_norain_to_nan <- function(series_moving, pp_threshold, pp_factor, min_rainda
 
 
 #' getDist
+#' 
 #' This function assigns an independent probability distribution function to each row of the input series by comparing the empirical probability distribution function with seven distributions based on the Kolmogorov-Smirnov (KS) test.
 #'
 #' The available distributions are: 1) Normal ; 2) Log-Normal ; 3) Gamma 2 parameters ; 4) Gamma 3 parameters ; (Pearson 3 parameters) ; 5) Log-Gamma 3 parameters ; 6) Gumbel ; 7) Exponential
@@ -359,6 +360,7 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
 
 
 #' getCDF
+#' 
 #' This function evaluates each row of the series in the respective cumulative distribution function assigned by the Kolmogorov-Smirnov (KS) test in the getDist function of the climQMBC package.
 #'
 #' The available distributions are: 1) Normal distribution; 2) Log-Normal distribution; 3) Gamma 2 parameters distribution; 4) Gamma 3 parameters distribution (Pearson 3 parameters distribution); 5) Log-Gamma 3 parameters distribution (Log-Pearson 3 parameters distribution); 6) Gumbel distribution; 7) Exponential distribution
@@ -428,8 +430,8 @@ getCDF <- function(pdf,series,mu,sigma,skew,skewy){
     }
   }
 
-  # 3) Tail probabilities are set to (0 +  threshold) and (1 - threshold) to
-  #    avoid numerical errors.
+  # Tail probabilities are set to (0 +  threshold) and (1 - threshold) to
+  # avoid numerical errors.
   th <- 10^-3
   prob[prob>1-th] <- 1-th
   prob[prob<th] <- th
@@ -438,71 +440,71 @@ getCDF <- function(pdf,series,mu,sigma,skew,skewy){
 }
 
 
-#' Get the value associated to a certain probability
-#'
-#' This function evaluates the probability, Taot, in the respective inverse cumulative distribution function assigned by the Kolmogorov-Smirnov (KS) test in the getDist function of the climQMBC package.
-#'
+#' getCDFinv
+#' 
+#' This function evaluates the probability, prob, in the respective inverse cumulative distribution function assigned by the Kolmogorov-Smirnov (KS) test in the getDist function of the climQMBC package.
+#' 
 #' The available distributions are: 1) Normal distribution; 2) Log-Normal distribution; 3) Gamma 2 parameters distribution; 4) Gamma 3 parameters distribution (Pearson 3 parameters distribution); 5) Log-Gamma 3 parameters distribution (Log-Pearson 3 parameters distribution); 6) Gumbel distribution; 7) Exponential distribution
 #'
-#' @param PDF A column vector with an ID for the resulting distribution from the KS test. [12,1] if the series consider monthly data and [1,1] if the series consider annual data. The ID is related to the numeration of the distribution listed in the description of this function.
-#' @param Taot A column vector with the non-exceedance probability for each row of the input series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.
-#' @param mu A column vector of mean values of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.
-#' @param sigma A column vector of standard deviation of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.
-#' @param skew A column vector of skewness of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.
-#' @param skewy A column vector of skewness of the logarithm of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.
+#' @param pdf A vector with an ID for the resulting distribution from the KS test. The ID is related to  the numeration of the distribution listed in the description of this function.
+#' @param prob A matrix with the non-exceedance probability for value row of the input series.
+#' @param mu A vector with mean values of each sub-period.
+#' @param sigma A vector with standard deviation values of each sub-period.
+#' @param skew A vector with skewness values of each sub-period.
+#' @param skewy A vector with skewness values of the logarithm of the series of each sub-period.
 #'
-#' @return  xhat: A column vector with the values obtained when the inverse cumulative distribution function is applied. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.
+#' @return  xhat: A matrix with the values obtained when the inverse cumulative distribution function is applied to prob.
 #' @export
 #'
 #' @examples getCDFinv(PDF,Taot,mu,sigma,skew,skewy)
-getCDFinv <- function(PDF,Taot,mu,sigma,skew,skewy){
+getCDFinv <- function(pdf,prob,mu,sigma,skew,skewy){
 
-  # 1) Get the number of rows and years of the series.
-  n_m <- dim(Taot)[1]
-  n_y <- dim(Taot)[2]
+  # Get the number of rows and columns of the series.
+  rows <- dim(prob)[1]
+  cols <- dim(prob)[2]
 
-  # 2) Compute the inverse cumulative distribution function to the values of
-  #    each row, based on the distribution assigned in the getDist function
-  #    of the climQMBC package.
-  xhat <- matrix(0,n_m,n_y)
-  for (m in 1:n_m){
-    if (PDF[m] == 1){ # i) Normal distribution.
-      xhat[m,] <- qnorm(Taot[m,],mu[m],sigma[m])
+  # Compute the cumulative distribution function to the values of each 
+  # row, based on the distribution assigned in the getDist function of the
+  # climQMBC package.
+  xhat <- matrix(0,rows,cols)
+  for (sp in 1:rows){
+    if (pdf[sp] == 1){ # i) Normal distribution.
+      xhat[sp,] <- qnorm(prob[sp,],mu[sp],sigma[sp])
 
-    } else if (PDF[m] == 2){ # ii) Log-Normal distribution.
-      sigmay <- sqrt(log(1+(sigma[m]/mu[m])^2))
-      muy <- log(mu[m])-(sigmay^2)/2
-      xhat[m,] <- qlnorm(Taot[m,],muy,sigmay)
+    } else if (pdf[sp] == 2){ # ii) Log-Normal distribution.
+      sigmay <- sqrt(log(1+(sigma[sp]/mu[sp])^2))
+      muy <- log(mu[sp])-(sigmay^2)/2
+      xhat[sp,] <- qlnorm(prob[sp,],muy,sigmay)
 
-    } else if (PDF[m] == 3){ # iii) Gamma 2 parameters distribution.
-      A <- (sigma[m]^2)/mu[m]
-      B <- (mu[m]/sigma[m])^2
-      xhat[m,] <- qgamma(Taot[m,],shape=B,scale=A)
+    } else if (pdf[sp] == 3){ # iii) Gamma 2 parameters distribution.
+      A <- (sigma[sp]^2)/mu[sp]
+      B <- (mu[sp]/sigma[sp])^2
+      xhat[sp,] <- qgamma(prob[sp,],shape=B,scale=A)
 
-    } else if (PDF[m] == 4){ # iv) Gamma 3 parameters distribution.
-      Bet  <- (2/skew[m])^2
-      Alp  <- sigma[m]/sqrt(Bet)
-      Gam  <- mu[m]-(Alp*Bet)
-      xhat[m,]  <- qgamma(Taot[m,],shape=Bet,scale=Alp) + Gam
+    } else if (pdf[sp] == 4){ # iv) Gamma 3 parameters distribution.
+      Bet  <- (2/skew[sp])^2
+      Alp  <- sigma[sp]/sqrt(Bet)
+      Gam  <- mu[sp]-(Alp*Bet)
+      xhat[sp,]  <- qgamma(prob[sp,],shape=Bet,scale=Alp) + Gam
 
-    } else if (PDF[m] == 5){ # v) Log-Gamma 3 parameters distribution.
-      Bety   <- (2/skewy[m])^2
-      sigmay <- sqrt(log(1+(sigma[m]/mu[m])^2))
+    } else if (pdf[sp] == 5){ # v) Log-Gamma 3 parameters distribution.
+      Bety   <- (2/skewy[sp])^2
+      sigmay <- sqrt(log(1+(sigma[sp]/mu[sp])^2))
       Alpy   <- sigmay/sqrt(Bety)
-      muy    <- log(mu[m])-(sigmay^2)/2
+      muy    <- log(mu[sp])-(sigmay^2)/2
       Gamy   <- muy - (Alpy*Bety)
-      xhat[m,]  <- exp(qgamma(Taot[m,],shape=Bety,scale=Alpy) + Gamy)
+      xhat[sp,]  <- exp(qgamma(prob[sp,],shape=Bety,scale=Alpy) + Gamy)
 
-    } else if (PDF[m] == 6){ # vi) Gumbel distribution.
+    } else if (pdf[sp] == 6){ # vi) Gumbel distribution.
       Sn <- pi/sqrt(6)
       yn <- 0.5772
-      a <- Sn/sigma[m]
-      u <- mu[m]-(yn/a)
-      xhat[m,] <- u-log(-log(Taot[m,]))/a
+      a <- Sn/sigma[sp]
+      u <- mu[sp]-(yn/a)
+      xhat[sp,] <- u-log(-log(prob[sp,]))/a
 
-    } else if (PDF[m] == 7){ # vii) Exponential distribution.
-      gamexp <- mu[m] - sigma[m]
-      xhat[m,] <- gamexp-(sigma[m]*log(1-Taot[m,]))
+    } else if (pdf[sp] == 7){ # vii) Exponential distribution.
+      gamexp <- mu[sp] - sigma[sp]
+      xhat[sp,] <- gamexp-(sigma[sp]*log(1-prob[sp,]))
     }
   }
 

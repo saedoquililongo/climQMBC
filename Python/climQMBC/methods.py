@@ -200,16 +200,16 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100,
     #    period and the modeled data. Equation 1 of Cannon et al. (2015).
     prob = getCDF(pdf_mod, mod_series, mu_mod, std_mod, skew_mod, skewy_mod)
     
-    # 3) Apply the inverse cumulative distribution function of the observed
+    # 5) Apply the inverse cumulative distribution function of the observed
     #    data, evaluated with the statistics of the observed data in the
     #    historical period, to the probabilities obtained from 2). Equation 1 of
     #    Cannon et al. (2015).
     QM_series = getCDFinv(pdf_obs, prob, mu_obs, std_obs, skew_obs, skewy_obs)
     
-    # 4) Reshape to a column vector
+    # 6) Reshape to a column vector
     QM_series = QM_series.reshape(-1, order='F')
     
-    # 5) If does not allow negative values, replace nans (should be the result 
+    # 7) If does not allow negative values, replace nans (should be the result 
     #    of correcting removed no-rain values) and replace no-rain values with 0
     if not allow_negatives:
         QM_series[np.isnan(QM_series)] = 0
@@ -651,7 +651,7 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
         
         # Apply the cumulative distribution function of the projected period,
         # evaluated with the statistics of this period, to the last data of the
-        # period. Equation 3 in Chadwick et al. (2023).
+        # period. Equation 3 in Cannon et al. (2015).
         if frq=='D':
             prob[:,j] = getCDF(pdf_win[:,j],mod_series[:,y_obs+j:y_obs+j+1], mu_win[:,j], std_win[:,j], skew_win[:,j], skewy_win[:,j])[:,0]
         else:
