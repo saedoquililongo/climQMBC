@@ -1,4 +1,4 @@
-function DQM_series = DQM(obs, mod, mult_change, allow_negatives, frq,pp_threshold,pp_factor,win)
+function DQM_series = DQM(obs, mod, mult_change, allow_negatives, frq,pp_threshold,pp_factor,win, user_pdf, pdf_obs, pdf_mod)
 %% DQM_series:
 %   This function performs bias correction of modeled series based on
 %   observed data by the Detrended Quantile Mapping (DQM) method, as 
@@ -141,6 +141,12 @@ if ~exist('win','var')
     win = 1;
 end
 
+if ~exist('user_pdf','var')
+    user_pdf = false;
+    user_obs = false;
+    user_mod = false;
+end
+
 
 % 1) Format inputs and get statistics of the observed and modeled series of
 %    the historical period (formatQM function of the climQMBC package).
@@ -168,12 +174,17 @@ end
 %    observed and modeled data in the historical period. If annual
 %    frequency is specified, this is applied to the complete historical
 %    period (getDist function of the climQMBC package).
-if frq=='D'
-    pdf_obs = getDist(reshape(obs_series_moving, 365,[]),allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
-    pdf_mod = getDist(reshape(mod_series_moving(:,:,1:y_obs), 365,[]),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+if user_pdf==false
+    if frq=='D'
+        pdf_obs = getDist(reshape(obs_series_moving, 365,[]),allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+        pdf_mod = getDist(reshape(mod_series_moving(:,:,1:y_obs), 365,[]),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+    else
+        pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+        pdf_mod = getDist(mod_series(:,1:y_obs),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+    end
 else
-    pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
-    pdf_mod = getDist(mod_series(:,1:y_obs),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+    pdf_obs = zeros(size(obs_series,1),1) + pdf_obs;
+    pdf_mod = zeros(size(mod_series,1),1) + pdf_mod;
 end
 
 % 3) Extract the long-term trend from the modeled data:

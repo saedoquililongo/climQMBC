@@ -1,4 +1,4 @@
-function UQM_series = UQM(obs, mod, mult_change, allow_negatives, frq,pp_threshold,pp_factor,win)
+function UQM_series = UQM(obs, mod, mult_change, allow_negatives, frq,pp_threshold,pp_factor,win, user_pdf, pdf_obs, pdf_mod)
 %% UQM_series:
 %   This function performs bias correction of modeled series based on
 %   observed data by the Unbiased Quantile Mapping (UQM) method, as 
@@ -138,6 +138,12 @@ if ~exist('win','var')
     win = 1;
 end
 
+if ~exist('user_pdf','var')
+    user_pdf = false;
+    user_obs = false;
+    user_mod = false;
+end
+
 % 1) Format inputs and get statistics of the observed and modeled series of
 %    the historical period (formatQM function of the climQMBC package).
 [y_obs,obs_series] = formatQM(obs, allow_negatives, frq,pp_threshold,pp_factor);
@@ -162,10 +168,15 @@ end
 
 % 2) Assign a probability distribution function to each month of the 
 %    historical period (getDist function of the climQMBC package).
-if frq=='D'
-    pdf_obs = getDist(reshape(obs_series_moving, 365,[]),allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+if user_pdf==false
+    if frq=='D'
+        pdf_obs = getDist(reshape(obs_series_moving, 365,[]),allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+    else
+        pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+    end
 else
-    pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+    pdf_obs = zeros(size(obs_series,1),1) + pdf_obs;
+    pdf_mod = zeros(size(mod_series,1),1) + pdf_mod;
 end
 
 
@@ -237,10 +248,14 @@ for j = 1:size(prob,2)
     % a) Assign a probability distribution function to each month. If
     %    annual frequency is specified, this is applied to the complete 
     %    period (getDist function of the climQMBC package).
-    if frq=='D'
-        pdf_win(:,j) = getDist(reshape(win_series(:,:,j,:),size(win_series,1),[]),allow_negatives,mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
+    if user_pdf==false
+        if frq=='D'
+            pdf_win(:,j) = getDist(reshape(win_series(:,:,j,:),size(win_series,1),[]),allow_negatives,mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
+        else
+            pdf_win(:,j) = getDist(reshape(win_series(:,j,:),size(win_series,[1,3])),allow_negatives,mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
+        end
     else
-        pdf_win(:,j) = getDist(reshape(win_series(:,j,:),size(win_series,[1,3])),allow_negatives,mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
+        pdf_win(:,j) = pdf_mod;
     end
 
     

@@ -53,43 +53,44 @@ clc
 clear all
 
 addpath('./climQMBC')  
-% var_name = {'tmax','pp'};
-% 
-% 
-% % Load observed and model data. Remember that for temperature, var = 0, and
-% % for precipitation, var = 1.
-% var = 1;
-% obs = csvread(strcat('../Sample_data/obs_',char(var_name(var+1)),'.csv'));
-% mod = csvread(strcat('../Sample_data/mod_',char(var_name(var+1)),'.csv'));
-% 
-% allow_negatives = 0;
-% mult_change = 1;
-% SDM_var = 1;
-% 
-% frq = 'A'; % 'M' for monthly data; 'A' for annual data
-% QM_series = QM(obs,mod,allow_negatives,frq);
-% DQM_series = DQM(obs,mod,mult_change,allow_negatives,frq);
-% QDM_series = QDM(obs,mod,mult_change,allow_negatives,frq);
-% UQM_series = UQM(obs,mod,mult_change,allow_negatives,frq);
-% SDM_series = SDM(obs,mod,SDM_var,frq);
 
-%% AA
-obs = csvread('../Sample_data/obs_pr_D.csv', 1,3);
-mod = csvread('../Sample_data/mod_pr_D.csv', 1,3);
+%  =============================================================================
+%  I) Montly and annual data
+%  =============================================================================
+%  variable:
+%     - pr  (precipitation)
+%     - tas (temperature)
+%  allow_negatives:
+%     - 0 (variables like precipitation)
+%     - 1 (variables like temperature)
+%  mult_change:
+%     - 0 (additive change: fut = hist + delta) 
+%     - 1 (multiplicative change: fut = hist*delta)
+%  SDM_var: (for Scaled Distribution Mapping only)
+%     - 0 (temperature: normal distribution and additive changes) 
+%     - 1 (precipitation: gamma distribution and multiplicative changes)
+%  frq:
+%     - 'D': Daily data (use in section II. Section I works for 'M' and 'A')
+%     - 'M': Monthly data (report function works only with 'M')
+%     - 'A': Anual data
 
-frq = 'D';
-allow_negatives=0;
+variable = 'pr';
 mult_change = 1;
-pp_threshold=1;
-pp_factor=1/(100*100);
-win=15;
+allow_negatives = 0;
+SDM_var = 1;
 
-% qm_series = QM(obs,mod,allow_negatives,frq,pp_threshold, pp_factor, win);
-% dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, win);
-qdm_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,pp_factor,win=win);
-uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, win);
+% Load observed and model data.
+obs = csvread(strcat('../Sample_data/obs_',variable,'_M.csv'),1,3);
+mod = csvread(strcat('../Sample_data/mod_',variable,'_M.csv'),1,3);
 
-plot(uqm_series,'o')
+
+frq = 'M'; % 'M' for monthly data; 'A' for annual data
+qm_series = QM(obs,mod,allow_negatives,frq,1,1/100,1,true,3,3);
+dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,1,1/100,1,true,3,3);
+qdm_series = QDM(obs,mod,mult_change,allow_negatives,frq,1,1/100,2,1,1,true,3,3);
+uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,1,1/100,1,true,3,3);
+% SDM_series = SDM(obs,mod,var,frq);
+
 %% Example 1
 %   Example 1 shows how to use the report function with the minimum number
 %   of inputs. The five methods available in the climQMBC package will be
@@ -122,3 +123,22 @@ plot(uqm_series,'o')
 % QDM_series = QDM(obs,mod,var,frq);
 % UQM_series = UQM(obs,mod,var,frq);
 % SDM_series = SDM(obs,mod,var,frq);
+
+
+% %% AA
+% obs = csvread('../Sample_data/obs_pr_D.csv', 1,3);
+% mod = csvread('../Sample_data/mod_pr_D.csv', 1,3);
+% 
+% frq = 'D';
+% allow_negatives=0;
+% mult_change = 1;
+% pp_threshold=1;
+% pp_factor=1/(100*100);
+% win=15;
+
+% qm_series = QM(obs,mod,allow_negatives,frq,pp_threshold, pp_factor, win);
+% dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, win);
+% qdm_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,pp_factor,win=win);
+% uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, win);
+
+% plot(uqm_series,'o')
