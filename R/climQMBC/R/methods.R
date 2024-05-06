@@ -689,7 +689,6 @@ QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
 
   # 6) Get the delta factor or relative change and apply it to the value
   #    obtained in 4b). Equation 4 and 6 of Cannon et al. (2015).
-  if mult_change:
   if (mult_change == 1){
     delta_quantile <- mod_series[,(y_obs+1):dim(mod_series)[2]]/inv_mod
     bool_undefined <- (delta_quantile>rel_change_th) & (inv_mod<inv_mod_th)

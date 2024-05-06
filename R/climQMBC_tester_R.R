@@ -122,12 +122,7 @@ mod <- matrix(mod[,variable])
 #  climQMBC package should be called. The outputs of each function are
 #  columns vector with monthly corrected data.
 
-frq <- 'A' #'M' or 'A'
-for (pdf_ in 1:7){
-  qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq, user_pdf=TRUE, pdf_obs=pdf_, pdf_mod=pdf_)
-  plot(qm_series)
-}
-
+# frq <- 'M' #'M' or 'A'
 # qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq)
 # dqm_series <- DQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq)
 # qdm_series <- QDM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq)
