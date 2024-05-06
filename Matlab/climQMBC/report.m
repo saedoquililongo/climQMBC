@@ -1,4 +1,4 @@
-function [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,var,fun,y_init,y_wind)
+function [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,SDM_var,mult_change,allow_negatives,fun,y_init,y_wind)
 %% report:
 %   This function generates two report of the performance of the different
 %   methods (QM, DQM, QDM, UQM and SDM) available in the climQMBC package.
@@ -140,6 +140,14 @@ n_mod = length(mod);
 y_mod = n_mod/12;
 
 % 1) Set non-declared arguments
+if ~exist('mult_change','var')
+  mult_change=1;
+end
+
+if ~exist('allow_negatives','var')
+  allow_negatives=1;
+end
+
 if ~exist('fun','var')
   fun = {'QM','DQM','QDM','UQM','SDM'};
 end
@@ -162,11 +170,11 @@ end
 y_wind = y_wind - y_init;
 
 % 2) Apply QM methods
-QM_series = QM(obs,mod,var);
-DQM_series = DQM(obs,mod,var);
-QDM_series = QDM(obs,mod,var);
-UQM_series = UQM(obs,mod,var);
-SDM_series = SDM(obs,mod,var);
+QM_series = QM(obs,mod,allow_negatives,'M');
+DQM_series = DQM(obs,mod,mult_change,allow_negatives,'M');
+QDM_series = QDM(obs,mod,mult_change,allow_negatives,'M');
+UQM_series = UQM(obs,mod,mult_change,allow_negatives,'M');
+SDM_series = SDM(obs,mod,SDM_var,'M');
 
 % 3) Get observed, modeled and bias corrected statistics
 % a) Get obs, mod, and QMs as [12 x n] matrix
@@ -320,7 +328,7 @@ ds_QDM_Mw = zeros(12,length(y_wind));
 ds_UQM_Mw = zeros(12,length(y_wind));
 ds_SDM_Mw = zeros(12,length(y_wind));
 
-if var == 1
+if mult_change == 1
     dm_obs = mu_QM_h/mu_obs;
     dm_mod = mu_mod_f/mu_mod_h;
     dm_QM = mu_QM_f/mu_QM_h;
@@ -465,39 +473,39 @@ n = 3; % Number of decimals to which round the values
 sp = ['-',' ',' ']; % A small trick to prevent negative values to use more
                     % space than positive values
 
-rep_mu_M = ['Modeled          :' ' ' sp(sign(dm_mod)+2) num2str(abs(roundn(dm_mod,-n)))];
-rep_mu_QM = ['QM               :' ' ' sp(sign(dm_QM)+2) num2str(abs(roundn(dm_QM,-n)))];
-rep_mu_DQM = ['DQM              :' ' ' sp(sign(dm_DQM)+2) num2str(abs(roundn(dm_DQM,-n)))];
-rep_mu_QDM = ['QDM              :' ' ' sp(sign(dm_QDM)+2) num2str(abs(roundn(dm_QDM,-n)))];
-rep_mu_UQM = ['UQM              :' ' ' sp(sign(dm_UQM)+2) num2str(abs(roundn(dm_UQM,-n)))];
-rep_mu_SDM = ['SDM              :' ' ' sp(sign(dm_SDM)+2) num2str(abs(roundn(dm_SDM,-n)))];
+rep_mu_M = ['Modeled          :' ' ' sp(sign(dm_mod)+2) num2str(abs(round(dm_mod,n)))];
+rep_mu_QM = ['QM               :' ' ' sp(sign(dm_QM)+2) num2str(abs(round(dm_QM,n)))];
+rep_mu_DQM = ['DQM              :' ' ' sp(sign(dm_DQM)+2) num2str(abs(round(dm_DQM,n)))];
+rep_mu_QDM = ['QDM              :' ' ' sp(sign(dm_QDM)+2) num2str(abs(round(dm_QDM,n)))];
+rep_mu_UQM = ['UQM              :' ' ' sp(sign(dm_UQM)+2) num2str(abs(round(dm_UQM,n)))];
+rep_mu_SDM = ['SDM              :' ' ' sp(sign(dm_SDM)+2) num2str(abs(round(dm_SDM,n)))];
 
-rep_s_M = ['Modeled          :' ' ' sp(sign(ds_mod)+2) num2str(abs(roundn(ds_mod,-n)))];
-rep_s_QM = ['QM               :' ' ' sp(sign(ds_QM)+2) num2str(abs(roundn(ds_QM,-n)))];
-rep_s_DQM = ['DQM              :' ' ' sp(sign(ds_DQM)+2) num2str(abs(roundn(ds_DQM,-n)))];
-rep_s_QDM = ['QDM              :' ' ' sp(sign(ds_QDM)+2) num2str(abs(roundn(ds_QDM,-n)))];
-rep_s_UQM = ['UQM              :' ' ' sp(sign(ds_UQM)+2) num2str(abs(roundn(ds_UQM,-n)))];
-rep_s_SDM = ['SDM              :' ' ' sp(sign(ds_SDM)+2) num2str(abs(roundn(ds_SDM,-n)))];
+rep_s_M = ['Modeled          :' ' ' sp(sign(ds_mod)+2) num2str(abs(round(ds_mod,n)))];
+rep_s_QM = ['QM               :' ' ' sp(sign(ds_QM)+2) num2str(abs(round(ds_QM,n)))];
+rep_s_DQM = ['DQM              :' ' ' sp(sign(ds_DQM)+2) num2str(abs(round(ds_DQM,n)))];
+rep_s_QDM = ['QDM              :' ' ' sp(sign(ds_QDM)+2) num2str(abs(round(ds_QDM,n)))];
+rep_s_UQM = ['UQM              :' ' ' sp(sign(ds_UQM)+2) num2str(abs(round(ds_UQM,n)))];
+rep_s_SDM = ['SDM              :' ' ' sp(sign(ds_SDM)+2) num2str(abs(round(ds_SDM,n)))];
 
 for w = 1:length(y_wind)
-    rep_mu_M = [rep_mu_M '  ; ' sp(sign(dm_mod_w(w))+2) num2str(abs(roundn(dm_mod_w(w),-n)))];
-    rep_mu_QM = [rep_mu_QM '  ; ' sp(sign(dm_QM_w(w))+2) num2str(abs(roundn(dm_QM_w(w),-n)))];
-    rep_mu_DQM = [rep_mu_DQM '  ; ' sp(sign(dm_DQM_w(w))+2) num2str(abs(roundn(dm_DQM_w(w),-n)))];
-    rep_mu_QDM = [rep_mu_QDM '  ; ' sp(sign(dm_QDM_w(w))+2) num2str(abs(roundn(dm_QDM_w(w),-n)))];
-    rep_mu_UQM = [rep_mu_UQM '  ; ' sp(sign(dm_UQM_w(w))+2) num2str(abs(roundn(dm_UQM_w(w),-n)))];
-    rep_mu_SDM = [rep_mu_SDM '  ; ' sp(sign(dm_SDM_w(w))+2) num2str(abs(roundn(dm_SDM_w(w),-n)))];
+    rep_mu_M = [rep_mu_M '  ; ' sp(sign(dm_mod_w(w))+2) num2str(abs(round(dm_mod_w(w),n)))];
+    rep_mu_QM = [rep_mu_QM '  ; ' sp(sign(dm_QM_w(w))+2) num2str(abs(round(dm_QM_w(w),n)))];
+    rep_mu_DQM = [rep_mu_DQM '  ; ' sp(sign(dm_DQM_w(w))+2) num2str(abs(round(dm_DQM_w(w),n)))];
+    rep_mu_QDM = [rep_mu_QDM '  ; ' sp(sign(dm_QDM_w(w))+2) num2str(abs(round(dm_QDM_w(w),n)))];
+    rep_mu_UQM = [rep_mu_UQM '  ; ' sp(sign(dm_UQM_w(w))+2) num2str(abs(round(dm_UQM_w(w),n)))];
+    rep_mu_SDM = [rep_mu_SDM '  ; ' sp(sign(dm_SDM_w(w))+2) num2str(abs(round(dm_SDM_w(w),n)))];
     
-    rep_s_M = [rep_s_M '  ; ' sp(sign(ds_mod_w(w))+2) num2str(abs(roundn(ds_mod_w(w),-n)))];
-    rep_s_QM = [rep_s_QM '  ; ' sp(sign(ds_QM_w(w))+2) num2str(abs(roundn(ds_QM_w(w),-n)))];
-    rep_s_DQM = [rep_s_DQM '  ; ' sp(sign(ds_DQM_w(w))+2) num2str(abs(roundn(ds_DQM_w(w),-n)))];
-    rep_s_QDM = [rep_s_QDM '  ; ' sp(sign(ds_QDM_w(w))+2) num2str(abs(roundn(ds_QDM_w(w),-n)))];
-    rep_s_UQM = [rep_s_UQM '  ; ' sp(sign(ds_UQM_w(w))+2) num2str(abs(roundn(ds_UQM_w(w),-n)))];
-    rep_s_SDM = [rep_s_SDM '  ; ' sp(sign(ds_SDM_w(w))+2) num2str(abs(roundn(ds_SDM_w(w),-n)))];
+    rep_s_M = [rep_s_M '  ; ' sp(sign(ds_mod_w(w))+2) num2str(abs(round(ds_mod_w(w),n)))];
+    rep_s_QM = [rep_s_QM '  ; ' sp(sign(ds_QM_w(w))+2) num2str(abs(round(ds_QM_w(w),n)))];
+    rep_s_DQM = [rep_s_DQM '  ; ' sp(sign(ds_DQM_w(w))+2) num2str(abs(round(ds_DQM_w(w),n)))];
+    rep_s_QDM = [rep_s_QDM '  ; ' sp(sign(ds_QDM_w(w))+2) num2str(abs(round(ds_QDM_w(w),n)))];
+    rep_s_UQM = [rep_s_UQM '  ; ' sp(sign(ds_UQM_w(w))+2) num2str(abs(round(ds_UQM_w(w),n)))];
+    rep_s_SDM = [rep_s_SDM '  ; ' sp(sign(ds_SDM_w(w))+2) num2str(abs(round(ds_SDM_w(w),n)))];
 end
 
 % b) Table
 disp('<strong>Mean</strong>')
-disp(['QM performance in historical period  :' ' ' sp(sign(dm_obs)+2) num2str(abs(roundn(dm_obs,-n)))])
+disp(['QM performance in historical period  :' ' ' sp(sign(dm_obs)+2) num2str(abs(round(dm_obs,n)))])
 disp(rep_head)
 disp(rep_mu_M)
 if any(strcmp(fun,'QM'))
@@ -518,7 +526,7 @@ end
 disp(' ')
 
 disp('<strong>Standard deviation</strong>')
-disp(['QM performance in historical period  :' ' ' sp(sign(ds_obs)+2) num2str(abs(roundn(ds_obs,-n)))])
+disp(['QM performance in historical period  :' ' ' sp(sign(ds_obs)+2) num2str(abs(round(ds_obs,n)))])
 disp(rep_head)
 disp(rep_s_M)
 if any(strcmp(fun,'QM'))
@@ -583,7 +591,7 @@ if any(strcmp(fun,'SDM'))
 end
 hold off
 title('Empirical cumulative ditribution functions')
-if var ==1
+if mult_change ==1
     xlabel('Precipitation (mm)') 
 else
     xlabel('Temperature (C)') 
@@ -621,7 +629,7 @@ end
 plot(obs,'r')
 lgnd{end+1} = 'Obs';
 hold off
-if var ==1
+if mult_change ==1
     title('Precipitation time series')
     ylabel('Precipitation (mm)') 
 else
@@ -673,9 +681,9 @@ if any(strcmp(fun,'SDM'))
     plot(mu_SDM_Mf,'m')
     lgnd{end+1} = 'SDM';
 end
-if var==1
+if mult_change==1
     plot(mu_obs_M.*dm_mod_M ,'r')
-elseif var ==0
+elseif mult_change ==0
     plot(mu_obs_M+dm_mod_M ,'r')
 end
 lgnd{end+1} = 'Obj';
@@ -705,9 +713,9 @@ for w=1:length(y_wind)
     if any(strcmp(fun,'SDM'))
         plot(mu_SDM_Mw(:,w),'m')
     end
-    if var==1
+    if mult_change==1
         plot(mu_obs_M.*dm_mod_Mw(:,w) ,'r')
-    elseif var ==0
+    elseif mult_change ==0
         plot(mu_obs_M+dm_mod_Mw(:,w) ,'r')
     end
     hold off
@@ -759,9 +767,9 @@ if any(strcmp(fun,'SDM'))
     plot(s_SDM_Mf,'m')
     lgnd{end+1} = 'SDM';
 end
-if var==1
+if mult_change==1
     plot(s_obs_M.*ds_mod_M ,'r')
-elseif var ==0
+elseif mult_change ==0
     plot(s_obs_M+ds_mod_M ,'r')
 end
 lgnd{end+1} = 'Obj';
@@ -791,9 +799,9 @@ for w=1:length(y_wind)
     if any(strcmp(fun,'SDM'))
         plot(s_SDM_Mw(:,w),'m')
     end
-    if var==1
+    if mult_change==1
         plot(s_obs_M.*ds_mod_Mw(:,w) ,'r')
-    elseif var ==0
+    elseif mult_change ==0
         plot(s_obs_M+ds_mod_Mw(:,w) ,'r')
     end
     hold off

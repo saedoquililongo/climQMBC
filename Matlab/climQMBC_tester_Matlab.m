@@ -84,13 +84,6 @@ obs = csvread(strcat('../Sample_data/obs_',variable,'_M.csv'),1,3);
 mod = csvread(strcat('../Sample_data/mod_',variable,'_M.csv'),1,3);
 
 
-frq = 'M'; % 'M' for monthly data; 'A' for annual data
-qm_series = QM(obs,mod,allow_negatives,frq,1,1/100,1,true,3,3);
-dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,1,1/100,1,true,3,3);
-qdm_series = QDM(obs,mod,mult_change,allow_negatives,frq,1,1/100,2,1,1,true,3,3);
-uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,1,1/100,1,true,3,3);
-% SDM_series = SDM(obs,mod,var,frq);
-
 %% Example 1
 %   Example 1 shows how to use the report function with the minimum number
 %   of inputs. The five methods available in the climQMBC package will be
@@ -99,7 +92,7 @@ uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,1,1/100,1,true,3,3);
 %   of the modeled period. Remember that the projected periods length is
 %   equal to the length of the historical period.
 
-% [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,var);
+% [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,SDM_var,mult_change,allow_negatives);
 
 
 %% Example 2
@@ -109,7 +102,7 @@ uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,1,1/100,1,true,3,3);
 %   (SDM) methods will be reported. The report will analyze the projected
 %   periods centered in 2035 2060 and 2080.
 
-% [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,var,{'QDM','UQM','SDM'},1979,[2035 2060 2080]);
+[QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,SDM_var,mult_change,allow_negatives,{'QDM','UQM','SDM'},1979,[2035 2060 2080]);
 
 
 %% Example 3
