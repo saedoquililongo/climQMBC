@@ -102,7 +102,7 @@ mod = csvread(strcat('../Sample_data/mod_',variable,'_M.csv'),1,3);
 %   (SDM) methods will be reported. The report will analyze the projected
 %   periods centered in 2035 2060 and 2080.
 
-[QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,SDM_var,mult_change,allow_negatives,{'QDM','UQM','SDM'},1979,[2035 2060 2080]);
+% [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,SDM_var,mult_change,allow_negatives,{'QDM','UQM','SDM'},1979,[2035 2060 2080]);
 
 
 %% Example 3
@@ -110,28 +110,31 @@ mod = csvread(strcat('../Sample_data/mod_',variable,'_M.csv'),1,3);
 %   climQMBC package should be called. The outputs of each function are
 %   columns vector with monthly corrected data.
 
-% frq = 'M'; % 'M' for monthly data; 'A' for annual data
-% QM_series = QM(obs,mod,var,frq);
-% DQM_series = DQM(obs,mod,var,frq);
-% QDM_series = QDM(obs,mod,var,frq);
-% UQM_series = UQM(obs,mod,var,frq);
+frq = 'A'; % 'M' for monthly data; 'A' for annual data
+% QM_series = QM(obs,mod,allow_negatives,frq);
+% DQM_series = DQM(obs,mod,mult_change,allow_negatives,frq);
+% QDM_series = QDM(obs,mod,mult_change,allow_negatives,frq);
+% UQM_series = UQM(obs,mod,mult_change,allow_negatives,frq);
 % SDM_series = SDM(obs,mod,var,frq);
 
 
 % %% AA
-% obs = csvread('../Sample_data/obs_pr_D.csv', 1,3);
-% mod = csvread('../Sample_data/mod_pr_D.csv', 1,3);
-% 
-% frq = 'D';
-% allow_negatives=0;
-% mult_change = 1;
-% pp_threshold=1;
-% pp_factor=1/(100*100);
-% win=15;
+obs = csvread('../Sample_data/obs_pr_D.csv', 1,4);
+mod = csvread('../Sample_data/mod_pr_D.csv', 1,4);
 
-% qm_series = QM(obs,mod,allow_negatives,frq,pp_threshold, pp_factor, win);
-% dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, win);
-% qdm_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,pp_factor,win=win);
-% uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, win);
+frq = 'D';
+allow_negatives=0;
+mult_change = 1;
+pp_threshold=1;
+pp_factor=1/(100*100);
+day_win=15;
+
+
+% qm_series = QM(obs,mod,allow_negatives,frq,pp_threshold, pp_factor, day_win,true,3,3);
+% dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, day_win,true,1,1);
+% qdm_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,pp_factor,2,pp_threshold,day_win);
+uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, day_win);
 
 % plot(uqm_series,'o')
+
+csvwrite('../../UQM.txt',uqm_series);

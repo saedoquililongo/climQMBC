@@ -1,4 +1,4 @@
-function PDF = getDist(series,allow_negatives, mu,sigma,skew,skewy)
+function [pdf,ks_fail] = getDist(series,allow_negatives, mu,sigma,skew,skewy)
 %% getDist:
 %   This function assigns an independent probability distribution function
 %   to each row of the input series by comparing the empirical probability
@@ -91,90 +91,82 @@ function PDF = getDist(series,allow_negatives, mu,sigma,skew,skewy)
 %%
 % 1) Get the number of years to compute the empirical distribution in step 
 %    3) and get the number of rows of the input series.
-y_series = size(series,2);
-n = size(series,1);
+nrows = size(series,1);
 
 % 2) Initialize column vectors for the statistics needed for the available
 %    probability distribution functions.
-PDF = zeros(n,1);
-sigmay = zeros(n,1);
-muy    = zeros(n,1);
-A      = zeros(n,1);
-B      = zeros(n,1);
-Alp    = zeros(n,1);
-Bet    = zeros(n,1);
-Gam    = zeros(n,1);
-Alpy   = zeros(n,1);
-Bety   = zeros(n,1);
-Gamy   = zeros(n,1);
-a      = zeros(n,1);
-u      = zeros(n,1);
+pdf = zeros(nrows,1);
 
+ks_fail = 0;
 % 3) Perform the Kolmogorov-Smirnov test for each row.
-for m=1:n
-    
+for sp=1:nrows
+    series_sub = series(sp,:);
+
+    series_sub = series_sub(~isnan(series_sub));
+    y_series = length(series_sub);
+
     % a) Get empirical distribution.
-    sortdata = sort(series(m,:))'; 
+    sortdata = sort(series_sub)'; 
     probEmp = (1/(y_series+1):1/(y_series+1):y_series/(y_series+1))';
 
     % b) Compare distributions.
     % i) Normal distribution.
-    normal = normcdf(sortdata,mu(m),sigma(m));
+    normal = normcdf(sortdata,mu(sp),sigma(sp));
     KSnormal = max(abs(normal-probEmp));
 
     % ii) Log Normal distribution.
-    if any(series(m,:) < 0)
+    if any(series(sp,:) < 0)
         KSlognormal = 1;
     else
-        sigmay(m)= sqrt(log(1+(sigma(m)/mu(m))^2));
-        muy(m)   = log(mu(m))-(sigmay(m)^2)/2;
-        lognormal  = logncdf(sortdata,muy(m),sigmay(m));
+        sigmay= sqrt(log(1+(sigma(sp)/mu(sp))^2));
+        muy   = log(mu(sp))-(sigmay^2)/2;
+        lognormal  = logncdf(sortdata,muy,sigmay);
         KSlognormal = max(abs(lognormal-probEmp));
     end
     
     % iii) Gamma 2 parameters distribution.
-    if any(series(m,:) < 0)
+    if any(series(sp,:) < 0)
         KSgammaII = 1;
     else
-        A(m)   = (sigma(m)^2)/mu(m); 
-        B(m)   = (mu(m)/sigma(m))^2;
-        GammaII  = gamcdf(sortdata,B(m),A(m));
+        A   = (sigma(sp)^2)/mu(sp); 
+        B   = (mu(sp)/sigma(sp))^2;
+        GammaII  = gamcdf(sortdata,B,A);
         KSgammaII = max(abs(GammaII-probEmp));
     end
 
     % iv) Gamma 3 parameters distribution.
     %     (Pearson 3 parameters distribution)
-    Bet(m)  = (2/skew(m))^2; 
-    Alp(m)  = sigma(m)/sqrt(Bet(m));
-    Gam(m)  = mu(m)-(Alp(m)*Bet(m));
-    GammaIII  = gamcdf((sortdata-Gam(m)),Bet(m),Alp(m));
+    Bet  = (2/skew(sp))^2; 
+    Alp  = sigma(sp)/sqrt(Bet);
+    Gam  = mu(sp)-(Alp*Bet);
+    GammaIII  = gamcdf((sortdata-Gam),Bet,Alp);
     KSgammaIII = max(abs(GammaIII-probEmp));
 
     % v) Log-Gamma 3 parameters distribution.
     %    (Log-Pearson 3 parameters distribution)
-    if any(series(m,:) < 0)
+    if any(series(sp,:) < 0)
         KSLpIII = 1;
     else
-        Bety(m) = (2/skewy(m))^2;
-        Alpy(m) = sigmay(m)/sqrt(Bety(m));
-        Gamy(m) = muy(m)-(Alpy(m)*Bety(m));
+        Bety = (2/skewy(sp))^2;
+        Alpy = sigmay/sqrt(Bety);
+        Gamy = muy-(Alpy*Bety);
         Lnsortdata = log(sortdata);
         Lnsortdata(isinf(Lnsortdata)) = log(0.01); 
-        LpIII  = gamcdf((Lnsortdata-Gamy(m)),Bety(m),Alpy(m));
+        LpIII  = gamcdf((Lnsortdata-Gamy),Bety,Alpy);
         KSLpIII = max(abs(LpIII-probEmp));
     end
 
     % vi) Gumbel distribution.
     Sn    = pi/sqrt(6);
     yn    = 0.5772;
-    a(m) = Sn/sigma(m);
-    u(m) = mu(m)-(yn/a(m));
-    gumbel = exp(-exp(-a(m).*(sortdata-u(m))));
+    a = Sn/sigma(sp);
+    u = mu(sp)-(yn/a);
+    gumbel = exp(-exp(-a.*(sortdata-u)));
     KSgumbel = max(abs(gumbel-probEmp));
 
     % vii) Exponential distribution.
-    gamexp = mu(m)-sigma(m);
-    exponential = max(1-exp(-1/sigma(m)*(sortdata-gamexp)),0);
+    gamexp = mu(sp)-sigma(sp);
+    exponential = max(1-exp(-1/sigma(sp)*(sortdata-gamexp)),0);
     KSexponential= max(abs(exponential-probEmp));
     
     % c) If variable is precipitation, set KS=1 to distributions that allow
@@ -184,12 +176,17 @@ for m=1:n
         KSgammaIII=1;
         KSgumbel=1;
         KSexponential=1;
+
+        KSLpIII = 1;
     end
     
     % d) The distribution with lower KS value is considered for each month.
-    [~,bestPDF]= min([KSnormal,KSlognormal,KSgammaII,KSgammaIII,...
-        KSLpIII,KSgumbel,KSexponential]);
+    KS_vals = [KSnormal,KSlognormal,KSgammaII,KSgammaIII, KSLpIII,KSgumbel,KSexponential];
+    [min_KS,bestPDF]= min(KS_vals);
 
-    PDF(m)= bestPDF;
+    ks_crit = 1.3581/sqrt(y_series);
+    ks_fail = ks_fail + (sign(min_KS-ks_crit)+1)/2;
+
+    pdf(sp)= bestPDF;
 end
 end

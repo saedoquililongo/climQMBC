@@ -20,7 +20,7 @@ get_pp_threshold_mod <- function(obs, mod, pp_threshold){
   mod_sort_descending <- sort(mod[1:length(obs)], decreasing=TRUE)
   days_kept <- min(obs_rainday_hist, length(obs))
   
-  if (days_kept!=obs_rainday_hist){
+  if (days_kept!=length(obs)){
     pp_threshold_mod <- mod_sort_descending[days_kept+1]
   } else {
     pp_threshold_mod <- 0
@@ -183,7 +183,7 @@ projected_backward_moving_window <- function(series, projected_win, frq){
 }
 
 
-#' projected_backward_moving_window
+#' set_norain_to_nan
 #'
 #' This function replace no-rain values with nans, leaving a minimum amout of values (min_rainday) to fit a distribution. If fewer than min_rainday values are above pp_threshold, random small values will be added.
 #'

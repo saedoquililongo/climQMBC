@@ -153,8 +153,8 @@ pp_threshold=1
 pp_factor=1/10000
 
 # Load observed and model data.
-# obs = pd.read_csv(f'../Sample_data/obs_{variable}_D.csv')[[variable]].values
-# mod = pd.read_csv(f'../Sample_data/mod_{variable}_D.csv')[[variable]].values
+obs = pd.read_csv(f'../Sample_data/obs_{variable}_D.csv')[[variable]].values
+mod = pd.read_csv(f'../Sample_data/mod_{variable}_D.csv')[[variable]].values
 
 # Example 4
 # Example 4 shows how each bias correction method available in the
@@ -162,24 +162,25 @@ pp_factor=1/10000
 # columns vector with daily corrected data.
 
 # qm_series = QM(obs, mod, allow_negatives=allow_negatives, frq=frq, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=2, pdf_mod=2)
-# dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=2, pdf_mod=2)
-# qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor, user_pdf=True, pdf_obs=2, pdf_mod=2)
-# uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
+# dqm_series = DQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)#, user_pdf=True, pdf_obs=0, pdf_mod=0)
+# qdm_series = QDM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)#, user_pdf=True, pdf_obs=2, pdf_mod=2)
+uqm_series = UQM(obs, mod, allow_negatives=allow_negatives, frq=frq, mult_change=mult_change, day_win=day_win, pp_threshold=pp_threshold, pp_factor=pp_factor)
 # sdm_series = SDM(obs, mod, SDM_var, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
 
 
-import matplotlib.pylab as plt
+# import matplotlib.pylab as plt
 
-plt.plot(uqm_series, 'o')
+# plt.plot(uqm_series, 'o')
 
 # # %%
+# %%
 
-# df__ = pd.read_csv('../../SDM.csv', index_col=0)
-# df__['R'] = df__['V1']
+df__ = pd.read_csv('../../UQM.txt', header=None)
+df__['M'] = df__.iloc[:,0]
 
-# df__['Python'] = sdm_series
+df__['Python'] = uqm_series
 
-# df__.plot.scatter(x='R',y='Python')
+df__.plot.scatter(x='M',y='Python')
 # plt.grid()
 # plt.xlim(0,4)
 # plt.ylim(0,4)

@@ -1,4 +1,4 @@
-function [mu, sigma, skew, skewy] = getStats(series, frq)
+function  series_moving = day_centered_moving_window(series, day_win)
 %% formatQM:
 % This function formats the inputs and gets basic statistics for the
 % different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available
@@ -139,30 +139,8 @@ function [mu, sigma, skew, skewy] = getStats(series, frq)
 % Revision: 1, updated Jul 2022
 
 %%
-if frq == 'D'
-    if length(size(series)) == 4
-        dim_stats = [2 4];
-    else
-        dim_stats = 2;
-    end
-else
-    if length(size(series)) == 3
-        dim_stats = 3;
-    else
-        dim_stats = 2;
-    end
-end
-
-% 4) If monthly data is specified, get monthly mean, standard deviation, 
-%    skewness, and log-skewness for the historical period of the observed
-%    and modeled series. If annual data is specified, get monthly mean,
-%    standard deviation, skewness, and log-skewness for the historical
-%    period of the observed and modeled series.
-mu  = nanmean(series,dim_stats);     % Mean
-sigma = nanstd(series,0,dim_stats);  % Standard deviation
-skew = skewness(series,0,dim_stats); % Skewness
-series_log = log(series);
-series_log(isinf(series_log)) = log(0.01);
-skewy = skewness(series_log,0,dim_stats);    % Log-skewness
+series_moving = cat(1,series(end-day_win+1:end,:),repmat(series, [day_win*2,1]),series(1:day_win,:));
+series_moving = reshape(series_moving,[size(series,1)+1, day_win*2, size(series,2)]);
+series_moving = series_moving(1:end-1,2:end,:);
 
 end

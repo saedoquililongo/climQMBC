@@ -1,4 +1,4 @@
-function [mu, sigma, skew, skewy] = getStats(series, frq)
+function win_series = projected_backward_moving_window(series, projected_win, frq)
 %% formatQM:
 % This function formats the inputs and gets basic statistics for the
 % different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available
@@ -139,30 +139,19 @@ function [mu, sigma, skew, skewy] = getStats(series, frq)
 % Revision: 1, updated Jul 2022
 
 %%
-if frq == 'D'
-    if length(size(series)) == 4
-        dim_stats = [2 4];
-    else
-        dim_stats = 2;
-    end
-else
-    if length(size(series)) == 3
-        dim_stats = 3;
-    else
-        dim_stats = 2;
-    end
-end
 
-% 4) If monthly data is specified, get monthly mean, standard deviation, 
-%    skewness, and log-skewness for the historical period of the observed
-%    and modeled series. If annual data is specified, get monthly mean,
-%    standard deviation, skewness, and log-skewness for the historical
-%    period of the observed and modeled series.
-mu  = nanmean(series,dim_stats);     % Mean
-sigma = nanstd(series,0,dim_stats);  % Standard deviation
-skew = skewness(series,0,dim_stats); % Skewness
-series_log = log(series);
-series_log(isinf(series_log)) = log(0.01);
-skewy = skewness(series_log,0,dim_stats);    % Log-skewness
+if frq == 'D'
+    y_mod = size(series,3);
+    day_win = (size(series,2)+1)/2;
+
+    win_series = cat(3, repmat(series, [1,1,projected_win]),zeros(size(series,1), day_win*2-1, projected_win));
+    win_series = reshape(win_series, [size(series,1), day_win*2-1, y_mod+1, projected_win]);
+    win_series = win_series(:,:,2:(y_mod-projected_win+1),:);
+else
+    y_mod = size(series,2);
+
+    win_series = [repmat(series,1,y_obs), zeros(size(series,1),projected_win)];
+    win_series = reshape(win_series,[size(series,1),y_mod+1,projected_win]);
+    win_series = win_series(:,2:end-projected_win,:);
 
 end

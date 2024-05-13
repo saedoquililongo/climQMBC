@@ -1,4 +1,4 @@
-function QDM_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,pp_factor, rel_change_th,inv_mod_th, win, user_pdf, pdf_obs, pdf_mod)
+function QDM_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,pp_factor, rel_change_th,inv_mod_th, day_win, user_pdf, pdf_obs, pdf_mod)
 %% QDM_series:
 %   This function performs bias correction of modeled series based on
 %   observed data by the Quantile Delta Mapping (QDM) method, as described
@@ -155,76 +155,73 @@ if ~exist('inv_mod_th','var')
     inv_mod_th = pp_threshold;
 end
 
-if ~exist('win','var')
-    win = 1;
+if ~exist('day_win','var')
+    day_win = 1;
 end
 
 if ~exist('user_pdf','var')
     user_pdf = false;
-    user_obs = false;
-    user_mod = false;
+    pdf_obs = false;
+    pdf_mod = false;
 end
 
+if (frq=='D' & allow_negatives==false)
+    pp_threshold_mod = get_pp_threshold_mod(obs, mod, pp_threshold);
+else
+pp_threshold_mod = pp_threshold;
+end
 
 % 1) Format inputs and get statistics of the observed and modeled series of
 %    the historical period (formatQM function of the climQMBC package).
 [y_obs,obs_series] = formatQM(obs, allow_negatives, frq,pp_threshold,pp_factor);
-[y_mod,mod_series] = formatQM(mod, allow_negatives, frq,pp_threshold,pp_factor);
+[y_mod,mod_series] = formatQM(mod, allow_negatives, frq,pp_threshold_mod,pp_factor);
 
 if frq=='D'
-    obs_series_moving = cat(1,obs_series(end-win+1:end,:),repmat(obs_series, [win*2,1]),obs_series(1:win,:));
-    obs_series_moving = reshape(obs_series_moving,[size(obs_series,1)+1, win*2, size(obs_series,2)]);
-    obs_series_moving = obs_series_moving(1:end-1,2:end,:);
+    obs_series_moving = day_centered_moving_window(obs_series, day_win);
+    mod_series_moving = day_centered_moving_window(mod_series, day_win);
 
-    mod_series_moving = cat(1,mod_series(end-win+1:end,:),repmat(mod_series, [win*2,1]),mod_series(1:win,:));
-    mod_series_moving = reshape(mod_series_moving,[size(mod_series,1)+1, win*2, size(mod_series,2)]);
-    mod_series_moving = mod_series_moving(1:end-1,2:end,:);
+    win_series = projected_backward_moving_window(mod_series_moving, y_obs, frq);
+
+    obs_series_moving = reshape(permute(obs_series_moving, [1,3,2]),[365,(2*day_win-1)*y_obs]);
+    modh_series_moving = reshape(permute(mod_series_moving(:,:,1:y_obs), [1,3,2]),[365,(2*day_win-1)*y_obs]);
+
+    win_series_moving = reshape(permute(win_series,[1,4,2,3]), [365, (2*day_win-1)*y_obs, y_mod-y_obs]);
+    
+    if allow_negatives==false
+        obs_series_moving = set_norain_to_nan(obs_series_moving, pp_threshold, pp_factor);
+        modh_series_moving = set_norain_to_nan(modh_series_moving, pp_threshold_mod, pp_factor);
+        mod_series(mod_series<pp_threshold_mod) = NaN;
+        win_series_moving = set_norain_to_nan(win_series_moving, pp_threshold_mod, pp_factor);
+    end
 
     [mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series_moving, frq);
-    [mu_mod, std_mod, skew_mod, skewy_mod] = getStats(mod_series_moving(:,:,1:y_obs), frq);
-    
+    [mu_mod, std_mod, skew_mod, skewy_mod] = getStats(modh_series_moving, frq);
+    [mu_win, std_win, skew_win, skewy_win] = getStats(win_series_moving, frq);
 else
+    win_series = projected_backward_moving_window(mod_series, y_obs, frq);
+
     [mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series, frq);
     [mu_mod, std_mod, skew_mod, skewy_mod] = getStats(mod_series(:,1:y_obs), frq);
+    [mu_win, std_win, skew_win, skewy_win] = getStats(win_series, frq);
 end
 
 % 2) Assign a probability distribution function to each month of the 
 %    historical period (getDist function of the climQMBC package).
 if user_pdf==false
     if frq=='D'
-        pdf_obs = getDist(reshape(obs_series_moving, 365,[]),allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
-        pdf_mod = getDist(reshape(mod_series_moving(:,:,1:y_obs), 365,[]),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+        [pdf_obs, ks_fail_obs] = getDist(obs_series_moving,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+        [pdf_mod, ks_fail_mod] = getDist(modh_series_moving,allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
     else
-        pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
-        pdf_mod = getDist(mod_series(:,1:y_obs),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+        [pdf_obs, ks_fail_obs] = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+        [pdf_mod, ks_fail_mod] = getDist(mod_series(:,1:y_obs),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
     end
 else
     pdf_obs = zeros(size(obs_series,1),1) + pdf_obs;
     pdf_mod = zeros(size(mod_series,1),1) + pdf_mod;
 end
 
-if frq == 'D'
-    win_series = cat(3, repmat(mod_series_moving, [1,1,y_obs]),zeros(size(mod_series,1), win*2-1, y_obs));
-    win_series = reshape(win_series, [size(mod_series,1), win*2-1, y_mod+1, y_obs]);
-    win_series = win_series(:,:,2:(y_mod-y_obs+1),:);
-
-    [mu_win, std_win, skew_win, skewy_win] = getStats(win_series, frq);
-
-    mu_win = reshape(mu_win, 365, []);
-    std_win = reshape(std_win, 365, []);
-    skew_win = reshape(skew_win, 365, []);
-    skewy_win = reshape(skewy_win, 365, []);
-
-else
-    win_series = [repmat(mod_series,1,y_obs), zeros(size(mod_series,1),y_obs)];
-    win_series = reshape(win_series,[size(mod_series,1),y_mod+1,y_obs]);
-    win_series = win_series(:,2:end-y_obs,:);
-
-    [mu_win, std_win, skew_win, skewy_win] = getStats(win_series, frq);
-end
-
-
 % 3) For each projected period:
+ks_fail_win = 0;
 pdf_win = zeros(size(mod_series,1),size(mod_series,2)-y_obs);
 prob = zeros(size(mod_series,1),size(mod_series,2)-y_obs);
 for j = 1:size(prob,2)
@@ -236,10 +233,12 @@ for j = 1:size(prob,2)
     %    period (getDist function of the climQMBC package).
     if user_pdf==false
         if frq=='D'
-            pdf_win(:,j) = getDist(reshape(win_series(:,:,j,:),size(win_series,1),[]),allow_negatives,mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
+            [pdf_win(:,j), ks_fail_wtemp] = getDist(win_series_moving(:,:,j),allow_negatives,mu_win(:,:,j),std_win(:,:,j),skew_win(:,:,j),skewy_win(:,:,j));
         else
-            pdf_win(:,j) = getDist(reshape(win_series(:,j,:),size(win_series,[1,3])),allow_negatives,mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
+            [pdf_win(:,j), ks_fail_wtemp] = getDist(reshape(win_series(:,j,:),size(win_series,[1,3])),allow_negatives,mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
         end
+        ks_fail_win = ks_fail_win + ks_fail_wtemp;
+
     else
         pdf_win(:,j) = pdf_mod;
     end
@@ -251,12 +250,10 @@ for j = 1:size(prob,2)
     %    data of the period (getCDF function of the climQMBC package).
     %    Equation 3 of Cannon et al. (2015).
     if frq=='D'
-        prob(:,j) = getCDF(pdf_win(:,j),win_series(:,win,j,end),mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
+        prob(:,j) = getCDF(pdf_win(:,j),mod_series(:,y_obs+j),mu_win(:,:,j),std_win(:,:,j),skew_win(:,:,j),skewy_win(:,:,j));
     else
         prob(:,j) = getCDF(pdf_win(:,j),win_series(:,j,end),mu_win(:,j),std_win(:,j),skew_win(:,j),skewy_win(:,j));
     end
-
-
     
 end
 
@@ -287,11 +284,20 @@ end
 QDM = QDM(:);
 
 % 6) Perform QM for the historical period.
-mod_h = mod_series(:,1:y_obs);
+mod_h = mod(1:length(obs));
 mod_h = mod_h(:);
-QM_series = QM(obs,mod_h,allow_negatives,frq,pp_threshold,pp_factor,win);
+QM_series = QM(obs,mod_h,allow_negatives,frq,pp_threshold,pp_factor,day_win,user_pdf,pdf_obs,pdf_mod);
 QDM_series = [QM_series' QDM']';
 if allow_negatives==0
+    QDM_series(isnan(QDM_series)) = 0;
     QDM_series(QDM_series<pp_threshold) = 0;
 end
+
+if user_pdf==false
+    ks_fail = ks_fail_obs + ks_fail_mod + ks_fail_win;
+    if ks_fail>0
+        disp('QDM: Some of the probability distribution functions did not pass the KS-Test')
+    end
+end
+
 end

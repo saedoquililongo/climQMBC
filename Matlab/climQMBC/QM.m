@@ -1,4 +1,4 @@
-function QM_series = QM(obs, mod, allow_negatives, frq,pp_threshold,pp_factor, win, user_pdf, pdf_obs, pdf_mod)
+function QM_series = QM(obs, mod, allow_negatives, frq,pp_threshold,pp_factor, day_win, user_pdf, pdf_obs, pdf_mod)
 %% QM_series:
 %   This function performs bias correction of modeled series based on 
 %   observed data by the Quantile Mapping (QM) method, as described by
@@ -118,33 +118,42 @@ if ~exist('pp_factor','var')
     pp_factor = 1/100;
 end
 
-if ~exist('win','var')
-    win = 1;
+if ~exist('day_win','var')
+    day_win = 1;
 end
 
 if ~exist('user_pdf','var')
     user_pdf = false;
-    user_obs = false;
-    user_mod = false;
+    pdf_obs = false;
+    pdf_mod = false;
 end
 
+if (frq=='D' & allow_negatives==false)
+    pp_threshold_mod = get_pp_threshold_mod(obs, mod, pp_threshold);
+else
+pp_threshold_mod = pp_threshold;
+end
 
 % 1) Format inputs and get statistics of the observed and modeled series of
 %    the historical period (formatQM function of the climQMBC package).
 [y_obs,obs_series] = formatQM(obs, allow_negatives, frq,pp_threshold,pp_factor);
-[y_mod,mod_series] = formatQM(mod, allow_negatives, frq,pp_threshold,pp_factor);
+[y_mod,mod_series] = formatQM(mod, allow_negatives, frq,pp_threshold_mod,pp_factor);
 
 if frq=='D'
-    obs_series_moving = cat(1,obs_series(end-win+1:end,:),repmat(obs_series, [win*2,1]),obs_series(1:win,:));
-    obs_series_moving = reshape(obs_series_moving,[size(obs_series,1)+1, win*2, size(obs_series,2)]);
-    obs_series_moving = obs_series_moving(1:end-1,2:end,:);
+    obs_series_moving = day_centered_moving_window(obs_series, day_win);
+    mod_series_moving = day_centered_moving_window(mod_series, day_win);
 
-    mod_series_moving = cat(1,mod_series(end-win+1:end,:),repmat(mod_series, [win*2,1]),mod_series(1:win,:));
-    mod_series_moving = reshape(mod_series_moving,[size(mod_series,1)+1, win*2, size(mod_series,2)]);
-    mod_series_moving = mod_series_moving(1:end-1,2:end,:);
+    obs_series_moving = reshape(permute(obs_series_moving, [1,3,2]),[365,(2*day_win-1)*y_obs]);
+    modh_series_moving = reshape(permute(mod_series_moving(:,:,1:y_obs), [1,3,2]),[365,(2*day_win-1)*y_obs]);
+    
+    if allow_negatives==false
+        obs_series_moving = set_norain_to_nan(obs_series_moving, pp_threshold, pp_factor);
+        modh_series_moving = set_norain_to_nan(modh_series_moving, pp_threshold_mod, pp_factor);
+        mod_series(mod_series<pp_threshold_mod) = NaN;
+    end
 
     [mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series_moving, frq);
-    [mu_mod, std_mod, skew_mod, skewy_mod] = getStats(mod_series_moving(:,:,1:y_obs), frq);
+    [mu_mod, std_mod, skew_mod, skewy_mod] = getStats(modh_series_moving, frq);
     
 else
     [mu_obs, std_obs, skew_obs, skewy_obs] = getStats(obs_series, frq);
@@ -159,11 +168,11 @@ end
 %    period (getDist function of the climQMBC package).
 if user_pdf==false
     if frq=='D'
-        pdf_obs = getDist(reshape(obs_series_moving, 365,[]),allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
-        pdf_mod = getDist(reshape(mod_series_moving(:,:,1:y_obs), 365,[]),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+        [pdf_obs, ks_fail_obs] = getDist(obs_series_moving,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+        [pdf_mod, ks_fail_mod] = getDist(modh_series_moving,allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
     else
-        pdf_obs = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
-        pdf_mod = getDist(mod_series(:,1:y_obs),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
+        [pdf_obs, ks_fail_obs] = getDist(obs_series,allow_negatives,mu_obs,std_obs,skew_obs,skewy_obs);
+        [pdf_mod, ks_fail_mod] = getDist(mod_series(:,1:y_obs),allow_negatives,mu_mod,std_mod,skew_mod,skewy_mod);
     end
 else
     
@@ -187,6 +196,14 @@ QM_series = getCDFinv(pdf_obs,prob,mu_obs,std_obs,skew_obs,skewy_obs);
 
 QM_series=QM_series(:);
 if allow_negatives==0
+    QM_series(isnan(QM_series)) = 0;
     QM_series(QM_series<pp_threshold) = 0;
+end
+
+if user_pdf==false
+    ks_fail = ks_fail_obs + ks_fail_mod;
+    if ks_fail>0
+        disp('QM: Some of the probability distribution functions did not pass the KS-Test')
+    end
 end
 end

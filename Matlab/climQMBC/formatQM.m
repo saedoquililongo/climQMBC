@@ -156,7 +156,7 @@ end
 % 1) If variable is precipitation, replace low values with random values.
 if allow_negatives == 0
     bool_low = series<pp_threshold;
-    series(bool_low) = rand(size(series(bool_low)))*pp_factor;
+    series(bool_low) = rand(size(series(bool_low)))*pp_threshold*pp_factor;
 end
 
 % 2) Get number of years of the observed period.

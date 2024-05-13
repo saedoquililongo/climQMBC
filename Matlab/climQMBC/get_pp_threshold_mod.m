@@ -1,4 +1,4 @@
-function [mu, sigma, skew, skewy] = getStats(series, frq)
+function pp_threshold_mod = get_pp_threshold_mod(obs,mod,pp_threshold)
 %% formatQM:
 % This function formats the inputs and gets basic statistics for the
 % different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available
@@ -139,30 +139,17 @@ function [mu, sigma, skew, skewy] = getStats(series, frq)
 % Revision: 1, updated Jul 2022
 
 %%
-if frq == 'D'
-    if length(size(series)) == 4
-        dim_stats = [2 4];
-    else
-        dim_stats = 2;
-    end
+% Get the rain days of the observed series
+obs_rainday_hist = sum(obs>pp_threshold);
+
+% Define the pp_threshold of the modeled series by matching the rain days
+% of the observed series
+mod_sort_descending = sort(mod(1:length(obs)), 'descend');
+days_kept = min(obs_rainday_hist, length(obs));
+
+if days_kept~=length(obs)
+    pp_threshold_mod = mod_sort_descending(days_kept+1);
 else
-    if length(size(series)) == 3
-        dim_stats = 3;
-    else
-        dim_stats = 2;
-    end
+    pp_threshold_mod = 0;
 end
-
-% 4) If monthly data is specified, get monthly mean, standard deviation, 
-%    skewness, and log-skewness for the historical period of the observed
-%    and modeled series. If annual data is specified, get monthly mean,
-%    standard deviation, skewness, and log-skewness for the historical
-%    period of the observed and modeled series.
-mu  = nanmean(series,dim_stats);     % Mean
-sigma = nanstd(series,0,dim_stats);  % Standard deviation
-skew = skewness(series,0,dim_stats); % Skewness
-series_log = log(series);
-series_log(isinf(series_log)) = log(0.01);
-skewy = skewness(series_log,0,dim_stats);    % Log-skewness
-
 end

@@ -1,4 +1,4 @@
-function [mu, sigma, skew, skewy] = getStats(series, frq)
+function  series_moving = set_norain_to_nan(series_moving,pp_threshold,pp_factor,min_rainday)
 %% formatQM:
 % This function formats the inputs and gets basic statistics for the
 % different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available
@@ -139,30 +139,31 @@ function [mu, sigma, skew, skewy] = getStats(series, frq)
 % Revision: 1, updated Jul 2022
 
 %%
-if frq == 'D'
-    if length(size(series)) == 4
-        dim_stats = [2 4];
-    else
-        dim_stats = 2;
+
+if ~exist('min_rainday','var')
+    min_rainday = 30;
+end
+
+% Falta evaluar qué ocurre con la información de períodos proyectados
+rainday_count = sum(series_moving>pp_threshold,2);
+
+if length(size(series_moving))==2
+    for per = 1:size(series_moving,1)
+        bool_low = series_moving(per,:)<pp_threshold;
+        replace_values_nans = rand(1,sum(bool_low))*pp_threshold*pp_factor;
+        replace_values_nans(max(1, (min_rainday-rainday_count(per))):end) = nan;
+        series_moving(per, bool_low) = replace_values_nans;
     end
 else
-    if length(size(series)) == 3
-        dim_stats = 3;
-    else
-        dim_stats = 2;
+    for per1 = 1:size(rainday_count,1)
+        for per2 = 1:size(rainday_count,3)
+            bool_low = series_moving(per1,:,per2)<pp_threshold;
+            replace_values_nans = rand(1,sum(bool_low))*pp_threshold*pp_factor;
+            replace_values_nans(max(1, (min_rainday-rainday_count(per1,1,per2))):end) = nan;
+            series_moving(per1, bool_low, per2) = replace_values_nans;
+        end
     end
 end
 
-% 4) If monthly data is specified, get monthly mean, standard deviation, 
-%    skewness, and log-skewness for the historical period of the observed
-%    and modeled series. If annual data is specified, get monthly mean,
-%    standard deviation, skewness, and log-skewness for the historical
-%    period of the observed and modeled series.
-mu  = nanmean(series,dim_stats);     % Mean
-sigma = nanstd(series,0,dim_stats);  % Standard deviation
-skew = skewness(series,0,dim_stats); % Skewness
-series_log = log(series);
-series_log(isinf(series_log)) = log(0.01);
-skewy = skewness(series_log,0,dim_stats);    % Log-skewness
 
 end
