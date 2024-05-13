@@ -1,147 +1,72 @@
 function [years, series] = formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor)
 %% formatQM:
-% This function formats the inputs and gets basic statistics for the
-% different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available
-% in the climQMBC package. If monthly data is specified, the input series
-% will be reshaped to a matrix of 12 rows and several columns equal to the
-% number of years of each series. If annual data is specified, the input
-% is reshaped to a row vector with same entries as the input series. For
-% precipitation, physically null values (values below pp_threshold) are
-% replaced by random positive values below pp_factor.
-%
-% Description:
-%   0) Check if annual or monthly data is specified.
-%
-%   1) If variable is precipitation, replace low values with random values.
-%
-%   2) Get number of years of the observed period.
-%
-%   3) If monthly data is specified, reshape the input series to a matrix
-%      of 12 rows and several columns equal to the number of years of each
-%      series. If annual data is specified, reshape the input to a row
-%      vector with same entries as the input series.
-%
-%   4) If monthly data is specified, get monthly mean, standard deviation,
-%      skewness, and log-skewness for the historical period of the observed
-%      and modeled series. If annual data is specified, get monthly mean,
-%      standard deviation, skewness, and log-skewness for the historical
-%      period of the observed and modeled series.
+%  This function formats a time series from a column vector to a matrix.
+%  The number of rows depends on the frequency of the data (1, 12 and 365
+%  for annual, monthyl and daily data, respectively). If negative values
+%  are not allowed, determined by allow_negatives=1, no-rain values (values
+%  below pp_threshold) are replaced by random positive values below the
+%  product pp_threshold*pp_factor.
 %
 % Input:
-%   obs = A column vector of monthly or annual observed data (temperature
-%         or precipitation). If monthly frequency is specified, the length
-%         of this vector is 12 times the number of observed years
-%         [12 x y_obs, 1]. If annual frequency is specified, the length 
-%         of this vector is equal to the number of observed years
-%         [y_obs, 1].
+%   series_ = A column vector of daily data, without considering leap days.
+%             The length of the column vector should by a multiple of 365.
+%             [ndata_obs, 1]
 %
-%   mod = A column vector of monthly or annual modeled data (temperature
-%         or precipitation). If monthly frequency is specified, the length
-%         of this vector is 12 times the number of observed years
-%         [12 x y_mod, 1]. If annual frequency is specified, the length
-%         of this vector is equal to the number of observed years
-%         [y_mod, 1].
+%   allow_negatives = A flag that identifies if data allows negative values
+%                     and also to replace no-rain values with random small
+%                     values (Chadwick et al., 2023) to avoid numerical
+%                     problems with the probability distribution functions.
+%                     allow_negatives = 1 or True: Allow negatives
+%                     allow_negatives = 0 or False: Do not allow negative
 %
-%   var = A flag that identifies if data are temperature or precipitation.
-%         This flag tells the getDist function if it has to discard
-%         distribution functions that allow negative numbers, and if the 
-%         terms in the correction equations are multiplied/divided or
-%         added/subtracted.
-%         Temperature:   var = 0
-%         Precipitation: var = 1
+%   frq = A string specifying if the input frequency is daily, monthly or
+%         annual.
+%         Daily:     frq = 'D'
+%         Monthly:   frq = 'M'
+%         Annual:    frq = 'A'
 %
-%   frq = A string specifying if the input is annual or monthly data. If
-%         not specified, it is set monthly as default.
-%         Monthly:    frq = 'M'
-%         annual:     frq = 'A'
-% 
-%   pp_threshold = A float indicating the threshold to consider physically 
-%                  null precipitation values.
+%   pp_threshold = A float indicating the threshold to consider no-rain
+%                  values.
 %
-%   pp_factor = A float indicating the maximum value of the random values
-%               that replace physically null precipitation values.
-%
-%   NOTE: This routine considers that obs and mod series start in january
-%         of the first year and ends in december of the last year.
+%   pp_factor = A float which multiplied to pp_threshold indicates the
+%               maximum value of the random values that replace no-rain
+%               values.
 %
 % Output:
-%   y_obs = Number of observed years
+%   years = Number of years of the series.
 %
-%   obs_series = A column vector of monthly or annual observed data 
-%               (temperature or precipitation). If monthly frequency is
-%               specified, the length of this vector is 12 times the number
-%               of observed years [12, y_obs]. If annual frequency is
-%               specified, the length of this vector is equal to the number
-%               of observed years [1, y_obs].
+%   series_matrix = A matrix of daily, monthly or annual observed data,
+%                   without considering leap days. For daily, monthly and
+%                   annual frequency, the number of rows will be 365, 12
+%                   and 1, respectively. The number of columns will be
+%                   equal to the number of years. [1, 12 or 365, years]
 %
-%   mod_series = A column vector of monthly or annual modeled data 
-%               (temperature or precipitation). If monthly frequency is
-%               specified, the length of this vector is 12 times the number
-%               of observed years [12, y_mod]. If annual frequency is
-%               specified, the length of this vector is equal to the number
-%               of observed years [1, y_mod].
 %
-%   mu_obs = If monthly frequency is specified, a column vector of monthly 
-%            mean of observed data [12,1]. If annual frequency is
-%            specified, the mean of the observed data (float).
-%
-%   mu_mod = If monthly frequency is specified, a column vector of monthly 
-%            mean of modeled data of the historical period [12,1]. If
-%            annual frequency is specified, the mean of the modeled data
-%            of the historical period(float).
-%
-%   sigma_obs = If monthly frequency is specified, a column vector of 
-%               monthly standard deviation of observed data [12,1]. If
-%               annual frequency is specified, the standard deviation of
-%               the observed data (float).
-%
-%   sigma_mod = If monthly frequency is specified, a column vector of 
-%               monthly standard deviation of modeled data of the
-%               historical period [12,1]. If annual frequency is
-%               specified, the standard deviation of the modeled data of
-%               the historical period(float).
-%
-%   skew_obs = If monthly frequency is specified, a column vector of 
-%               monthly skewness of observed data [12,1]. If annual
-%               frequency is specified, the skewness of the observed data
-%               (float).
-%
-%   skew_mod = If monthly frequency is specified, a column vector of 
-%               monthly skewness of modeled data of the historical period
-%               [12,1]. If annual frequency is specified, the skewness of
-%               the modeled data of the historical period(float).
-%
-%   skewy_obs = If monthly frequency is specified, a column vector of 
-%               monthly skewness of the logarithm of observed data [12,1].
-%               If annual frequency is specified, the skewness of the
-%               logarithm of the observed data (float).
-%
-%   skewy_mod = If monthly frequency is specified, a column vector of 
-%               monthly skewness of the logarithm of modeled data of the
-%               historical period [12,1]. If annual frequency is
-%               specified, the skewness of the logarithm of the modeled
-%               data of the historical period(float).
-%
-
 % Written by Sebastian Aedo Quililongo (1*)
 %            Cristian Chadwick         (2)
 %            Fernando Gonzalez-Leiva   (3)
-%            Jorge Gironas             (3)
-%            
-%   (1) Centro de CAmbio Global UC, Pontificia Universidad Catolica de 
-%       Chile, Santiago, Chile
-%   (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
-%       Santiago, Chile
-%   (3) Department of Hydraulics and Environmental Engineering, Pontificia
-%       Universidad Catolica de Chile, Santiago, Chile
-%       
-%   *Maintainer contact: slaedo@uc.cl
-% Revision: 1, updated Jul 2022
+%            Jorge Gironas             (3, 4)
+%           
+%  (1) Stockholm Environment Institute, Latin America Centre, Bogota,
+%      Colombia
+%  (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
+%      Santiago, Chile
+%  (3) Department of Hydraulics and Environmental Engineering, Pontificia 
+%      Universidad Catolica de Chile, Santiago, Chile
+%  (4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
+%      Santiago, Chile
+%
+% *Maintainer contact: sebastian.aedo.q@gmail.com
+% Revision: 1, updated Apr 2024
+%
 
 %%
+
+% This prevents modyfing the original input passed by reference
+%% Must look for a more elegant way to skip this step
 series = series_;
 
-% 0) Check if annual or monthly data is specified.
+% Check frequency and define the number of rows
 if frq=='D'
     I = 365;
 elseif frq=='M'
@@ -152,20 +77,17 @@ else
     I = 1;
 end
 
-
-% 1) If variable is precipitation, replace low values with random values.
+% If variable is precipitation, determined by allow_negatives=1, replace 
+% low values with random values.
 if allow_negatives == 0
     bool_low = series<pp_threshold;
     series(bool_low) = rand(size(series(bool_low)))*pp_threshold*pp_factor;
 end
 
-% 2) Get number of years of the observed period.
+% Get number of years of the series.
 years = length(series)/I;
 
-% 3) If monthly data is specified, reshape the input series to a matrix of
-%    12 rows and several columns equal to the number of years of each 
-%    series. If annual data is specified, reshape the input to a row 
-%    vector with same entries as the input series.
+% Reshape to get a matrix of shape [I , years]
 series = reshape(series,I,[]);
 
 end

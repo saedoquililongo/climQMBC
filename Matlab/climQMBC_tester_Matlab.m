@@ -75,8 +75,8 @@ addpath('./climQMBC')
 %     - 'A': Anual data
 
 variable = 'pr';
-mult_change = 1;
-allow_negatives = 0;
+mult_change = 0;
+allow_negatives = 1;
 SDM_var = 1;
 
 % Load observed and model data.
@@ -110,17 +110,17 @@ mod = csvread(strcat('../Sample_data/mod_',variable,'_M.csv'),1,3);
 %   climQMBC package should be called. The outputs of each function are
 %   columns vector with monthly corrected data.
 
-frq = 'A'; % 'M' for monthly data; 'A' for annual data
+% frq = 'A'; % 'M' for monthly data; 'A' for annual data
 % QM_series = QM(obs,mod,allow_negatives,frq);
 % DQM_series = DQM(obs,mod,mult_change,allow_negatives,frq);
 % QDM_series = QDM(obs,mod,mult_change,allow_negatives,frq);
 % UQM_series = UQM(obs,mod,mult_change,allow_negatives,frq);
-% SDM_series = SDM(obs,mod,var,frq);
+% sdm_series = SDM(obs,mod,SDM_var,frq);
 
 
 % %% AA
-obs = csvread('../Sample_data/obs_pr_D.csv', 1,4);
-mod = csvread('../Sample_data/mod_pr_D.csv', 1,4);
+obs = csvread('../Sample_data/obs_tas_D.csv', 1,4);
+mod = csvread('../Sample_data/mod_tas_D.csv', 1,4);
 
 frq = 'D';
 allow_negatives=0;
@@ -128,13 +128,15 @@ mult_change = 1;
 pp_threshold=1;
 pp_factor=1/(100*100);
 day_win=15;
+SDM_var = 0;
 
 
 % qm_series = QM(obs,mod,allow_negatives,frq,pp_threshold, pp_factor, day_win,true,3,3);
 % dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, day_win,true,1,1);
 % qdm_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,pp_factor,2,pp_threshold,day_win);
-uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, day_win);
+% uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, day_win);
+sdm_series = SDM(obs,mod,SDM_var,frq,pp_threshold,pp_factor,day_win);
 
 % plot(uqm_series,'o')
 
-csvwrite('../../UQM.txt',uqm_series);
+csvwrite('../../SDM.txt',sdm_series);

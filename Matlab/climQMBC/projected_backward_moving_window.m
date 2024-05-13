@@ -150,7 +150,7 @@ if frq == 'D'
 else
     y_mod = size(series,2);
 
-    win_series = [repmat(series,1,y_obs), zeros(size(series,1),projected_win)];
+    win_series = [repmat(series,1,projected_win), zeros(size(series,1),projected_win)];
     win_series = reshape(win_series,[size(series,1),y_mod+1,projected_win]);
     win_series = win_series(:,2:end-projected_win,:);
 

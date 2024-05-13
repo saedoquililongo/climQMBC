@@ -1,31 +1,8 @@
 function  series_moving = day_centered_moving_window(series, day_win)
-%% formatQM:
-% This function formats the inputs and gets basic statistics for the
-% different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available
-% in the climQMBC package. If monthly data is specified, the input series
-% will be reshaped to a matrix of 12 rows and several columns equal to the
-% number of years of each series. If annual data is specified, the input
-% is reshaped to a row vector with same entries as the input series. For
-% precipitation, physically null values (values below pp_threshold) are
-% replaced by random positive values below pp_factor.
-%
-% Description:
-%   0) Check if annual or monthly data is specified.
-%
-%   1) If variable is precipitation, replace low values with random values.
-%
-%   2) Get number of years of the observed period.
-%
-%   3) If monthly data is specified, reshape the input series to a matrix
-%      of 12 rows and several columns equal to the number of years of each
-%      series. If annual data is specified, reshape the input to a row
-%      vector with same entries as the input series.
-%
-%   4) If monthly data is specified, get monthly mean, standard deviation,
-%      skewness, and log-skewness for the historical period of the observed
-%      and modeled series. If annual data is specified, get monthly mean,
-%      standard deviation, skewness, and log-skewness for the historical
-%      period of the observed and modeled series.
+%% day_centered_moving_window:
+%  This function transform a 2D matrix of dimension [days in year, years]
+%  to a 3D array, where the new dimension is a centered moving window for
+%  each day of the year.
 %
 % Input:
 %   obs = A column vector of monthly or annual observed data (temperature

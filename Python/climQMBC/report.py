@@ -61,11 +61,11 @@ def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM',
                 column vector should by a multiple of 12. [ndata_obs, 1]
 
         mod:    A column vector of monthly modeled or GCM data.The length of the
-                column vector should by a multiple of 12. [ndata_obs, 1]
+                column vector should by a multiple of 12. [ndata_mod, 1]
                 
         SDM_var: A flag that identifies if data are temperature or precipitation.
-                     Temperature:   var = 0
-                     Precipitation: var = 1
+                     Temperature:   SDM_var = 0
+                     Precipitation: SDM_var = 1
 
         NOTE: This routine considers that obs and mod series start in the same
         day/month/year and are continuous until the end day/month/year.

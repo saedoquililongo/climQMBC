@@ -1,28 +1,27 @@
 function [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,SDM_var,mult_change,allow_negatives,fun,y_init,y_wind)
 %% report:
-%   This function generates two report of the performance of the different
-%   methods (QM, DQM, QDM, UQM and SDM) available in the climQMBC package.
-%   These reports are based on the mean and standard deviation of the
-%   series in the historical and future projected periods.
-%
-%   The first report is a summary table with the overall performance of the
-%   QM method in the historical period and of the different methods in
-%   future projected periods. The methods performance is addressed by
-%   comparing its variations in the mean and standard deviation with the
-%   ones of the modeled data.
-%
-%   The second report consist of three figures. Figure 1 shows the
-%   cumulative distribution of the observed, modeled, and corrected series
-%   in the historical and future period. This figure also shows the
-%   complete time series. Figure 2 and 3 shows the monthly mean and
-%   standard deviation, respectively, of each series in the historical and
-%   future projected periods. In these two figures, in the future projected
-%   periods, the observed series is replaced by an objective series which
-%   is computed as the observed series (monthly mean or standard
-%   deviation), scaled by the variation between the projected and the
-%   historical period of the modeled series. Each projected period is
-%   centered in a moving window whose length is equal to the length of the
-%   historical period.
+%  This function generates two report of the performance of the different
+%  methods (QM, DQM, QDM, UQM and SDM) available in the climQMBC package.
+%  These reports are based on the mean and standard deviation of the series
+%  in the historical and future projected periods.
+% 
+%  The first report is a summary table with the overall performance of the
+%  QM method in the historical period and of the different methods in
+%  future projected periods. The methods performance is addressed by 
+%  comparing its variations in the mean and standard deviation with the
+%  ones of the modeled data.
+% 
+%  The second report consist of three figures. Figure 1 shows the 
+%  cumulative distribution of the observed, modeled, and corrected series 
+%  in the historical and future period. This figure also shows the complete
+%  time series. Figure 2 and 3 shows the monthly mean and standard
+%  deviation, respectively, of each series in the historical and future
+%  projected periods. In these two figures, in the future projected periods,
+%  the observed series is replaced by an objective series which is computed
+%  as the observed series (monthly mean or standard deviation), scaled by
+%  the variation between the projected and the historical period of the
+%  modeled series. Each projected period is centered in a moving window 
+%  whose length is equal to the length of the historical period.
 %
 %   NOTE: 
 %      1) Even if a set of methods are specified in the optional inputs,
@@ -30,42 +29,34 @@ function [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mo
 %         climQMBC package.
 %      2) This report function was built for monthly data.
 %
-% Description:
-%   0) Get the number of observed and modeled years.
-%
-%   1) Set non-declared arguments.
-%
-%   2) Apply bias correction methods.
-%
-%   3) Get observed, modeled and bias corrected statistics of the
-%      historical and complete future period.
-%
-%   4) Get observed, modeled and bias corrected statistics of the projected
-%      periods.
-%
-%   5) Get delta mean and delta standard deviation.
-%
-%   6) Display report:
-%          a) Report description.
-%          b) Table.
-%          c) Figures.
-%
 % Input:
-%   obs = A column vector of monthly observed data (temperature or
-%         precipitation) [12 x y_obs, 1].
+%   obs = A column vector of monthly observed data. The length of the 
+%         column vector should by a multiple of 12. [ndata_obs, 1]
 %
-%   mod = A column vector of monthly modeled data (temperature or
-%         precipitation) [12 x y_mod, 1].
+%   mod = A column vector of monthly modeled or GCM data.The length of the
+%         column vector should by a multiple of 12. [ndata_mod, 1]
 %
-%   var = A flag that identifies if data are temperature or precipitation.
-%         This flag tells the getDist function if it has to discard
-%         distribution functions that allow negative numbers, and if the 
-%         terms in the correction equations are multiplied/divided or
-%         added/subtracted.
-%         Temperature:   var = 0
-%         Precipitation: var = 1
+%   SDM_var = A flag that identifies if data are temperature or precipitation.
+%             Temperature:   SDM_var = 0
+%             Precipitation: SDM_var = 1
+% 
+%  NOTE: This routine considers that obs and mod series start in the same
+%        day/month/year and are continuous until the end day/month/year.
 %
 % Optional inputs:
+%   mult_change = A flag that indicates if projected changes should be 
+%                 computed as multiplicative (fut = hist*delta) or additive
+%                 (fut = hist + delta) changes.
+%                 mult_change = 1 or True: Multiplicative (default)
+%                 mult_change = 0 or False: Additive
+% 
+%   allow_negatives: A flag that identifies if data allows negative values
+%                    and also to replace no-rain values with random small 
+%                    values (Chadwick et al., 2023) to avoid numerical
+%                    problems with the probability distribution functions.
+%                    allow_negatives = 1 or True: Allow negatives (default)
+%                    allow_negatives = 0 or False: Do not allow negative
+%
 %   fun = A cell array of strings with the desired bias correction methods
 %         to be reported. If this input is not recieved by the function,
 %         all bias correction methods available in the climQMBC package
@@ -87,49 +78,48 @@ function [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mo
 %                     the end of historical period, and a second projected 
 %                     period just before the end of the modeled series.
 %
-%   NOTE: As MATLAB reads the inputs in sequence, each optional inputs must
-%         be added as defined by the function. If y_init or y_wind is a
-%         desired argument, fun must be specified.
+%   NOTE: As MATLAB reads the inputs in sequence, each optional inputs
+%         must be added as defined by the function. For example, if fun
+%         or is a desired argument, mult_change and allow_negatives must 
+%         be specified.
 %
 % Output:
-%   QM_series = A column vector of monthly modeled data (temperature or 
-%               precipitation) corrected by the QM method [12 x y_mod, 1].
+%   QM_series = A column vector of data bias corrected with the QM method.
+%               [ndata_mod, 1]
 %
-%   DQM_series = A column vector of monthly modeled data (temperature or 
-%                precipitation) corrected by the DQM method 
-%                [12 x y_mod, 1].
+%   DQM_series = A column vector of data bias corrected with the DQM method.
+%                [ndata_mod, 1]
 %
-%   QDM_series = A column vector of monthly modeled data (temperature or 
-%                precipitation) corrected by the QdM method 
-%                [12 x y_mod, 1].
+%   QDM_series = A column vector of data bias corrected with the QDM method.
+%                [ndata_mod, 1]
 %
-%   UQM_series = A column vector of monthly modeled data (temperature or 
-%                precipitation) corrected by the UQM method 
-%                [12 x y_mod, 1].
+%   UQM_series = A column vector of data bias corrected with the UQM method.
+%                [ndata_mod, 1]
 %
-%   SDM_series = A column vector of monthly modeled data (temperature or 
-%                precipitation) corrected by the SDM method 
-%                [12 x y_mod, 1].
+%   SDM_series = A column vector of data bias corrected with the SDM method.
+%                [ndata_mod, 1]
 %
 %   NOTE: This function returns all five bias correction methods, 
 %         independently of which methods are specified for this report.
 %
-
+%
 % Written by Sebastian Aedo Quililongo (1*)
 %            Cristian Chadwick         (2)
 %            Fernando Gonzalez-Leiva   (3)
-%            Jorge Gironas             (3)
-%            
-%   (1) Centro de CAmbio Global UC, Pontificia Universidad Catolica de 
-%       Chile, Santiago, Chile
-%   (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
-%       Santiago, Chile
-%   (3) Department of Hydraulics and Environmental Engineering, Pontificia
-%       Universidad Catolica de Chile, Santiago, Chile
-%       
-%   *Maintainer contact: slaedo@uc.cl
-% Revision: 0, updated Dec 2021
-% 
+%            Jorge Gironas             (3, 4)
+%           
+%  (1) Stockholm Environment Institute, Latin America Centre, Bogota,
+%      Colombia
+%  (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
+%      Santiago, Chile
+%  (3) Department of Hydraulics and Environmental Engineering, Pontificia 
+%      Universidad Catolica de Chile, Santiago, Chile
+%  (4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
+%      Santiago, Chile
+%
+% *Maintainer contact: sebastian.aedo.q@gmail.com
+% Revision: 1, updated Apr 2024
+%
 
 %%
 % 0) Get the number of observed and modeled years
@@ -151,9 +141,11 @@ end
 if ~exist('fun','var')
   fun = {'QM','DQM','QDM','UQM','SDM'};
 end
+
 if ~exist('y_init','var')
   y_init = 0;
 end
+
 if ~exist('y_wind','var')
   y_wind = [floor(y_obs+y_obs/2) floor(y_mod-y_obs/2)];
   w_label = {'First period','Last period'};

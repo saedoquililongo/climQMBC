@@ -1,4 +1,4 @@
-function SDM_series = SDM(obs,mod,SDM_var,frq,pp_threshold,pp_factor)
+function SDM_series = SDM(obs,mod,SDM_var,frq,pp_threshold,pp_factor,day_win)
 %% SDM_series
 %   This function performs bias correction of modeled series based on
 %   observed data by the Scaled Distribution Mapping (SDM) method, as
@@ -159,20 +159,55 @@ if ~exist('pp_factor','var')
     pp_factor = 1/100;
 end
 
+if ~exist('day_win','var')
+    day_win = 1;
+end
+
 lower_lim = pp_threshold;
 CDF_th = 10^-3;
 
 % 0) Check if annual or monthly data is specified.
 if ~exist('frq','var')
-    frq = 'M';
+    frq = 'A';
 end
 
 % 1) Format inputs and get statistics of the observed and modeled series of
 % the historical period (formatQM function of the climQMBC package).
 [y_obs,obs_series] = formatQM(obs, SDM_var, frq,pp_threshold,pp_factor);
 [y_mod,mod_series] = formatQM(mod, SDM_var, frq,pp_threshold,pp_factor);
+modh_series = mod_series(:,1:y_obs);
 
-SDM  = zeros(size(mod_series,1),size(mod_series,2)-y_obs);
+% If frequency is daily, consider a moving window for each day to fit
+% the statistics
+if frq=='D'
+    % Get a 3D array with a moving window centered on each day
+    obs_series = day_centered_moving_window(obs_series, day_win);
+    mod_series = day_centered_moving_window(mod_series, day_win);
+    
+    % Get a 4D array with a backward moving window for each projected period
+    win_series = projected_backward_moving_window(mod_series, y_obs, frq);
+    
+    % Reshape to 2D in order to have all the days of the window in each row
+    obs_series = reshape(permute(obs_series, [1,3,2]),[365,(2*day_win-1)*y_obs]);
+    modh_series = reshape(permute(mod_series(:,:,1:y_obs), [1,3,2]),[365,(2*day_win-1)*y_obs]);
+    
+    % Reshape to 3D in order to have all the days of the window in each row
+    win_series = reshape(permute(win_series,[1,4,2,3]), [365, (2*day_win-1)*y_obs, y_mod-y_obs]);
+    
+    % Add the historical period to the moving window
+    win_series_ = cat(3,modh_series, win_series);
+else
+    % For non-daily frequency, make sure that day_win=1
+    day_win = 1;
+    
+    % Get a 3D array with a backward moving window for each projected period
+    win_series = projected_backward_moving_window(mod_series, y_obs, frq);
+    
+    % Add the historical period to the moving window
+    win_series_ = cat(3,modh_series, permute(win_series, [1,3,2]));
+end
+
+SDM  = zeros(size(mod_series,1),y_mod-y_obs);
 SDM_h  = zeros(size(obs_series,1),y_obs);
 for m = 1:size(mod_series,1)
     % 2) Historical period:
@@ -184,16 +219,20 @@ for m = 1:size(mod_series,1)
     %     the modeled and observed series in the historical period.
     if SDM_var == 0
         D_obs = detrend(obs_series(m,:));
-        D_mod = detrend(mod_series(m,1:y_obs));
+        D_mod = detrend(modh_series(m,:));
 
         mu_obs = mean(obs_series(m,:));
-        mu_mod = mean(mod_series(m,1:y_obs));
+        mu_mod = mean(modh_series(m,:));
     else
         D_obs = sort(obs_series(m,obs_series(m,:)>lower_lim));
-        D_mod = sort(mod_series(m,mod_series(m,1:y_obs)>lower_lim));
+        D_mod = sort(modh_series(m,modh_series(m,:)>lower_lim));
 
         freq_obs = size(D_obs,2)/size(obs_series,2);
-        freq_mod = size(D_mod,2)/size(mod_series(m,1:y_obs),2);
+        freq_mod = size(D_mod,2)/size(modh_series(m,:),2);
+
+        if freq_mod==0
+            freq_mod = 1/(365*y_obs);
+        end
     end
 
     % b) [Switanek et al. (2017), step 2)]
@@ -228,13 +267,15 @@ for m = 1:size(mod_series,1)
         CDF_mod(CDF_mod>1-CDF_th) = 1-CDF_th;
     end
     
+
     % 3) Projected periods:
-    for j = 0:length(mod_series)-y_obs
+    for j = 0:(y_mod-y_obs)
+
         % c) Initialize correction array.
-        corr_temp = zeros(1,y_obs);
+        corr_temp = zeros(1,(2*day_win-1)*y_obs);
         
         % d) Define projected window.
-        win_series  = mod_series(m,1+j:y_obs+j);
+        win_series  = win_series_(m,:,j+1);
         
         % e) [Switanek et al. (2017), step 1)]
         %    For temperature, get the detrended series of the projected
@@ -291,8 +332,17 @@ for m = 1:size(mod_series,1)
         
         % h) Interpolate observed and modeled CDF of the historical period
         %    to the length of the projected period.
-        obs_cdf_intpol = interp1(linspace(1,length(D_obs),length(D_obs)),CDF_obs,linspace(1,length(D_obs),length(D_win)));
-        mod_cdf_intpol = interp1(linspace(1,length(D_mod),length(D_mod)),CDF_mod,linspace(1,length(D_mod),length(D_win)));
+        if length(D_obs)>0
+            obs_cdf_intpol = interp1(linspace(1,length(D_obs),length(D_obs)),CDF_obs,linspace(1,length(D_obs),length(D_win)));
+        else
+            obs_cdf_intpol = CDF_win*0;
+        end
+
+        if length(D_mod)>0
+            mod_cdf_intpol = interp1(linspace(1,length(D_mod),length(D_mod)),CDF_mod,linspace(1,length(D_mod),length(D_win)));
+        else
+            mod_cdf_intpol = CDF_win*0;
+        end
         
         % i) [Switanek et al. (2017), steps 4 and 5)]
         %    Get recurrence intervals and its scaled version for the
@@ -350,7 +400,7 @@ for m = 1:size(mod_series,1)
         %    If the projected period is not the historical period (j>0),
         %    save the value of the last year.
         if j == 0
-            SDM_h(m,:) = corr_temp;
+            SDM_h(m,:) = corr_temp(day_win:(2*day_win-1):end);
         else
             SDM(m,j) = corr_temp(end);
         end
