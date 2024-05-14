@@ -45,15 +45,13 @@
 # *Maintainer contact: sebastian.aedo.q@gmail.com
 # Revision: 1, updated Apr 2024
 
-## Recordar a usuarios que deben descargar libreria abind
-
-# # If the package is not installed, save the .tar.gz file in the same directory
-# # as this script. The following lines will install the package and import it.
+# If the package is not installed, save the .tar.gz file in the same directory
+# as this script. The following lines will install the package and import it.
 # install.packages(paste(getwd(),'/','climQMBC_0.1.1.tar.gz',sep=''),repos=NULL,type='source')
 
 # library(climQMBC)
+
 source(paste(getwd(),'/climQMBC/R/methods.R',sep=''))
-source(paste(getwd(),'/climQMBC/R/utils.R',sep=''))
 source(paste(getwd(),'/climQMBC/R/report.R',sep=''))
 
 # =============================================================================
@@ -96,12 +94,12 @@ mod <- matrix(mod[,variable])
 #  of the modeled period. Remember that the projected periods length is
 #  equal to the length of the historical period.
 
-# rep_series <- report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
-# qm_series <- rep_series[[1]]
-# dqm_series <- rep_series[[2]]
-# qdm_series <- rep_series[[3]]
-# uqm_series <- rep_series[[4]]
-# sdm_series <- rep_series[[5]]
+rep_series <- report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
+qm_series <- rep_series[[1]]
+dqm_series <- rep_series[[2]]
+qdm_series <- rep_series[[3]]
+uqm_series <- rep_series[[4]]
+sdm_series <- rep_series[[5]]
 
 ## Example 2
 #  Example 2 shows how to use the report function for specific bias
@@ -178,7 +176,7 @@ mod <- matrix(mod[,variable])
 #  climQMBC package should be called. The outputs of each function are
 #  columns vector with daily corrected data.
 # 
-qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+# qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
 # dqm_series <- DQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
 # qdm_series <- QDM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
 # uqm_series <- UQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)

@@ -987,8 +987,8 @@ def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100, day_win=1):
                  [ndata_mod, 1]
 
         SDM_var: A flag that identifies if data are temperature or precipitation.
-                     Temperature:   var = 0
-                     Precipitation: var = 1
+                     Temperature:   SDM_var = 0
+                     Precipitation: SDM_var = 1
 
         NOTE: This routine considers that obs and mod series start in the same
         day/month/year and are continuous until the end day/month/year.
