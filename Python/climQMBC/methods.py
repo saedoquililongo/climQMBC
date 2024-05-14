@@ -632,7 +632,7 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
         pdf_obs = np.zeros(obs_series.shape[0]) + pdf_obs
         pdf_mod = np.zeros(mod_series.shape[0]) + pdf_mod
     
-    # 4) For each projected period assign a probability distribution function to
+    # 4) For each projected period assign a probability distribution function 
     #    to each sub-period and apply the cumulative distribution function to
     #    the modeled data.
     ks_fail_win = 0
