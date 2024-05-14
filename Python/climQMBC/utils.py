@@ -508,7 +508,7 @@ def getCDF(pdf, series, mu, sigma, skew, skewy):
                  of each sub-period.
 
     Output:
-        Taot:   A matrix with the non-exceedance probability for value
+        prob:   A matrix with the non-exceedance probability for value
                 row of the input series.
     """
 

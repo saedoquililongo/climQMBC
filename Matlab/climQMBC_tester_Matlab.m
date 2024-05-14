@@ -75,8 +75,8 @@ addpath('./climQMBC')
 %     - 'A': Anual data
 
 variable = 'pr';
-mult_change = 0;
-allow_negatives = 1;
+mult_change = 1;
+allow_negatives = 0;
 SDM_var = 1;
 
 % Load observed and model data.
@@ -92,7 +92,7 @@ mod = csvread(strcat('../Sample_data/mod_',variable,'_M.csv'),1,3);
 %   of the modeled period. Remember that the projected periods length is
 %   equal to the length of the historical period.
 
-% [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,SDM_var,mult_change,allow_negatives);
+[QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,SDM_var,mult_change,allow_negatives);
 
 
 %% Example 2
@@ -135,8 +135,8 @@ SDM_var = 0;
 % dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, day_win,true,1,1);
 % qdm_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,pp_factor,2,pp_threshold,day_win);
 % uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, day_win);
-sdm_series = SDM(obs,mod,SDM_var,frq,pp_threshold,pp_factor,day_win);
+% sdm_series = SDM(obs,mod,SDM_var,frq,pp_threshold,pp_factor,day_win);
 
 % plot(uqm_series,'o')
 
-csvwrite('../../SDM.txt',sdm_series);
+% csvwrite('../../SDM.txt',sdm_series);

@@ -1,14 +1,9 @@
 function [pdf,ks_fail] = getDist(series,allow_negatives, mu,sigma,skew,skewy)
 %% getDist:
-%   This function assigns an independent probability distribution function
-%   to each row of the input series by comparing the empirical probability
-%   distribution function with seven distributions based on the
-%   Kolmogorov-Smirnov (KS) test. If the series consider monthly data, it
-%   will have 12 rows and each row will represent a month. For annual
-%   data the series will have only one row. Only strictly positive
-%   distributions are considered for precipitation and strictly positive
-%   distributions are discarded if the series has negative values. The
-%   available distributions are:
+%  This function assigns an independent probability distribution function
+%  to each row of the input series by comparing the empirical probability
+%  distribution function with seven distributions based on the
+%  Kolmogorov-Smirnov (KS) test. The available distributions are:
 %          1) Normal distribution
 %          2) Log-Normal distribution
 %          3) Gamma 2 parameters distribution
@@ -19,89 +14,73 @@ function [pdf,ks_fail] = getDist(series,allow_negatives, mu,sigma,skew,skewy)
 %          6) Gumbel distribution
 %          7) Exponential distribution
 %
-%   For precipitation, only 2), 3) and 5) are considered (1, 4, 6, and 7
-%   are discarded). For series with negative values, only 1), 3), 4), 6),
-%   and 7) are considered (2 and 5 are discarded).
-%
-% Description:
-%   1) Get the number of years to compute the empirical distribution in
-%      step 3) and get the number of rows of the input series.
-%
-%   2) Initialize column vectors for the statistics needed for the
-%      available probability distribution functions.
-%
-%   3) Perform the Kolmogorov-Smirnov test for each row.
-%      a) Get empirical distribution.
-%      b) Compare distributions.
-%      c) If variable is precipitation, discard distribution that allows 
-%         negative values.
-%      d) Compare KS values.
+%   For allow_negatives=0, only 2), 3) and 5) are considered (1, 4, 6, and
+%   7 are discarded). For series with negative values, only 1), 3), 4), 6),
+%   and 7) are considered (2, 3 and 5 are discarded).
 %
 % Input:
-%   series = A matrix of monthly or annual data (temperature or 
-%            precipitation). If the series consider monthly data, it will
-%            have 12 rows and each row will represent a month. For annual
-%            data the series will have only one row.
+%   series = An array of daily, monthly or annual data, without considering
+%            leap days. Possible input dimensions:
+%            2D array: [sub-periods, years]
+%                      [sub-periods + days window, years]
 %
-%   mu = A column vector of mean values of the series. [12,1] if the series
-%        consider monthly data and [1,1] if the series consider annual
-%        data.
+%   allow_negatives = A flag that identifies if data allows negative values
+%                     and also to replace no-rain values with random small 
+%                     values (Chadwick et al., 2023) to avoid numerical
+%                     problems with the probability distribution functions.
+%                     allow_negatives = 1 or True: Allow negatives
+%                     allow_negatives = 0 or False: Do not allow negative
 %
-%   sigma = A column vector of standard deviation of the series. [12,1] if 
-%           the series consider monthly data and [1,1] if the series
-%           consider annual data.
+%   mu = A vector with mean values of each sub-period.
 %
-%   skew = A column vector of skewness of the series. [12,1] if the series
-%          consider monthly data and [1,1] if the series consider annual
-%          data.
+%   sigma = A vector with standard deviation values of each sub-period.
 %
-%   skewy = A column vector of skewness of the logarithm of the series. 
-%           [12,1] if the series consider monthly data and [1,1] if the
-%           series consider annual data.
+%   skew = A vector with skewness values of each sub-period.
 %
-%   var = A flag that identifies if data are temperature or precipitation.
-%         This flag tells the getDist function if it has to discard
-%         distribution functions that allow negative numbers.
-%         Temperature:   var = 0
-%         Precipitation: var = 1
+%   skewy = A vector with skewness values of the logarithm of the series
+%           of each sub-period.
 %
 % Output:
-%   PDF = A column vector with an ID for the resulting distribution from
-%         the KS test [12,1]. The ID is related to the order of the 
-%         distribution listed in the description of this function. This ID
-%         is used in the getCDF and getCDFinv functions of the climQMBC
-%         package.
+%   pdf = A vector with an ID for the resulting distribution from the KS
+%         test. The ID is related to  the numeration of the distribution
+%         listed in the description of this function. This ID is used in
+%         the getCDF and getCDFinv  functions of the climQMBC package.
 %
-
 % Written by Sebastian Aedo Quililongo (1*)
 %            Cristian Chadwick         (2)
 %            Fernando Gonzalez-Leiva   (3)
-%            Jorge Gironas             (3)
-%            
-%   (1) Centro de CAmbio Global UC, Pontificia Universidad Catolica de 
-%       Chile, Santiago, Chile
-%   (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
-%       Santiago, Chile
-%   (3) Department of Hydraulics and Environmental Engineering, Pontificia
-%       Universidad Catolica de Chile, Santiago, Chile
-%       
-%   *Maintainer contact: slaedo@uc.cl
-% Revision: 0, updated Dec 2021
+%            Jorge Gironas             (3, 4)
+%           
+%  (1) Stockholm Environment Institute, Latin America Centre, Bogota,
+%      Colombia
+%  (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
+%      Santiago, Chile
+%  (3) Department of Hydraulics and Environmental Engineering, Pontificia 
+%      Universidad Catolica de Chile, Santiago, Chile
+%  (4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
+%      Santiago, Chile
+%
+% *Maintainer contact: sebastian.aedo.q@gmail.com
+% Revision: 1, updated Apr 2024
+%
 
 %%
-% 1) Get the number of years to compute the empirical distribution in step 
-%    3) and get the number of rows of the input series.
+% Get the number of rows of the input series.
 nrows = size(series,1);
 
-% 2) Initialize column vectors for the statistics needed for the available
-%    probability distribution functions.
+% Initialize column vectors for the statistics needed for the available
+% probability distribution functions.
 pdf = zeros(nrows,1);
 
+% Initialize a counter of failures of the KS test
 ks_fail = 0;
-% 3) Perform the Kolmogorov-Smirnov test for each row.
+
+% Perform the Kolmogorov-Smirnov test for sub-period or row.
 for sp=1:nrows
     series_sub = series(sp,:);
 
+    % Get the number of years with valid data (for allow_negatives=0, the 
+    % series might have nan values to ignore them)
     series_sub = series_sub(~isnan(series_sub));
     y_series = length(series_sub);
 
@@ -169,8 +148,8 @@ for sp=1:nrows
     exponential = max(1-exp(-1/sigma(sp)*(sortdata-gamexp)),0);
     KSexponential= max(abs(exponential-probEmp));
     
-    % c) If variable is precipitation, set KS=1 to distributions that allow
-    %    negative values (this will discard those distributions).
+    % c) allow_negatives=0, set KS=1 to distributions that allow negative
+    %    values (this will discard those distributions).
     if allow_negatives==0
         KSnormal=1;
         KSgammaIII=1;

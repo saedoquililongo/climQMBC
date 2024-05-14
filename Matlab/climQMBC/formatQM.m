@@ -63,7 +63,7 @@ function [years, series] = formatQM(series_, allow_negatives, frq, pp_threshold,
 %%
 
 % This prevents modyfing the original input passed by reference
-%% Must look for a more elegant way to skip this step
+% Must look for a more elegant way to skip this step
 series = series_;
 
 % Check frequency and define the number of rows

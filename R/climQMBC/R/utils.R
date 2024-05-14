@@ -342,6 +342,8 @@ getDist <- function(series, allow_negatives, mu, sigma, skew, skewy){
       KSgammaIII <- 1
       KSgumbel <- 1
       KSexponential <- 1
+      
+      KSLpIII <- 1
     }
 
     # d) The distribution with lower KS value is considered for each month.

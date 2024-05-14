@@ -1,9 +1,9 @@
-function xhat = getCDFinv(PDF,Taot,mu,sigma,skew,skewy)
+function xhat = getCDFinv(pdf,prob,mu,sigma,skew,skewy)
 %% getCDFinv:
-%   This function evaluates the probability, Taot, in the respective
-%   inverse cumulative distribution function assigned by the
-%   Kolmogorov-Smirnov (KS) test in the getDist function of the climQMBC
-%   package. The available distributions are:
+%  This function evaluates the probability, prob, in the respective inverse
+%  cumulative distribution function assigned by the Kolmogorov-Smirnov (KS)
+%  test in the getDist function of the climQMBC package. The available
+%  distributions are:
 %          1) Normal distribution
 %          2) Log-Normal distribution
 %          3) Gamma 2 parameters distribution
@@ -17,109 +17,94 @@ function xhat = getCDFinv(PDF,Taot,mu,sigma,skew,skewy)
 %   Note that each row is associated to an independent distribution
 %   function.
 %
-% Description:
-%   1) Get the number of rows and years of the series.
-%
-%   2) Compute the inverse cumulative distribution function to the values
-%      of each row, based on the distribution assigned in the getDist
-%      function of the climQMBC package.
-%
 % Input:
-%   PDF = A column vector with an ID for the resulting distribution from
-%         the KS test [12,1]. The ID is related to the order of the 
-%         distribution listed in the description of this function.
+%   pdf = A vector with an ID for the resulting distribution from the KS
+%         test. The ID is related to  the numeration of the distribution
+%         listed in the description of this function.
 %
-%   Taot = A column vector with the non-exceedance probability for each row
-%          of the input series. [12,1] if the series consider monthly data
-%          and [1,1] if the series consider annual data.
+%   prob = A matrix with the non-exceedance probability for value row of
+%          the input series.
 %
-%   mu = A column vector of mean values of the series. [12,1] if the series
-%        consider monthly data and [1,1] if the series consider annual
-%        data.
+%   mu = A vector with mean values of each sub-period.
 %
-%   sigma = A column vector of standard deviation of the series. [12,1] if 
-%           the series consider monthly data and [1,1] if the series
-%           consider annual data.
+%   sigma = A vector with standard deviation values of each sub-period.
 %
-%   skew = A column vector of skewness of the series. [12,1] if the series
-%          consider monthly data and [1,1] if the series consider annual
-%          data.
+%   skew = A vector with skewness values of each sub-period.
 %
-%   skewy = A column vector of skewness of the logarithm of the series. 
-%           [12,1] if the series consider monthly data and [1,1] if the
-%           series consider annual data.
+%   skewy = A vector with skewness values of the logarithm of the series of
+%           each sub-period.
 %
 % Output:
-%   xhat = A column vector with the values obtained when the inverse
-%          cumulative distribution function is applied. [12,1] if the
-%          series consider monthly data and [1,1] if the series consider
-%          annual data.
+%   xhat = A matrix with the values obtained when the inverse cumulative
+%            distribution function is applied to prob.
 %
-
 % Written by Sebastian Aedo Quililongo (1*)
 %            Cristian Chadwick         (2)
 %            Fernando Gonzalez-Leiva   (3)
-%            Jorge Gironas             (3)
-%            
-%   (1) Centro de CAmbio Global UC, Pontificia Universidad Catolica de 
-%       Chile, Santiago, Chile
-%   (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
-%       Santiago, Chile
-%   (3) Department of Hydraulics and Environmental Engineering, Pontificia
-%       Universidad Catolica de Chile, Santiago, Chile
-%       
-%   *Maintainer contact: slaedo@uc.cl
-% Revision: 0, updated Dec 2021
+%            Jorge Gironas             (3, 4)
+%           
+%  (1) Stockholm Environment Institute, Latin America Centre, Bogota,
+%      Colombia
+%  (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
+%      Santiago, Chile
+%  (3) Department of Hydraulics and Environmental Engineering, Pontificia 
+%      Universidad Catolica de Chile, Santiago, Chile
+%  (4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
+%      Santiago, Chile
+%
+% *Maintainer contact: sebastian.aedo.q@gmail.com
+% Revision: 1, updated Apr 2024
+%
 
 
 %%
-% 1) Get the number of rows and years of the series.
-n_m = size(Taot,1);
-n_y = size(Taot,2);
+% Get the number of rows and columns of the series.
+rows = size(prob,1);
+cols = size(prob,2);
 
-% 2) Compute the inverse cumulative distribution function to the values of
-%    each row, based on the distribution assigned in the getDist function
-%    of the climQMBC package.
-xhat = zeros(n_m,n_y);
-for m=1:n_m
-    if PDF(m)==1 % i) Normal distribution.
-        xhat(m,:)  = norminv(Taot(m,:),mu(m),sigma(m));
+% Compute the cumulative distribution function to the values of each row,
+% based on the distribution assigned in the getDist function of the
+% climQMBC package.
+xhat = zeros(rows,cols);
+for sp=1:rows
+    if pdf(sp)==1 % i) Normal distribution.
+        xhat(sp,:)  = norminv(prob(sp,:),mu(sp),sigma(sp));
         
-    elseif PDF(m)==2 % ii) Log-Normal distribution.
-        sigmay = sqrt(log(1+(sigma(m)/mu(m))^2));
-        muy    = log(mu(m))-(sigmay^2)/2;
-        xhat(m,:)  = logninv(Taot(m,:),muy,sigmay);
+    elseif pdf(sp)==2 % ii) Log-Normal distribution.
+        sigmay = sqrt(log(1+(sigma(sp)/mu(sp))^2));
+        muy    = log(mu(sp))-(sigmay^2)/2;
+        xhat(sp,:)  = logninv(prob(sp,:),muy,sigmay);
         
-    elseif PDF(m)==3 % iii) Gamma 2 parameters distribution.
-            A  = (sigma(m)^2)/mu(m);
-            B  = (mu(m)/sigma(m))^2;
+    elseif pdf(sp)==3 % iii) Gamma 2 parameters distribution.
+            A  = (sigma(sp)^2)/mu(sp);
+            B  = (mu(sp)/sigma(sp))^2;
             
-        xhat(m,:)= gaminv(Taot(m,:),B,A);
+        xhat(sp,:)= gaminv(prob(sp,:),B,A);
         
-    elseif PDF(m)==4 % iv) Gamma 3 parameters distribution.
-        Bet = (2/skew(m))^2; 
-        Alp = sigma(m)/sqrt(Bet);
-        Gam = mu(m)-(Alp*Bet);
-        xhat(m,:)= (gaminv(Taot(m,:),Bet,Alp)+ Gam);
+    elseif pdf(sp)==4 % iv) Gamma 3 parameters distribution.
+        Bet = (2/skew(sp))^2; 
+        Alp = sigma(sp)/sqrt(Bet);
+        Gam = mu(sp)-(Alp*Bet);
+        xhat(sp,:)= (gaminv(prob(sp,:),Bet,Alp)+ Gam);
         
-    elseif PDF(m)==5 % v) Log-Gamma 3 parameters distribution.
-        BetyAster  = (2/skewy(m))^2;
-        sigmay= sqrt(log(1+(sigma(m)/mu(m))^2));
+    elseif pdf(sp)==5 % v) Log-Gamma 3 parameters distribution.
+        BetyAster  = (2/skewy(sp))^2;
+        sigmay= sqrt(log(1+(sigma(sp)/mu(sp))^2));
         Alpy  = sigmay/sqrt(BetyAster);
-        muy   = log(mu(m))-(sigmay^2)/2;
+        muy   = log(mu(sp))-(sigmay^2)/2;
         Gamy  = muy -(Alpy*BetyAster);
-        xhat(m,:)= exp(gaminv(Taot(m,:),BetyAster,Alpy)+Gamy);
+        xhat(sp,:)= exp(gaminv(prob(sp,:),BetyAster,Alpy)+Gamy);
         
-    elseif PDF(m)==6 % vi) Gumbel distribution.
+    elseif pdf(sp)==6 % vi) Gumbel distribution.
         Sn     = pi/sqrt(6);
         yn = 0.5772;
-        a = Sn/sigma(m);
-        u = mu(m)-(yn/a);
-        xhat(m,:)= (u-log(-log(Taot(m,:)))./a);
+        a = Sn/sigma(sp);
+        u = mu(sp)-(yn/a);
+        xhat(sp,:)= (u-log(-log(prob(sp,:)))./a);
         
-    elseif PDF(m)==7 % vii) Exponential distribution.
-        gamexp = mu(m) -sigma(m);
-        xhat(m,:)= (gamexp-(sigma(m)*log(1-Taot(m,:))));           
+    elseif pdf(sp)==7 % vii) Exponential distribution.
+        gamexp = mu(sp) -sigma(sp);
+        xhat(sp,:)= (gamexp-(sigma(sp)*log(1-prob(sp,:))));           
     end     
 end
 end
