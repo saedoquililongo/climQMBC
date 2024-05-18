@@ -93,7 +93,7 @@ mod = csvread(strcat('../Sample_data/mod_',variable,'_M.csv'),1,3);
 %  of the modeled period. Remember that the projected periods length is
 %  equal to the length of the historical period.
 % 
-% [qm_series,dqm_series,qdm_series,uqm_series,sdm_series] = report(obs,mod,SDM_var,mult_change,allow_negatives);
+[qm_series,dqm_series,qdm_series,uqm_series,sdm_series] = report(obs,mod,SDM_var,mult_change,allow_negatives);
 
 
 %% Example 2
@@ -148,35 +148,27 @@ mod = csvread(strcat('../Sample_data/mod_',variable,'_M.csv'),1,3);
 %            low values to replace no-rain values
 frq = 'D';
 
-variable = 'tas';
+variable = 'pr';
 mult_change = 1;
 allow_negatives = 0;
-SDM_var = 0;
+SDM_var = 1;
 
 day_win = 15;
 pp_threshold=1;
 pp_factor=1/10000;
 
-for variable=["pr","tas"]
-    for mult_change=[0,1]
-        for allow_negatives=[0,1]
-            % Load observed and model data.
-            obs = csvread(strcat('../Sample_data/obs_',variable,'_D.csv'), 1,4);
-            mod = csvread(strcat('../Sample_data/mod_',variable,'_D.csv'), 1,4);
-            
-            
-            %% Example 4
-            %  Example 4 shows how each bias correction method available in the
-            %  climQMBC package should be called. The outputs of each function are
-            %  columns vector with daily corrected data.
-            
-            qm_series = QM(obs,mod,allow_negatives,frq,pp_threshold, pp_factor, day_win);
-            dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, day_win);
-            qdm_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,pp_factor,2,pp_threshold,day_win);
-            uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, day_win);
-            % sdm_series = SDM(obs,mod,SDM_var,frq,pp_threshold,pp_factor,day_win);
+% Load observed and model data.
+obs = csvread(strcat('../Sample_data/obs_',variable,'_D.csv'), 1,4);
+mod = csvread(strcat('../Sample_data/mod_',variable,'_D.csv'), 1,4);
 
-            disp([round(max(qm_series)),round(max(dqm_series)),round(max(qdm_series)),round(max(uqm_series))])
-        end
-    end
-end
+
+%% Example 4
+%  Example 4 shows how each bias correction method available in the
+%  climQMBC package should be called. The outputs of each function are
+%  columns vector with daily corrected data.
+
+% qm_series = QM(obs,mod,allow_negatives,frq,pp_threshold, pp_factor, day_win);
+% dqm_series = DQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, day_win);
+% qdm_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,pp_factor,2,pp_threshold,day_win);
+% uqm_series = UQM(obs,mod,mult_change,allow_negatives,frq,pp_threshold, pp_factor, day_win);
+% sdm_series = SDM(obs,mod,SDM_var,frq,pp_threshold,pp_factor,day_win);

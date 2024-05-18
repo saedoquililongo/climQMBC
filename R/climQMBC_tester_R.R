@@ -47,13 +47,10 @@
 
 # If the package is not installed, save the .tar.gz file in the same directory
 # as this script. The following lines will install the package and import it.
-# install.packages(paste(getwd(),'/','climQMBC_0.1.1.tar.gz',sep=''),repos=NULL,type='source')
+install.packages(paste(getwd(),'/','climQMBC_1.0.0.tar.gz',sep=''),repos=NULL,type='source')
 
-# library(climQMBC)
+library(climQMBC)
 
-source(paste(getwd(),'/climQMBC/R/methods.R',sep=''))
-source(paste(getwd(),'/climQMBC/R/utils.R',sep=''))
-source(paste(getwd(),'/climQMBC/R/report.R',sep=''))
 
 # =============================================================================
 # I) Monthly and annual data
@@ -96,12 +93,12 @@ mod <- matrix(mod[,variable])
 #  of the modeled period. Remember that the projected periods length is
 #  equal to the length of the historical period.
 
-# rep_series <- report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
-# qm_series <- rep_series[[1]]
-# dqm_series <- rep_series[[2]]
-# qdm_series <- rep_series[[3]]
-# uqm_series <- rep_series[[4]]
-# sdm_series <- rep_series[[5]]
+rep_series <- report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
+qm_series <- rep_series[[1]]
+dqm_series <- rep_series[[2]]
+qdm_series <- rep_series[[3]]
+uqm_series <- rep_series[[4]]
+sdm_series <- rep_series[[5]]
 
 
 ## Example 2
@@ -169,28 +166,20 @@ pp_threshold <- 1
 pp_factor <- 1/10000
 
 
-for (variable in c('pr','tas')){
-  for (SDM_var in c(0,1)){
+# Load observed and model data.
+obs <- read.csv(paste(getwd(),'/../Sample_data/obs_',variable,'_D.csv',sep=''))
+obs <- matrix(obs[,variable])
 
-      # Load observed and model data.
-      obs <- read.csv(paste(getwd(),'/../Sample_data/obs_',variable,'_D.csv',sep=''))
-      obs <- matrix(obs[,variable])
-      
-      mod <- read.csv(paste(getwd(),'/../Sample_data/mod_',variable,'_D.csv',sep=''))
-      mod <- matrix(mod[,variable])
-      
-      ## Example 4
-      #  Example 4 shows how each bias correction method available in the
-      #  climQMBC package should be called. The outputs of each function are
-      #  columns vector with daily corrected data.
-      # 
-      # qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-      # dqm_series <- DQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-      # qdm_series <- QDM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-      # uqm_series <- UQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-      sdm_series <- SDM(obs,mod,SDM_var=SDM_var,frq=frq,pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-      
-      print(as.integer(max(sdm_series)))
+mod <- read.csv(paste(getwd(),'/../Sample_data/mod_',variable,'_D.csv',sep=''))
+mod <- matrix(mod[,variable])
 
-  }
-}
+## Example 4
+#  Example 4 shows how each bias correction method available in the
+#  climQMBC package should be called. The outputs of each function are
+#  columns vector with daily corrected data.
+
+# qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+# dqm_series <- DQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+# qdm_series <- QDM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+# uqm_series <- UQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+# sdm_series <- SDM(obs,mod,SDM_var=SDM_var,frq=frq,pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
