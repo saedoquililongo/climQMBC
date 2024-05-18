@@ -170,8 +170,7 @@ pp_factor <- 1/10000
 
 
 for (variable in c('pr','tas')){
-  for (mult_change in c(0,1)){
-    for (allow_negatives in c(0,1)){
+  for (SDM_var in c(0,1)){
 
       # Load observed and model data.
       obs <- read.csv(paste(getwd(),'/../Sample_data/obs_',variable,'_D.csv',sep=''))
@@ -185,14 +184,13 @@ for (variable in c('pr','tas')){
       #  climQMBC package should be called. The outputs of each function are
       #  columns vector with daily corrected data.
       # 
-      qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-      dqm_series <- DQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-      qdm_series <- QDM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-      uqm_series <- UQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
-      # sdm_series <- SDM(obs,mod,SDM_var=SDM_var,frq=frq,pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+      # qm_series <- QM(obs,mod,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+      # dqm_series <- DQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+      # qdm_series <- QDM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+      # uqm_series <- UQM(obs,mod,mult_change=mult_change,allow_negatives=allow_negatives, frq=frq, pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
+      sdm_series <- SDM(obs,mod,SDM_var=SDM_var,frq=frq,pp_threshold=pp_threshold, pp_factor=pp_factor, day_win=day_win)
       
-      print(c(as.integer(max(qm_series)),as.integer(max(dqm_series)),as.integer(max(qdm_series)),as.integer(max(uqm_series))))
+      print(as.integer(max(sdm_series)))
 
-    }
   }
 }
