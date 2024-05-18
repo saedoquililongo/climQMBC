@@ -4,35 +4,39 @@
 \alias{SDM}
 \title{Scaled Distribution Mapping}
 \usage{
-SDM(obs, mod, var, frq, pp_threshold, pp_factor)
+SDM(obs, mod, SDM_var, frq, pp_threshold, pp_factor, day_win)
 }
 \arguments{
-\item{obs}{A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_obs, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_obs, 1].}
+\item{obs}{A column vector of daily, monthly or annual observed data, without considering leap days. If daily frequency is specified, the length of the column vector should by a multiple of 365 and for monthly frequency, it should be a multiple of 12. [ndata_obs, 1]}
 
-\item{mod}{A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].}
+\item{mod}{A column vector of daily, monthly or annual modeled or GCM data, without considering leap days. If daily frequency is specified, the length of the column vector should by a multiple of 365 and for monthly frequency, it should be a multiple of 12. [ndata_mod, 1]}
 
-\item{var}{A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1}
+\item{SDM_var}{A flag that identifies if data are temperature or precipitation. Temperature:   var = 0 ; Precipitation: var = 1}
 
-\item{frq}{(Optional) A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'}
+\item{frq}{(Optional) A string specifying if the input frequency is daily, monthly or annual. ; Daily:     frq = 'D' ; Monthly:   frq = 'M' ; Annual:    frq = 'A' (default)}
 
-\item{pp_threshold}{(Optional) A float indicating the threshold to consider physically null precipitation values.}
+\item{pp_threshold}{(Optional) A float indicating the threshold to consider no-rain values. Default is 1.}
 
-\item{pp_factor}{(Optional) A float indicating the maximum value of the random values that replace physically null precipitation values.}
+\item{pp_factor}{(Optional) A float which multiplied to pp_threshold indicates the maximum value of the random values that replace no-rain values. Default is 1/100.}
+
+\item{day_win}{(Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: win = 1}
 }
 \value{
-A column vector of monthly or annual modeled data (temperature or precipitation) corrected by the SDM method. If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed  years [y_mod, 1].
+SDM_series: A column vector of data bias corrected with the QM method. [ndata_mod, 1]
 }
 \description{
-This function performs bias correction of modeled series based on observed data by the Scaled Distribution Mapping (SDM) method, as described by Switanek et al. (2017). Correction is performed to monthly or annual precipitation or temperature data in a single location. The historical period of the modeled series is bias corrected as a scenario where the complete series is replaced by the bias corrected series. On the other hand, for each year after the historical period the method considers a projected period as a window whose length is equal to the number of years of the historical period and ends in the analyzed year. From the bias corrected series, only the last year is saved and all the others are discarded. This approach aims to build a continuum for the bias corrected series.
+This function performs bias correction of modeled series based on observed data by the Scaled Distribution Mapping (SDM) method, as described by Switanek et al. (2017). Correction is performed to daily, monthly or annual precipitation or temperature data in a single location. The historical period of the modeled series is bias corrected as a scenario where the complete series is replaced by the bias corrected series. On the other hand, for each year after the historical period the method considers a projected period as a window whose length is equal to the number of years of the historical period and ends in the analyzed year. From the bias corrected series, only the last year is saved and all the others are discarded. This approach aims to build a continuum for the bias corrected series.
 }
 \details{
+NOTE: This routine considers that obs and mod series start in the same day/month/year and are continuous until the end day/month/year.
+
 Switanek, B. M., Troch, P., Castro, L. C., Leuprecht, A., Chang, H. I., Mukherjee, R., and Demaria, M. C. E. (2017) Scaled distribution mapping: A bias correction method that preserves raw climate model projected changes. Hydrology &amp; Earth System Sciences, 21, 2649-2666, https://doi.org/10.5194/hess-21-2649-2017.
 }
 \examples{
-SDM(obs,mod,var)
-SDM(obs,mod,var,frq='A')
-SDM(obs,mod,var,frq='M')
-SDM(obs,mod,var,frq='M',pp_threshold=0.1)
-SDM(obs,mod,var,frq='M',pp_factor=1/1000)
-SDM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
+SDM(obs,mod,SDM_var)
+SDM(obs,mod,SDM_var,frq='A')
+SDM(obs,mod,SDM_var,frq='M')
+SDM(obs,mod,SDM_var,frq='M',pp_threshold=0.1)
+SDM(obs,mod,SDM_var,frq='M',pp_factor=1/1000)
+SDM(obs,mod,SDM_var,frq='D',pp_threshold=0.1,pp_factor=1/1000,day_win=15)
 }

@@ -2,28 +2,28 @@
 % Please edit documentation in R/utils.R
 \name{getCDFinv}
 \alias{getCDFinv}
-\title{Get the value associated to a certain probability}
+\title{getCDFinv}
 \usage{
-getCDFinv(PDF, Taot, mu, sigma, skew, skewy)
+getCDFinv(pdf, prob, mu, sigma, skew, skewy)
 }
 \arguments{
-\item{PDF}{A column vector with an ID for the resulting distribution from the KS test. [12,1] if the series consider monthly data and [1,1] if the series consider annual data. The ID is related to the numeration of the distribution listed in the description of this function.}
+\item{pdf}{A vector with an ID for the resulting distribution from the KS test. The ID is related to  the numeration of the distribution listed in the description of this function.}
 
-\item{Taot}{A column vector with the non-exceedance probability for each row of the input series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.}
+\item{prob}{A matrix with the non-exceedance probability for value row of the input series.}
 
-\item{mu}{A column vector of mean values of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.}
+\item{mu}{A vector with mean values of each sub-period.}
 
-\item{sigma}{A column vector of standard deviation of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.}
+\item{sigma}{A vector with standard deviation values of each sub-period.}
 
-\item{skew}{A column vector of skewness of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.}
+\item{skew}{A vector with skewness values of each sub-period.}
 
-\item{skewy}{A column vector of skewness of the logarithm of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.}
+\item{skewy}{A vector with skewness values of the logarithm of the series of each sub-period.}
 }
 \value{
-xhat: A column vector with the values obtained when the inverse cumulative distribution function is applied. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.
+xhat: A matrix with the values obtained when the inverse cumulative distribution function is applied to prob.
 }
 \description{
-This function evaluates the probability, Taot, in the respective inverse cumulative distribution function assigned by the Kolmogorov-Smirnov (KS) test in the getDist function of the climQMBC package.
+This function evaluates the probability, prob, in the respective inverse cumulative distribution function assigned by the Kolmogorov-Smirnov (KS) test in the getDist function of the climQMBC package.
 }
 \details{
 The available distributions are: 1) Normal distribution; 2) Log-Normal distribution; 3) Gamma 2 parameters distribution; 4) Gamma 3 parameters distribution (Pearson 3 parameters distribution); 5) Log-Gamma 3 parameters distribution (Log-Pearson 3 parameters distribution); 6) Gumbel distribution; 7) Exponential distribution

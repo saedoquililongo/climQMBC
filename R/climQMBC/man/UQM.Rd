@@ -4,35 +4,64 @@
 \alias{UQM}
 \title{Unbiased Quantile Mapping}
 \usage{
-UQM(obs, mod, var, frq, pp_threshold, pp_factor)
+UQM(
+  obs,
+  mod,
+  mult_change,
+  allow_negatives,
+  frq,
+  pp_threshold,
+  pp_factor,
+  day_win,
+  user_pdf,
+  pdf_obs,
+  pdf_mod
+)
 }
 \arguments{
-\item{obs}{A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_obs, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_obs, 1].}
+\item{obs}{A column vector of daily, monthly or annual observed data, without considering leap days. If daily frequency is specified, the length of the column vector should by a multiple of 365 and for monthly frequency, it should be a multiple of 12. [ndata_obs, 1]}
 
-\item{mod}{A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].}
+\item{mod}{A column vector of daily, monthly or annual modeled or GCM data, without considering leap days. If daily frequency is specified, the length of the column vector should by a multiple of 365 and for monthly frequency, it should be a multiple of 12. [ndata_mod, 1]}
 
-\item{var}{A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1}
+\item{mult_change}{(Optional) A flag that indicates if projected changes should be computed as multiplicative (fut = hist*delta) or  additive (fut = hist + delta) changes. mult_change = 1 or True: Multiplicative (default) ; mult_change = 0 or False: Additive}
 
-\item{frq}{(Optional) A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'}
+\item{allow_negatives}{(Optional) A flag that identifies if data allows negative values and also to replace no-rain values with random small values (Chadwick et al., 2023) to avoid numerical problems with the probability distribution functions. allow_negatives = 1 or True: Allow negatives (default) ; allow_negatives = 0 or False: Do not allow negative}
 
-\item{pp_threshold}{(Optional) A float indicating the threshold to consider physically null precipitation values.}
+\item{frq}{(Optional) A string specifying if the input frequency is daily, monthly or annual. Daily:     frq = 'D' ; Monthly:   frq = 'M' ; Annual:    frq = 'A' (default)}
 
-\item{pp_factor}{(Optional) A float indicating the maximum value of the random values that replace physically null precipitation values.}
+\item{pp_threshold}{(Optional) A float indicating the threshold to consider no-rain values. Default is 1.}
+
+\item{pp_factor}{(Optional) A float which multiplied to pp_threshold indicates the maximum value of the random values that replace no-rain values. Default is 1/100.}
+
+\item{day_win}{(Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: win = 1}
+
+\item{user_pdf}{(Optional) A flag indicating if the user will define the probability distribution functions (pdf) for the observed and modeled series. The distributions will be the same for all periods and sub-periods. user_pdf = 1 or True: User defines the pdf ; user_pdf = 0 or False: pdf defined by the Kolmogorov -Smirnov test (default)}
+
+\item{pdf_obs}{(Optional) An integer indicating the probability distribution function (pdf) to be used for the observed data. The pdf will be the same for all periods and sub-periods. Default: None}
+
+\item{pdf_mod}{(Optional) An integer indicating the probability distribution function (pdf) to be used for the modeled data. The pdf will be the same for all periods and sub-periods. Default: None}
 }
 \value{
-A column vector of monthly or annual modeled data (temperature or precipitation) corrected by the UQM method. If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed  years [y_mod, 1].
+UQM_series: A column vector of data bias corrected with the UQM method. [ndata_mod, 1]
 }
 \description{
-This function performs bias correction of modeled series based on observed data by the Unbiased Quantile Mapping (UQM) method, as described by Chadwick et al.  (2021). Correction is performed to monthly or annual precipitation or temperature data in a single location. An independent probability distribution function is assigned to each month and to each projected period based on the Kolmogorov-Smirnov test. If annual frequency is specified, this is applied to the complete period. Each projected period  considers a window whose length is equal to the number of years of the historical period and ends in the analyzed year. Correction of the historical period is performed by the Quantile Mapping (QM) method, as described by Cannon et al. (2015).
+This function performs bias correction of modeled series based on observed data by the Unbiased Quantile Mapping (UQM) method, as described by Chadwick et al. (2023). Correction is performed to daily, monthly or annual data in a single location. An independent probability distribution function is assigned to each sub-annual period based on the Kolmogorov-Smirnov test. Each projected period considers a window whose length is equal to the number of years of the historical period and ends in the analyzed year.
 }
 \details{
-Chadwick et al. (2022) [under revision]
+Correction of the historical period is performed by the Quantile Mapping (QM) method, as described in Cannon et al. (2015) and Chadwick et al. (2023).
+
+The available distributions are: 1) Normal ; 2) Log-Normal ; 3) Gamma 2 parameters ; 4) Gamma 3 parameters ; (Pearson 3 parameters) ; 5) Log-Gamma 3 parameters ; 6) Gumbel ; 7) Exponential
+
+NOTE: This routine considers that obs and mod series start in the same day/month/year and are continuous until the end day/month/year.
+
+Chadwick, C., Gironás, J., González-Leiva, F., and Aedo, S. (2023). Bias adjustment to preserve changes in variability: the unbiased mapping of GCM changes. Hydrological Sciences Journal, https://doi.org/10.1080/02626667.2023.2201450
 }
 \examples{
-UQM(obs,mod,var)
-UQM(obs,mod,var,frq='A')
-UQM(obs,mod,var,frq='M')
-UQM(obs,mod,var,frq='M',pp_threshold=0.1)
-UQM(obs,mod,var,frq='M',pp_factor=1/1000)
-UQM(obs,mod,var,frq='M',pp_threshold=0.1,pp_factor=1/1000)
+UQM(obs,mod)
+UQM(obs,mod,frq='A')
+UQM(obs,mod,frq='M')
+UQM(obs,mod,frq='D')
+UQM(obs,mod,mult_changes=0,allow_negatives=1)
+UQM(obs,mod,mult_changes=1,allow_negatives=0)
+UQM(obs,mod,mult_changes=1,allow_negatives=0,frq='D',pp_factor=1/10000,day_win=15)
 }

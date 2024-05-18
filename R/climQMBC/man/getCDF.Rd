@@ -2,25 +2,25 @@
 % Please edit documentation in R/utils.R
 \name{getCDF}
 \alias{getCDF}
-\title{Get probability of a set of values}
+\title{getCDF}
 \usage{
-getCDF(PDF, series, mu, sigma, skew, skewy)
+getCDF(pdf, series, mu, sigma, skew, skewy)
 }
 \arguments{
-\item{PDF}{A column vector with an ID for the resulting distribution from the KS test. [12,1] if the series consider monthly data and [1,1] if the series consider annual data. The ID is related to the numeration of the distribution listed in the description of this function.}
+\item{pdf}{A vector with an ID for the resulting distribution from the KS test. The ID is related to  the numeration of the distribution listed in the description of this function.}
 
-\item{series}{A matrix of monthly or annual data (temperature or precipitation). If the series consider monthly data, it will have 12 rows and each row will represent a month. For annual data the series will have only one row.}
+\item{series}{An array of daily, monthly or annual data, without considering leap days. Possible input dimensions: 2D array: [sub-periods, years] ; [sub-periods + days window, years]}
 
-\item{mu}{A column vector of mean values of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.}
+\item{mu}{A vector with mean values of each sub-period.}
 
-\item{sigma}{A column vector of standard deviation of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.}
+\item{sigma}{A vector with standard deviation values of each sub-period.}
 
-\item{skew}{A column vector of skewness of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.}
+\item{skew}{A vector with skewness values of each sub-period.}
 
-\item{skewy}{A column vector of skewness of the logarithm of the series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.}
+\item{skewy}{A vector with skewness values of the logarithm of the series of each sub-period.}
 }
 \value{
-Taot: A column vector with the non-exceedance probability for each row of the input series. [12,1] if the series consider monthly data and [1,1] if the series consider annual data.
+prob: A matrix with the non-exceedance probability for value row of the input series.
 }
 \description{
 This function evaluates each row of the series in the respective cumulative distribution function assigned by the Kolmogorov-Smirnov (KS) test in the getDist function of the climQMBC package.
@@ -29,5 +29,5 @@ This function evaluates each row of the series in the respective cumulative dist
 The available distributions are: 1) Normal distribution; 2) Log-Normal distribution; 3) Gamma 2 parameters distribution; 4) Gamma 3 parameters distribution (Pearson 3 parameters distribution); 5) Log-Gamma 3 parameters distribution (Log-Pearson 3 parameters distribution); 6) Gumbel distribution; 7) Exponential distribution
 }
 \examples{
-getCDF(PDF,series,mu,sigma,skew,skewy)
+getCDF(pdf,series,mu,sigma,skew,skewy)
 }

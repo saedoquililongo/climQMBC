@@ -4,47 +4,27 @@
 \alias{formatQM}
 \title{formatQM}
 \usage{
-formatQM(obs, mod, var, frq, pp_threshold, pp_factor)
+formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor)
 }
 \arguments{
-\item{obs}{A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_obs, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_obs, 1].}
+\item{series_}{A column vector of daily data, without considering leap days. The length of the column vector should by a multiple of 365. [ndata_obs, 1]}
 
-\item{mod}{A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].}
+\item{allow_negatives}{A flag that identifies if data allows negative values and also to replace no-rain values with random small values (Chadwick et al., 2023) to avoid numerical problems with the probability distribution functions. allow_negatives = 1 or True: Allow negatives ; allow_negatives = 0 or False: Do not allow negative}
 
-\item{var}{A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1}
+\item{frq}{A string specifying if the input frequency is daily, monthly or annual. Daily:     frq = 'D' ; Monthly:   frq = 'M' ; Annual:    frq = 'A'}
 
-\item{frq}{A string specifying if the input is annual or monthly data. If not specified, it is set monthly as default. Monthly:   frq = 'M'; Annual:    frq = 'A'}
+\item{pp_threshold}{A float indicating the threshold to consider no-rain values.}
 
-\item{pp_threshold}{A float indicating the threshold to consider physically null precipitation values.}
-
-\item{pp_factor}{A float indicating the maximum value of the random values that replace physically null precipitation values.}
+\item{pp_factor}{A float which multiplied to pp_threshold indicates the maximum value of the random values that replace no-rain values.}
 }
 \value{
-y_obs:          Number of observed years.
+years: Number of years of the series.
 
-obs_series:     A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12, y_obs]. If annual frequency is specified, the length of this vector is equal to the number of observed years [1, y_obs].
-
-mod_series:     A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12, y_mod]. If annual frequency is specified, the length of this vector is equal to the number of observed years [1, y_mod].
-
-mu_obs:         If monthly frequency is specified, a column vector of monthly mean of observed data [12,1]. If annual frequency is specified, the mean of the observed data (float).
-
-mu_mod:         If monthly frequency is specified, a column vector of monthly mean of modeled data of the historical period [12,1]. If annual frequency is specified, the mean of the modeled data of the historical period(float).
-
-sigma_obs:      If monthly frequency is specified, a column vector of monthly standard deviation of observed data [12,1]. If annual frequency is specified, the standard deviation of the observed data (float).
-
-sigma_mod:      If monthly frequency is specified, a column vector of monthly standard deviation of modeled data of the historical period [12,1]. If annual frequency is specified, the standard deviation of the modeled data of the historical period(float).
-
-skew_obs:       If monthly frequency is specified, a column vector of monthly skewness of observed data [12,1]. If annual frequency is specified, the skewness of the observed data (float).
-
-skew_mod:       If monthly frequency is specified, a column vector of monthly skewness of modeled data of the historical period [12,1]. If annual frequency is specified, the skewness of the modeled data of the historical period (float).
-
-skewy_obs:      If monthly frequency is specified, a column vector of monthly skewness of the logarithm of observed data [12,1]. If annual frequency is specified, the skewness of the logarithm of the observed data (float).
-
-skewy_mod:      If monthly frequency is specified, a column vector of monthly skewness of the logarithm of modeled data of the historical period [12,1]. If annual frequency is specified, the skewness of the logarithm of the modeled data of the historical period(float).
+series_matrix: A matrix of daily, monthly or annual observed data, without considering leap days. For daily, monthly and annual frequency, the number of rows will be 365, 12 and 1, respectively. The number of columns will be equal to the number of years. [1, 12 or 365, years]
 }
 \description{
-This function formats the inputs and gets basic statistics for the different Quantile Mapping (QM, DQM, QDM, UQM and SDM) methods available in the climQMBC package. If monthly data is specified, the input series will be reshaped to a matrix of 12 rows and several columns equal to the number of years of each series. If annual data is specified, the input is reshaped to a row vector with same entries as the input series. For precipitation, physically null values (values below pp_threshold) are replaced by random positive values below pp_factor.
+This function formats a time series from a column vector to a matrix. The number of rows depends on the frequency of the data (1, 12 and 365 for annual, monthyl and daily data, respectively). If negative values are not allowed, determined by allow_negatives=1, no-rain values (values below pp_threshold) are replaced by random positive values below the product pp_threshold*pp_factor.
 }
 \examples{
-formatQM(obs,mod,var,frq,pp_threshold,pp_factor)
+formatQM(series_, allow_negatives, frq, pp_threshold, pp_factor)
 }
