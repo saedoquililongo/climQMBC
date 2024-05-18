@@ -76,16 +76,11 @@ report <- function(obs, mod ,SDM_var, mult_change, allow_negatives, fun, y_init,
 
   # 2) Apply QM methods
   QM_series <- QM(obs, mod, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
-  print('QM')
   DQM_series <- DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
-  print('DQM')
   QDM_series <- QDM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
-  print('QDM')
   UQM_series <- UQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
-  print('UQM')
   SDM_series <- SDM(obs, mod, SDM_var=SDM_var, frq='M')
-  print('SDM')
-
+  
   # 3) Get observed, modeled and bias corrected statistics
   # a) Get obs, mod, and QMs as [12 x n] matrix
   obs_M <- matrix(obs,nrow = 12, ncol = y_obs)

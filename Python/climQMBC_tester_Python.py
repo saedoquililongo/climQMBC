@@ -54,7 +54,7 @@ import pandas as pd
 
 
 # =============================================================================
-# I) Montly and annual data
+# I) Monthly and annual data
 # =============================================================================
 # variable:
 #    - pr  (precipitation)
@@ -82,6 +82,7 @@ SDM_var = 1
 obs = pd.read_csv(f'../Sample_data/obs_{variable}_M.csv')[[variable]].values
 mod = pd.read_csv(f'../Sample_data/mod_{variable}_M.csv')[[variable]].values
 
+
 # Example 1
 # Example 1 shows how to use the report function with the minimum number
 # of inputs. The five methods available in the climQMBC package will be
@@ -91,6 +92,16 @@ mod = pd.read_csv(f'../Sample_data/mod_{variable}_M.csv')[[variable]].values
 # equal to the length of the historical period.
 
 qm_series,dqm_series,qdm_series,uqm_series,sdm_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives)
+
+
+# Example 2
+# Example 2 shows how to use the report function for specific bias
+# correction methods and projected periods. The Quantile Delta Mapping
+# (QDM), Unbiased Quantile Mapping (UQM), and Scaled Distribution Mapping
+# (SDM) methods will be reported. The report will analyze the projected periods
+# centered in 2035 2060 and 2080.
+
+# qm_series,dqm_series,qdm_series,uqm_series,sdm_series = report(obs, mod, SDM_var=SDM_var, mult_change=mult_change, allow_negatives=allow_negatives, y_init = 1979,y_wind = [2035,2060,2080])
 
 
 # Example 2
@@ -145,7 +156,7 @@ qm_series,dqm_series,qdm_series,uqm_series,sdm_series = report(obs, mod, SDM_var
 #            values to replace no-rain values
 frq = 'D'
 
-variable = 'tas'
+variable = 'pr'
 mult_change = 1
 allow_negatives = 0
 SDM_var = 0
@@ -153,6 +164,7 @@ SDM_var = 0
 day_win = 15
 pp_threshold=1
 pp_factor=1/10000
+
 
 # Load observed and model data.
 obs = pd.read_csv(f'../Sample_data/obs_{variable}_D.csv')[[variable]].values
