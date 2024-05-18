@@ -95,3 +95,8 @@ Additionally, the [Example_notebook.ipynb](https://github.com/saedoquililongo/cl
 
 ### Version 0.0.0
 First release of the climQMBC package.
+
+
+## Acknowledgement
+
+The climQMBC package has been developed and funded by FONDECYT projects 1200135 and 11220952. The development of the climQMBC package has also been supported by the suggestions, needs and issues raised by users.
