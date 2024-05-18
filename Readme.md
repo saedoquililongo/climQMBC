@@ -9,7 +9,7 @@ Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzale
 (4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile, Santiago, Chile. 
 
 *Maintainer contact: sebastian.aedo.q@gmail.com\
-Version: 1.0.0, updated Apr 2024\
+Version: 1.0.0, updated Apr 2024
 
 
 ## Introduction
