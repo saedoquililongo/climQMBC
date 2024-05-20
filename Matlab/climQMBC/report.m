@@ -1,28 +1,27 @@
-function [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,var,fun,y_init,y_wind)
+function [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mod,SDM_var,mult_change,allow_negatives,fun,y_init,y_wind)
 %% report:
-%   This function generates two report of the performance of the different
-%   methods (QM, DQM, QDM, UQM and SDM) available in the climQMBC package.
-%   These reports are based on the mean and standard deviation of the
-%   series in the historical and future projected periods.
-%
-%   The first report is a summary table with the overall performance of the
-%   QM method in the historical period and of the different methods in
-%   future projected periods. The methods performance is addressed by
-%   comparing its variations in the mean and standard deviation with the
-%   ones of the modeled data.
-%
-%   The second report consist of three figures. Figure 1 shows the
-%   cumulative distribution of the observed, modeled, and corrected series
-%   in the historical and future period. This figure also shows the
-%   complete time series. Figure 2 and 3 shows the monthly mean and
-%   standard deviation, respectively, of each series in the historical and
-%   future projected periods. In these two figures, in the future projected
-%   periods, the observed series is replaced by an objective series which
-%   is computed as the observed series (monthly mean or standard
-%   deviation), scaled by the variation between the projected and the
-%   historical period of the modeled series. Each projected period is
-%   centered in a moving window whose length is equal to the length of the
-%   historical period.
+%  This function generates two report of the performance of the different
+%  methods (QM, DQM, QDM, UQM and SDM) available in the climQMBC package.
+%  These reports are based on the mean and standard deviation of the series
+%  in the historical and future projected periods.
+% 
+%  The first report is a summary table with the overall performance of the
+%  QM method in the historical period and of the different methods in
+%  future projected periods. The methods performance is addressed by 
+%  comparing its variations in the mean and standard deviation with the
+%  ones of the modeled data.
+% 
+%  The second report consist of three figures. Figure 1 shows the 
+%  cumulative distribution of the observed, modeled, and corrected series 
+%  in the historical and future period. This figure also shows the complete
+%  time series. Figure 2 and 3 shows the monthly mean and standard
+%  deviation, respectively, of each series in the historical and future
+%  projected periods. In these two figures, in the future projected periods,
+%  the observed series is replaced by an objective series which is computed
+%  as the observed series (monthly mean or standard deviation), scaled by
+%  the variation between the projected and the historical period of the
+%  modeled series. Each projected period is centered in a moving window 
+%  whose length is equal to the length of the historical period.
 %
 %   NOTE: 
 %      1) Even if a set of methods are specified in the optional inputs,
@@ -30,42 +29,34 @@ function [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mo
 %         climQMBC package.
 %      2) This report function was built for monthly data.
 %
-% Description:
-%   0) Get the number of observed and modeled years.
-%
-%   1) Set non-declared arguments.
-%
-%   2) Apply bias correction methods.
-%
-%   3) Get observed, modeled and bias corrected statistics of the
-%      historical and complete future period.
-%
-%   4) Get observed, modeled and bias corrected statistics of the projected
-%      periods.
-%
-%   5) Get delta mean and delta standard deviation.
-%
-%   6) Display report:
-%          a) Report description.
-%          b) Table.
-%          c) Figures.
-%
 % Input:
-%   obs = A column vector of monthly observed data (temperature or
-%         precipitation) [12 x y_obs, 1].
+%   obs = A column vector of monthly observed data. The length of the 
+%         column vector should by a multiple of 12. [ndata_obs, 1]
 %
-%   mod = A column vector of monthly modeled data (temperature or
-%         precipitation) [12 x y_mod, 1].
+%   mod = A column vector of monthly modeled or GCM data.The length of the
+%         column vector should by a multiple of 12. [ndata_mod, 1]
 %
-%   var = A flag that identifies if data are temperature or precipitation.
-%         This flag tells the getDist function if it has to discard
-%         distribution functions that allow negative numbers, and if the 
-%         terms in the correction equations are multiplied/divided or
-%         added/subtracted.
-%         Temperature:   var = 0
-%         Precipitation: var = 1
+%   SDM_var = A flag that identifies if data are temperature or precipitation.
+%             Temperature:   SDM_var = 0
+%             Precipitation: SDM_var = 1
+% 
+%  NOTE: This routine considers that obs and mod series start in the same
+%        day/month/year and are continuous until the end day/month/year.
 %
 % Optional inputs:
+%   mult_change = A flag that indicates if projected changes should be 
+%                 computed as multiplicative (fut = hist*delta) or additive
+%                 (fut = hist + delta) changes.
+%                 mult_change = 1 or True: Multiplicative (default)
+%                 mult_change = 0 or False: Additive
+% 
+%   allow_negatives: A flag that identifies if data allows negative values
+%                    and also to replace no-rain values with random small 
+%                    values (Chadwick et al., 2023) to avoid numerical
+%                    problems with the probability distribution functions.
+%                    allow_negatives = 1 or True: Allow negatives (default)
+%                    allow_negatives = 0 or False: Do not allow negative
+%
 %   fun = A cell array of strings with the desired bias correction methods
 %         to be reported. If this input is not recieved by the function,
 %         all bias correction methods available in the climQMBC package
@@ -87,49 +78,48 @@ function [QM_series,DQM_series,QDM_series,UQM_series,SDM_series] = report(obs,mo
 %                     the end of historical period, and a second projected 
 %                     period just before the end of the modeled series.
 %
-%   NOTE: As MATLAB reads the inputs in sequence, each optional inputs must
-%         be added as defined by the function. If y_init or y_wind is a
-%         desired argument, fun must be specified.
+%   NOTE: As MATLAB reads the inputs in sequence, each optional inputs
+%         must be added as defined by the function. For example, if fun
+%         or is a desired argument, mult_change and allow_negatives must 
+%         be specified.
 %
 % Output:
-%   QM_series = A column vector of monthly modeled data (temperature or 
-%               precipitation) corrected by the QM method [12 x y_mod, 1].
+%   QM_series = A column vector of data bias corrected with the QM method.
+%               [ndata_mod, 1]
 %
-%   DQM_series = A column vector of monthly modeled data (temperature or 
-%                precipitation) corrected by the DQM method 
-%                [12 x y_mod, 1].
+%   DQM_series = A column vector of data bias corrected with the DQM method.
+%                [ndata_mod, 1]
 %
-%   QDM_series = A column vector of monthly modeled data (temperature or 
-%                precipitation) corrected by the QdM method 
-%                [12 x y_mod, 1].
+%   QDM_series = A column vector of data bias corrected with the QDM method.
+%                [ndata_mod, 1]
 %
-%   UQM_series = A column vector of monthly modeled data (temperature or 
-%                precipitation) corrected by the UQM method 
-%                [12 x y_mod, 1].
+%   UQM_series = A column vector of data bias corrected with the UQM method.
+%                [ndata_mod, 1]
 %
-%   SDM_series = A column vector of monthly modeled data (temperature or 
-%                precipitation) corrected by the SDM method 
-%                [12 x y_mod, 1].
+%   SDM_series = A column vector of data bias corrected with the SDM method.
+%                [ndata_mod, 1]
 %
 %   NOTE: This function returns all five bias correction methods, 
 %         independently of which methods are specified for this report.
 %
-
+%
 % Written by Sebastian Aedo Quililongo (1*)
 %            Cristian Chadwick         (2)
 %            Fernando Gonzalez-Leiva   (3)
-%            Jorge Gironas             (3)
-%            
-%   (1) Centro de CAmbio Global UC, Pontificia Universidad Catolica de 
-%       Chile, Santiago, Chile
-%   (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
-%       Santiago, Chile
-%   (3) Department of Hydraulics and Environmental Engineering, Pontificia
-%       Universidad Catolica de Chile, Santiago, Chile
-%       
-%   *Maintainer contact: slaedo@uc.cl
-% Revision: 0, updated Dec 2021
-% 
+%            Jorge Gironas             (3, 4)
+%           
+%  (1) Stockholm Environment Institute, Latin America Centre, Bogota,
+%      Colombia
+%  (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
+%      Santiago, Chile
+%  (3) Department of Hydraulics and Environmental Engineering, Pontificia 
+%      Universidad Catolica de Chile, Santiago, Chile
+%  (4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
+%      Santiago, Chile
+%
+% *Maintainer contact: sebastian.aedo.q@gmail.com
+% Revision: 1, updated Apr 2024
+%
 
 %%
 % 0) Get the number of observed and modeled years
@@ -140,12 +130,22 @@ n_mod = length(mod);
 y_mod = n_mod/12;
 
 % 1) Set non-declared arguments
+if ~exist('mult_change','var')
+  mult_change=1;
+end
+
+if ~exist('allow_negatives','var')
+  allow_negatives=1;
+end
+
 if ~exist('fun','var')
   fun = {'QM','DQM','QDM','UQM','SDM'};
 end
+
 if ~exist('y_init','var')
   y_init = 0;
 end
+
 if ~exist('y_wind','var')
   y_wind = [floor(y_obs+y_obs/2) floor(y_mod-y_obs/2)];
   w_label = {'First period','Last period'};
@@ -162,11 +162,11 @@ end
 y_wind = y_wind - y_init;
 
 % 2) Apply QM methods
-QM_series = QM(obs,mod,var);
-DQM_series = DQM(obs,mod,var);
-QDM_series = QDM(obs,mod,var);
-UQM_series = UQM(obs,mod,var);
-SDM_series = SDM(obs,mod,var);
+QM_series = QM(obs,mod,allow_negatives,'M');
+DQM_series = DQM(obs,mod,mult_change,allow_negatives,'M');
+QDM_series = QDM(obs,mod,mult_change,allow_negatives,'M');
+UQM_series = UQM(obs,mod,mult_change,allow_negatives,'M');
+SDM_series = SDM(obs,mod,SDM_var,'M');
 
 % 3) Get observed, modeled and bias corrected statistics
 % a) Get obs, mod, and QMs as [12 x n] matrix
@@ -320,7 +320,7 @@ ds_QDM_Mw = zeros(12,length(y_wind));
 ds_UQM_Mw = zeros(12,length(y_wind));
 ds_SDM_Mw = zeros(12,length(y_wind));
 
-if var == 1
+if mult_change == 1
     dm_obs = mu_QM_h/mu_obs;
     dm_mod = mu_mod_f/mu_mod_h;
     dm_QM = mu_QM_f/mu_QM_h;
@@ -465,39 +465,39 @@ n = 3; % Number of decimals to which round the values
 sp = ['-',' ',' ']; % A small trick to prevent negative values to use more
                     % space than positive values
 
-rep_mu_M = ['Modeled          :' ' ' sp(sign(dm_mod)+2) num2str(abs(roundn(dm_mod,-n)))];
-rep_mu_QM = ['QM               :' ' ' sp(sign(dm_QM)+2) num2str(abs(roundn(dm_QM,-n)))];
-rep_mu_DQM = ['DQM              :' ' ' sp(sign(dm_DQM)+2) num2str(abs(roundn(dm_DQM,-n)))];
-rep_mu_QDM = ['QDM              :' ' ' sp(sign(dm_QDM)+2) num2str(abs(roundn(dm_QDM,-n)))];
-rep_mu_UQM = ['UQM              :' ' ' sp(sign(dm_UQM)+2) num2str(abs(roundn(dm_UQM,-n)))];
-rep_mu_SDM = ['SDM              :' ' ' sp(sign(dm_SDM)+2) num2str(abs(roundn(dm_SDM,-n)))];
+rep_mu_M = ['Modeled          :' ' ' sp(sign(dm_mod)+2) num2str(abs(round(dm_mod,n)))];
+rep_mu_QM = ['QM               :' ' ' sp(sign(dm_QM)+2) num2str(abs(round(dm_QM,n)))];
+rep_mu_DQM = ['DQM              :' ' ' sp(sign(dm_DQM)+2) num2str(abs(round(dm_DQM,n)))];
+rep_mu_QDM = ['QDM              :' ' ' sp(sign(dm_QDM)+2) num2str(abs(round(dm_QDM,n)))];
+rep_mu_UQM = ['UQM              :' ' ' sp(sign(dm_UQM)+2) num2str(abs(round(dm_UQM,n)))];
+rep_mu_SDM = ['SDM              :' ' ' sp(sign(dm_SDM)+2) num2str(abs(round(dm_SDM,n)))];
 
-rep_s_M = ['Modeled          :' ' ' sp(sign(ds_mod)+2) num2str(abs(roundn(ds_mod,-n)))];
-rep_s_QM = ['QM               :' ' ' sp(sign(ds_QM)+2) num2str(abs(roundn(ds_QM,-n)))];
-rep_s_DQM = ['DQM              :' ' ' sp(sign(ds_DQM)+2) num2str(abs(roundn(ds_DQM,-n)))];
-rep_s_QDM = ['QDM              :' ' ' sp(sign(ds_QDM)+2) num2str(abs(roundn(ds_QDM,-n)))];
-rep_s_UQM = ['UQM              :' ' ' sp(sign(ds_UQM)+2) num2str(abs(roundn(ds_UQM,-n)))];
-rep_s_SDM = ['SDM              :' ' ' sp(sign(ds_SDM)+2) num2str(abs(roundn(ds_SDM,-n)))];
+rep_s_M = ['Modeled          :' ' ' sp(sign(ds_mod)+2) num2str(abs(round(ds_mod,n)))];
+rep_s_QM = ['QM               :' ' ' sp(sign(ds_QM)+2) num2str(abs(round(ds_QM,n)))];
+rep_s_DQM = ['DQM              :' ' ' sp(sign(ds_DQM)+2) num2str(abs(round(ds_DQM,n)))];
+rep_s_QDM = ['QDM              :' ' ' sp(sign(ds_QDM)+2) num2str(abs(round(ds_QDM,n)))];
+rep_s_UQM = ['UQM              :' ' ' sp(sign(ds_UQM)+2) num2str(abs(round(ds_UQM,n)))];
+rep_s_SDM = ['SDM              :' ' ' sp(sign(ds_SDM)+2) num2str(abs(round(ds_SDM,n)))];
 
 for w = 1:length(y_wind)
-    rep_mu_M = [rep_mu_M '  ; ' sp(sign(dm_mod_w(w))+2) num2str(abs(roundn(dm_mod_w(w),-n)))];
-    rep_mu_QM = [rep_mu_QM '  ; ' sp(sign(dm_QM_w(w))+2) num2str(abs(roundn(dm_QM_w(w),-n)))];
-    rep_mu_DQM = [rep_mu_DQM '  ; ' sp(sign(dm_DQM_w(w))+2) num2str(abs(roundn(dm_DQM_w(w),-n)))];
-    rep_mu_QDM = [rep_mu_QDM '  ; ' sp(sign(dm_QDM_w(w))+2) num2str(abs(roundn(dm_QDM_w(w),-n)))];
-    rep_mu_UQM = [rep_mu_UQM '  ; ' sp(sign(dm_UQM_w(w))+2) num2str(abs(roundn(dm_UQM_w(w),-n)))];
-    rep_mu_SDM = [rep_mu_SDM '  ; ' sp(sign(dm_SDM_w(w))+2) num2str(abs(roundn(dm_SDM_w(w),-n)))];
+    rep_mu_M = [rep_mu_M '  ; ' sp(sign(dm_mod_w(w))+2) num2str(abs(round(dm_mod_w(w),n)))];
+    rep_mu_QM = [rep_mu_QM '  ; ' sp(sign(dm_QM_w(w))+2) num2str(abs(round(dm_QM_w(w),n)))];
+    rep_mu_DQM = [rep_mu_DQM '  ; ' sp(sign(dm_DQM_w(w))+2) num2str(abs(round(dm_DQM_w(w),n)))];
+    rep_mu_QDM = [rep_mu_QDM '  ; ' sp(sign(dm_QDM_w(w))+2) num2str(abs(round(dm_QDM_w(w),n)))];
+    rep_mu_UQM = [rep_mu_UQM '  ; ' sp(sign(dm_UQM_w(w))+2) num2str(abs(round(dm_UQM_w(w),n)))];
+    rep_mu_SDM = [rep_mu_SDM '  ; ' sp(sign(dm_SDM_w(w))+2) num2str(abs(round(dm_SDM_w(w),n)))];
     
-    rep_s_M = [rep_s_M '  ; ' sp(sign(ds_mod_w(w))+2) num2str(abs(roundn(ds_mod_w(w),-n)))];
-    rep_s_QM = [rep_s_QM '  ; ' sp(sign(ds_QM_w(w))+2) num2str(abs(roundn(ds_QM_w(w),-n)))];
-    rep_s_DQM = [rep_s_DQM '  ; ' sp(sign(ds_DQM_w(w))+2) num2str(abs(roundn(ds_DQM_w(w),-n)))];
-    rep_s_QDM = [rep_s_QDM '  ; ' sp(sign(ds_QDM_w(w))+2) num2str(abs(roundn(ds_QDM_w(w),-n)))];
-    rep_s_UQM = [rep_s_UQM '  ; ' sp(sign(ds_UQM_w(w))+2) num2str(abs(roundn(ds_UQM_w(w),-n)))];
-    rep_s_SDM = [rep_s_SDM '  ; ' sp(sign(ds_SDM_w(w))+2) num2str(abs(roundn(ds_SDM_w(w),-n)))];
+    rep_s_M = [rep_s_M '  ; ' sp(sign(ds_mod_w(w))+2) num2str(abs(round(ds_mod_w(w),n)))];
+    rep_s_QM = [rep_s_QM '  ; ' sp(sign(ds_QM_w(w))+2) num2str(abs(round(ds_QM_w(w),n)))];
+    rep_s_DQM = [rep_s_DQM '  ; ' sp(sign(ds_DQM_w(w))+2) num2str(abs(round(ds_DQM_w(w),n)))];
+    rep_s_QDM = [rep_s_QDM '  ; ' sp(sign(ds_QDM_w(w))+2) num2str(abs(round(ds_QDM_w(w),n)))];
+    rep_s_UQM = [rep_s_UQM '  ; ' sp(sign(ds_UQM_w(w))+2) num2str(abs(round(ds_UQM_w(w),n)))];
+    rep_s_SDM = [rep_s_SDM '  ; ' sp(sign(ds_SDM_w(w))+2) num2str(abs(round(ds_SDM_w(w),n)))];
 end
 
 % b) Table
 disp('<strong>Mean</strong>')
-disp(['QM performance in historical period  :' ' ' sp(sign(dm_obs)+2) num2str(abs(roundn(dm_obs,-n)))])
+disp(['QM performance in historical period  :' ' ' sp(sign(dm_obs)+2) num2str(abs(round(dm_obs,n)))])
 disp(rep_head)
 disp(rep_mu_M)
 if any(strcmp(fun,'QM'))
@@ -518,7 +518,7 @@ end
 disp(' ')
 
 disp('<strong>Standard deviation</strong>')
-disp(['QM performance in historical period  :' ' ' sp(sign(ds_obs)+2) num2str(abs(roundn(ds_obs,-n)))])
+disp(['QM performance in historical period  :' ' ' sp(sign(ds_obs)+2) num2str(abs(round(ds_obs,n)))])
 disp(rep_head)
 disp(rep_s_M)
 if any(strcmp(fun,'QM'))
@@ -583,7 +583,7 @@ if any(strcmp(fun,'SDM'))
 end
 hold off
 title('Empirical cumulative ditribution functions')
-if var ==1
+if mult_change ==1
     xlabel('Precipitation (mm)') 
 else
     xlabel('Temperature (C)') 
@@ -621,7 +621,7 @@ end
 plot(obs,'r')
 lgnd{end+1} = 'Obs';
 hold off
-if var ==1
+if mult_change ==1
     title('Precipitation time series')
     ylabel('Precipitation (mm)') 
 else
@@ -673,9 +673,9 @@ if any(strcmp(fun,'SDM'))
     plot(mu_SDM_Mf,'m')
     lgnd{end+1} = 'SDM';
 end
-if var==1
+if mult_change==1
     plot(mu_obs_M.*dm_mod_M ,'r')
-elseif var ==0
+elseif mult_change ==0
     plot(mu_obs_M+dm_mod_M ,'r')
 end
 lgnd{end+1} = 'Obj';
@@ -705,9 +705,9 @@ for w=1:length(y_wind)
     if any(strcmp(fun,'SDM'))
         plot(mu_SDM_Mw(:,w),'m')
     end
-    if var==1
+    if mult_change==1
         plot(mu_obs_M.*dm_mod_Mw(:,w) ,'r')
-    elseif var ==0
+    elseif mult_change ==0
         plot(mu_obs_M+dm_mod_Mw(:,w) ,'r')
     end
     hold off
@@ -759,9 +759,9 @@ if any(strcmp(fun,'SDM'))
     plot(s_SDM_Mf,'m')
     lgnd{end+1} = 'SDM';
 end
-if var==1
+if mult_change==1
     plot(s_obs_M.*ds_mod_M ,'r')
-elseif var ==0
+elseif mult_change ==0
     plot(s_obs_M+ds_mod_M ,'r')
 end
 lgnd{end+1} = 'Obj';
@@ -791,9 +791,9 @@ for w=1:length(y_wind)
     if any(strcmp(fun,'SDM'))
         plot(s_SDM_Mw(:,w),'m')
     end
-    if var==1
+    if mult_change==1
         plot(s_obs_M.*ds_mod_Mw(:,w) ,'r')
-    elseif var ==0
+    elseif mult_change ==0
         plot(s_obs_M+ds_mod_Mw(:,w) ,'r')
     end
     hold off

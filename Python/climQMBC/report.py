@@ -3,7 +3,28 @@ import matplotlib.pylab as plt
 import pandas as pd
 import numpy as np
 
-def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0):
+"""
+This script contains the report function to compare the performance of different
+methods.
+
+Written by Sebastian Aedo Quililongo (1*)
+           Cristian Chadwick         (2)
+           Fernando Gonzalez-Leiva   (3)
+           Jorge Gironas             (3, 4)
+           
+  (1) Stockholm Environment Institute, Latin America Centre, Bogota, Colombia
+  (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez, Santiago,
+      Chile
+  (3) Department of Hydraulics and Environmental Engineering, Pontificia
+      Universidad Catolica de Chile, Santiago, Chile
+  (4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
+      Santiago, Chile
+      
+*Maintainer contact: sebastian.aedo.q@gmail.com
+Revision: 1, updated Apr 2024
+"""
+
+def report(obs, mod, SDM_var, mult_change=1, allow_negatives=1, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function generates two report of the performance of the different
     methods (QM, DQM, QDM, UQM and SDM) available in the climQMBC package.
@@ -34,52 +55,35 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
            package.
     
         2) This report function was built for monthly data.
-    
-    Description:
-        0) Get the number of observed and modeled years.
-        
-        1) Set non-declared arguments.
-        
-        2) Apply bias correction methods.
-        
-        3) Get observed, modeled and bias corrected statistics of the 
-           historical and complete future period.
-        
-        4) Get observed, modeled and bias corrected statistics of the projected
-           periods.
-        
-        5) Get delta mean and delta standard deviation.
-        
-        6) Display report:
-            a) Report description.
-            b) Table.
-            c) Figures.
             
     Input:
-        obs:    A column vector of monthly or annual observed data (temperature
-                or precipitation). If monthly frequency is specified, 
-                the length of this vector is 12 times the number of observed 
-                years [12 x y_obs, 1]. If annual frequency is specified, the 
-                length of this vector is equal to the number of observed years
-                [y_obs, 1].
+        obs:    A column vector of monthly observed data. The length of the 
+                column vector should by a multiple of 12. [ndata_obs, 1]
 
-        mod:    A column vector of monthly or annual modeled data (temperature
-                or precipitation). If monthly frequency is specified, 
-                the length of this vector is 12 times the number of observed
-                years [12 x y_mod, 1]. If annual frequency is specified, the 
-                length of this vector is equal to the number of observed years
-                [y_mod, 1].
+        mod:    A column vector of monthly modeled or GCM data.The length of the
+                column vector should by a multiple of 12. [ndata_mod, 1]
+                
+        SDM_var: A flag that identifies if data are temperature or precipitation.
+                     Temperature:   SDM_var = 0
+                     Precipitation: SDM_var = 1
 
-        var:    A flag that identifies if data are temperature or 
-                precipitation. This flag tells the getDist function if it has 
-                to discard distribution functions that allow negative numbers,
-                and if the terms in the correction equations are
-                multiplied/divided or added/subtracted.
-                    Temperature:   var = 0
-                    Precipitation: var = 1
-    
+        NOTE: This routine considers that obs and mod series start in the same
+        day/month/year and are continuous until the end day/month/year.
     
     Optional inputs:
+        mult_change:     A flag that indicates if projected changes should be
+                         computed as multiplicative (fut = hist*delta) or 
+                         additive (fut = hist + delta) changes.
+                             mult_change = 1 or True: Multiplicative (default)
+                             mult_change = 0 or False: Additive
+
+        allow_negatives: A flag that identifies if data allows negative values
+                         and also to replace no-rain values with random small 
+                         values (Chadwick et al., 2023) to avoid numerical
+                         problems with the probability distribution functions.
+                             allow_negatives = 1 or True: Allow negatives (default)
+                             allow_negatives = 0 or False: Do not allow negative
+        
         fun:    A list of strings with the desired bias correction methods to
         be reported. If this input is not recieved by the function, all bias
         correction methods available in the climQMBC package will be reported.
@@ -99,76 +103,65 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
                     This value sets a first projected period just after the end 
                     of historical period, and a second projected period just 
                     before the end of the modeled series.
+                    
+        user_pdf:        A flag indicating if the user will define the
+                         probability distribution functions (pdf) for the
+                         observed and modeled series. The distributions will be
+                         the same for all periods and sub-periods.
+                            user_pdf = 1 or True: User defines the pdf
+                            user_pdf = 0 or False: pdf defined by the Kolmogorov
+                                                   -Smirnov test (default)
+
+        pdf_obs:         An integer indicating the probability distribution 
+                         function (pdf) to be used for the observed data. The
+                         pdf will be the same for all periods and sub-periods.
+                         Default: None
+
+        pdf_mod:         An integer indicating the probability distribution 
+                         function (pdf) to be used for the modeled data. The
+                         pdf will be the same for all periods and sub-periods.
+                         Default: None
+
+        NOTE: The available distributions for pdf_obs and pdf_mod are:
+            0) Normal
+            1) Log-Normal
+            2) Gamma 2 parameters
+            3) Gamma 3 parameters
+               (Pearson 3 parameters)
+            4) Log-Gamma 3 parameters
+               (Log-Pearson 3 parameters)
+            5) Gumbel
+            6) Exponential
     
     Output:
-        QM_series:  A column vector of monthly or annual modeled data 
-                    (temperature or precipitation) corrected by the QM method. 
-                    If monthly frequency is specified, the length of this 
-                    vector is 12 times the number of observed years 
-                    [12 x y_mod, 1]. If annual frequency is specified, the 
-                    length of this vector is equal to the number of observed 
-                    years [y_mod, 1].
-                    
-        DQM_series: A column vector of monthly or annual modeled data 
-                    (temperature or precipitation) corrected by the DQM method. 
-                    If monthly frequency is specified, the length of this 
-                    vector is 12 times the number of observed years 
-                    [12 x y_mod, 1]. If annual frequency is specified, the 
-                    length of this vector is equal to the number of observed 
-                    years [y_mod, 1].
-                    
-        QDM_series: A column vector of monthly or annual modeled data 
-                    (temperature or precipitation) corrected by the QDM method. 
-                    If monthly frequency is specified, the length of this 
-                    vector is 12 times the number of observed years 
-                    [12 x y_mod, 1]. If annual frequency is specified, the 
-                    length of this vector is equal to the number of observed 
-                    years [y_mod, 1].
-                    
-        UQM_series: A column vector of monthly or annual modeled data 
-                    (temperature or precipitation) corrected by the UQM method. 
-                    If monthly frequency is specified, the length of this 
-                    vector is 12 times the number of observed years 
-                    [12 x y_mod, 1]. If annual frequency is specified, the 
-                    length of this vector is equal to the number of observed 
-                    years [y_mod, 1].
-                    
-        SDM_series: A column vector of monthly or annual modeled data 
-                    (temperature or precipitation) corrected by the SDM method. 
-                    If monthly frequency is specified, the length of this 
-                    vector is 12 times the number of observed years 
-                    [12 x y_mod, 1]. If annual frequency is specified, the 
-                    length of this vector is equal to the number of observed 
-                    years [y_mod, 1].
+        QM_series:  A column vector of data bias corrected with the QM method.
+                   [ndata_mod, 1]
+                   
+        DQM_series: A column vector of data bias corrected with the DQM method.
+                   [ndata_mod, 1]
+                   
+        QDM_series: A column vector of data bias corrected with the QDM method.
+                   [ndata_mod, 1]
+                   
+        UQM_series: A column vector of data bias corrected with the UQM method.
+                   [ndata_mod, 1]
+                   
+        SDM_series: A column vector of data bias corrected with the SDM method.
+                   [ndata_mod, 1]
     
         NOTE: This function returns all five bias correction methods,
               independently of which methods are specified for this report.
-    
-    
-    Written by Sebastian Aedo Quililongo (1*)
-               Cristian Chadwick         (2)
-               Fernando Gonzalez-Leiva   (3)
-               Jorge Gironas             (3)
-               
-      (1) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile,
-          Santiago, Chile
-      (2) Faculty of Engineering and Sciences, Universidad Adolfo Ibanez,
-          Santiago, Chile
-      (3) Department of Hydraulics and Environmental Engineering, Pontificia
-          Universidad Catolica de Chile, Santiago, Chile
-          
-    *Maintainer contact: slaedo@uc.cl
-    Revision: 0, updated Dec 2021
     """
     
+
     from .methods import QM, DQM, QDM, UQM, SDM
     
     
-    def var_op(a,b,var):
-        if var==0:
-            return a - b
-        else:
+    def var_op(a,b,mult_change):
+        if mult_change:
             return a/b
+        else:
+            return a - b
     
     def ecdf(x):
         return [(1 + i)/len(x) for i in range(len(x))]
@@ -198,11 +191,11 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
     fun = ['Modeled']+fun
     
     # 2) Apply QM methods
-    QM_series = QM(obs, mod, var)
-    DQM_series = DQM(obs, mod, var)
-    QDM_series = QDM(obs, mod, var)
-    UQM_series = UQM(obs, mod, var)
-    SDM_series = SDM(obs, mod, var)
+    QM_series = QM(obs, mod, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+    DQM_series = DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+    QDM_series = QDM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+    UQM_series = UQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+    SDM_series = SDM(obs, mod, SDM_var=SDM_var, frq='M')
     
     # 3) Get observed, modeled and bias corrected statistics
     # a) Get obs, mod, and QMs as [12 x n] matrix
@@ -263,32 +256,32 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
     # 5) Get delta mean and delta standard deviation
     SF_m = []
     SF_s = []
-    SF_m.append(var_op(mu_M[2],mu_M[1],var))
-    SF_s.append(var_op(std_M[2],std_M[1],var))
+    SF_m.append(var_op(mu_M[2],mu_M[1],mult_change))
+    SF_s.append(var_op(std_M[2],std_M[1],mult_change))
     dm = []
     ds = []
-    dm.append(var_op(mu[3],mu[0],var))
-    dm.append(var_op(mu[4],mu[0],var))
-    dm.append(var_op(mu[2],mu[1],var))
-    ds.append(var_op(std[3],std[0],var))
-    ds.append(var_op(std[4],std[0],var))
-    ds.append(var_op(std[2],std[1],var))
+    dm.append(var_op(mu[3],mu[0],mult_change))
+    dm.append(var_op(mu[4],mu[0],mult_change))
+    dm.append(var_op(mu[2],mu[1],mult_change))
+    ds.append(var_op(std[3],std[0],mult_change))
+    ds.append(var_op(std[4],std[0],mult_change))
+    ds.append(var_op(std[2],std[1],mult_change))
     for i in range(4,len(s)):
-        dm.append(var_op(mu[i],mu[3],var))
-        ds.append(var_op(std[i],std[3],var))
+        dm.append(var_op(mu[i],mu[3],mult_change))
+        ds.append(var_op(std[i],std[3],mult_change))
     
     dm_w = []
     ds_w = []
     for w in range(len(y_wind)):
-        SF_m.append(var_op(mu_Mw[w][0],mu_M[1],var))
-        SF_s.append(var_op(std_Mw[w][0],std_M[1],var))
+        SF_m.append(var_op(mu_Mw[w][0],mu_M[1],mult_change))
+        SF_s.append(var_op(std_Mw[w][0],std_M[1],mult_change))
         dm_w.append([])
         ds_w.append([])
-        dm_w[w].append(var_op(mu_w[w][0],mu[1],var))
-        ds_w[w].append(var_op(std_w[w][0],std[1],var))
+        dm_w[w].append(var_op(mu_w[w][0],mu[1],mult_change))
+        ds_w[w].append(var_op(std_w[w][0],std[1],mult_change))
         for i in range(1,len(v)):
-            dm_w[w].append(var_op(mu_w[w][i],mu[3],var))
-            ds_w[w].append(var_op(std_w[w][i],std[3],var))
+            dm_w[w].append(var_op(mu_w[w][i],mu[3],mult_change))
+            ds_w[w].append(var_op(std_w[w][i],std[3],mult_change))
 
     # 6) Display report
     print('Description of this report:\n')
@@ -343,7 +336,7 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
     plt.figure(figsize=(13,6))
     plt.subplot(1,2,1)
     plt.title('Empirical distribution functions')
-    if var == 0:
+    if mult_change == 0:
         plt.xlabel('Temperature (°C)')
     else:
         plt.xlabel('Precipitation (mm)')
@@ -367,7 +360,7 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
     
     plt.subplot(1,2,2)
     plt.title('Time series')
-    if var == 0:
+    if mult_change == 0:
         plt.ylabel('Temperature (°C)')
     else:
         plt.ylabel('Precipitation (mm)')
@@ -400,7 +393,7 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
     plt.xlim(0,11)
     plt.title('Historical period')
     plt.xlabel('Month')
-    if var == 0:
+    if mult_change == 0:
         plt.ylabel('Temperature (°C)')
     else:
         plt.ylabel('Precipitation (mm)')
@@ -415,7 +408,7 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
     plt.xlim(0,11)
     plt.title('Future period')
     plt.xlabel('Month')
-    if var == 0:
+    if mult_change == 0:
         plt.ylabel('Temperature (°C)')
     else:
         plt.ylabel('Precipitation (mm)')
@@ -430,7 +423,7 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
         plt.plot(mu_M[7],'c',lw=1,label='UQM')
     if 'SDM' in fun:
         plt.plot(mu_M[8],'m',lw=1,label='SDM')
-    if var == 0:
+    if mult_change == 0:
         plt.plot(mu_M[0]+SF_m[0],'r',lw=1,label=r'Obj')
     else:
         plt.plot(mu_M[0]*SF_m[0],'r',lw=1,label=r'Obj')
@@ -442,7 +435,7 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
         plt.grid()
         plt.xlim(0,11)
         plt.title(w_label[w])
-        if var == 0:
+        if mult_change == 0:
             plt.ylabel('Temperature (°C)')
         else:
             plt.ylabel('Precipitation (mm)')
@@ -457,7 +450,7 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
             plt.plot(mu_Mw[w][4],'c',lw=1,label='UQM')
         if 'SDM' in fun:
             plt.plot(mu_Mw[w][5],'m',lw=1,label='SDM')
-        if var == 0:
+        if mult_change == 0:
             plt.plot(mu_M[0]+SF_m[w+1],'r',lw=1,label='Obj')
         else:
             plt.plot(mu_M[0]*SF_m[w+1],'r',lw=1,label='Obj')
@@ -478,7 +471,7 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
     plt.xlim(0,11)
     plt.title('Historical period')
     plt.xlabel('Month')
-    if var == 0:
+    if mult_change == 0:
         plt.ylabel('Temperature (°C)')
     else:
         plt.ylabel('Precipitation (mm)')
@@ -493,7 +486,7 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
     plt.xlim(0,11)
     plt.title('Future period')
     plt.xlabel('Month')
-    if var == 0:
+    if mult_change == 0:
         plt.ylabel('Temperature (°C)')
     else:
         plt.ylabel('Precipitation (mm)')
@@ -508,7 +501,7 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
         plt.plot(std_M[7],'c',lw=1,label='UQM')
     if 'SDM' in fun:
         plt.plot(std_M[8],'m',lw=1,label='SDM')
-    if var == 0:
+    if mult_change == 0:
         plt.plot(std_M[0]+SF_s[0],'r',lw=1,label=r'Obj')
     else:
         plt.plot(std_M[0]*SF_s[0],'r',lw=1,label=r'Obj')
@@ -520,7 +513,7 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
         plt.grid()
         plt.xlim(0,11)
         plt.title(w_label[w])
-        if var == 0:
+        if mult_change == 0:
             plt.ylabel('Temperature (°C)')
         else:
             plt.ylabel('Precipitation (mm)')
@@ -535,7 +528,7 @@ def report(obs, mod, var, fun=['QM','DQM','QDM','UQM','SDM'], y_init=0, y_wind=0
             plt.plot(std_Mw[w][4],'c',lw=1,label='UQM')
         if 'SDM' in fun:
             plt.plot(std_Mw[w][5],'m',lw=1,label='SDM')
-        if var == 0:
+        if mult_change == 0:
             plt.plot(std_M[0]+SF_s[w+1],'r',lw=1,label=r'Obj')
         else:
             plt.plot(std_M[0]*SF_s[w+1],'r',lw=1,label=r'Obj')

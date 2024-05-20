@@ -5,20 +5,28 @@
 #' The first report is a summary table with the overall performance of the QM method in the historical period and of the different methods in future projected periods. The methods performance is addressed by comparing its variations in the mean and standard deviation with the ones of the modeled data.
 #'
 #' The second report consist of three figures. Figure 1 shows the cumulative distribution of the observed, modeled, and corrected series in the historical and future period. This figure also shows the complete time series. Figure 2 and 3 shows the monthly mean and standard deviation, respectively, of each series in the historical and future projected periods. In these two figures, in the future projected periods, the observed series is replaced by an objective series which is computed as the observed series (monthly mean or standard deviation), scaled by the variation between the projected and the historical period of the modeled series. Each projected period is centered in a moving window whose length is equal to the length of the historical period.
+#' 
+#' NOTE: This routine considers that obs and mod series start in the same day/month/year and are continuous until the end day/month/year.
 #'
-#' @param obs A column vector of monthly or annual observed data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_obs, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_obs, 1].
-#' @param mod A column vector of monthly or annual modeled data (temperature or precipitation). If monthly frequency is specified, the length of this vector is 12 times the number of observed years [12 x y_mod, 1]. If annual frequency is specified, the length of this vector is equal to the number of observed years [y_mod, 1].
-#' @param var A flag that identifies if data are temperature or precipitation. This flag tells the getDist function if it has to discard distribution functions that allow negative numbers, and if the terms in the correction equations are multiplied/divided or added/subtracted. Temperature:   var = 0; Precipitation: var = 1
+#' @param obs A column vector of monthly observed data. The length of the column vector should by a multiple of 12. [ndata_obs, 1]
+#' @param mod A column vector of monthly modeled or GCM data.The length of the column vector should by a multiple of 12. [ndata_obs, 1]
+#' @param var A flag that identifies if data are temperature or precipitation. Temperature:   var = 0 ; Precipitation: var = 1
+#' @param mult_change (Optional) A flag that indicates if projected changes should be computed as multiplicative (fut = hist*delta) or additive (fut = hist + delta) changes. mult_change = 1 or True: Multiplicative (default) ; mult_change = 0 or False: Additive
+#' @param allow_negatives (Optional) A flag that identifies if data allows negative values and also to replace no-rain values with random small  values (Chadwick et al., 2023) to avoid numerical problems with the probability distribution functions. allow_negatives = 1 or True: Allow negatives (default) ; allow_negatives = 0 or False: Do not allow negative
 #' @param fun (Optional) A list of strings with the desired bias correction methods to be reported. If this input is not recieved by the function, all bias correction methods available in the climQMBC package will be reported. The methods supported are: a) 'QM' : Quantile Mapping; b) 'DQM': Detrended Quantile Mapping; c) 'QDM': Quantile Delta Mapping; d) 'UQM': Unbiased Quantile Mapping; Default: fun = ['QM','DQM','QDM','UQM','SDM']
 #' @param y_init (Optional) First year of the observed and modeled series (integer). Default: y_init = 0
 #' @param y_wind (Optional) A list of integers with the year of the center of the projected periods to be reported. Default: y_wind = [int(y_obs+y_obs/2), int(y_mod-y_obs/2)] This value sets a first projected period just after the end of historical period, and a second projected period just before the end of the modeled series.
-#'
+#' @param user_pdf (Optional) A flag indicating if the user will define the probability distribution functions (pdf) for the observed and modeled series. The distributions will be the same for all periods and sub-periods. user_pdf = 1 or True: User defines the pdf ; user_pdf = 0 or False: pdf defined by the Kolmogorov -Smirnov test (default). NOTE: The available distributions for pdf_obs and pdf_mod are:  1) Normal ; 2) Log-Normal ; 3) Gamma 2 parameters ; 4) Gamma 3 parameters ; 5) Log-Gamma 3 parameters ; 6) Gumbel ; 7) Exponential
+#' @param pdf_obs (Optional) An integer indicating the probability distribution function (pdf) to be used for the observed data. The pdf will be the same for all periods and sub-periods. Default: FALSE
+#' @param pdf_mod (Optional) An integer indicating the probability distribution  function (pdf) to be used for the modeled data. The pdf will be the same for all periods and sub-periods. Default: FALSE
+#' 
 #' @return A list with the five methods implemented in the climQMBC ppackage: QM, DQM, QDM, UQM, and SDM.
 #' @export
 #'
-#' @examples report(obs, mod, var)
-#' @examples report(obs, mod, var,fun=['QDM','UQM','SDM'],y_init = 1979,y_wind = [2035,2060,2080])
-report <- function(obs,mod,var,fun,y_init,y_wind){
+#' @examples report(obs, mod, SDM_var)
+#' @examples report(obs, mod, SDM_var, mult_change, allow_negatives)
+#' @examples report(obs, mod, SDM_var,fun=['QDM','UQM','SDM'],y_init = 1979,y_wind = [2035,2060,2080])
+report <- function(obs, mod ,SDM_var, mult_change, allow_negatives, fun, y_init, y_wind, user_pdf, pdf_obs, pdf_mod){
 
   # 0) Get the number of observed and modeled years
   n_obs <- length(obs)
@@ -28,6 +36,12 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
   y_mod = n_mod/12
 
   # 1) Set non-declared arguments
+  if(missing(mult_change)) {
+    mult_change <- 1
+  }
+  if(missing(allow_negatives)) {
+    allow_negatives <- 1
+  }
   if(missing(fun)) {
     fun <- c('QM','DQM','QDM','UQM','SDM')
   }
@@ -46,16 +60,27 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
       w_label = c(w_label,pracma::num2str(y_wind[w],0))
     }
   }
+  if(missing(user_pdf)) {
+    user_pdf <- FALSE
+  }
+  
+  if(missing(pdf_obs)) {
+    pdf_obs <- FALSE
+  }
+  
+  if(missing(pdf_mod)) {
+    pdf_mod <- FALSE
+  }
 
   y_wind <- y_wind - y_init
 
   # 2) Apply QM methods
-  QM_series <- QM(obs,mod,var)
-  DQM_series <- DQM(obs,mod,var)
-  QDM_series <- QDM(obs,mod,var)
-  UQM_series <- UQM(obs,mod,var)
-  SDM_series <- SDM(obs,mod,var)
-
+  QM_series <- QM(obs, mod, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+  DQM_series <- DQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+  QDM_series <- QDM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+  UQM_series <- UQM(obs, mod, mult_change=mult_change, allow_negatives=allow_negatives, frq='M', user_pdf=user_pdf, pdf_obs=pdf_obs, pdf_mod=pdf_mod)
+  SDM_series <- SDM(obs, mod, SDM_var=SDM_var, frq='M')
+  
   # 3) Get observed, modeled and bias corrected statistics
   # a) Get obs, mod, and QMs as [12 x n] matrix
   obs_M <- matrix(obs,nrow = 12, ncol = y_obs)
@@ -208,7 +233,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
   ds_UQM_Mw <- matrix(0,12,length(y_wind))
   ds_SDM_Mw <- matrix(0,12,length(y_wind))
 
-  if (var == 1){
+  if (mult_change==1){
     dm_obs <- mu_QM_h/mu_obs
     dm_mod <- mu_mod_f/mu_mod_h
     dm_QM <- mu_QM_f/mu_QM_h
@@ -463,7 +488,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
   # Plot empirical cumulative distribution function
   dev.new()
   par(mfrow=c(1,2))
-  plot(xo,fo,col='red',type='l',xlab=c('Temperature (C)','Precipitation (mm)')[var+1],ylab='Probability',main='Empirical cumulative distribution function',ylim=c(0,1),xlim=c(series_mn,series_mx))
+  plot(xo,fo,col='red',type='l',xlab=c('Temperature (C)','Precipitation (mm)')[mult_change+1],ylab='Probability',main='Empirical cumulative distribution function',ylim=c(0,1),xlim=c(series_mn,series_mx))
   grid()
   par(new=TRUE)
   lines(xm,fm,col='blue')
@@ -511,7 +536,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
   lgnd <- c('Mod')
   clr <- c('blue')
   # Plot series
-  plot(mod,col='blue',type='l',xlab='Month since starting date',ylab=c('Temperature (°C)','Precipitation (mm)')[var+1],main=paste(c('Temperature','Precipitation')[var+1],'time series'), ylim=c(series_mn,series_mx))
+  plot(mod,col='blue',type='l',xlab='Month since starting date',ylab=c('Temperature (°C)','Precipitation (mm)')[mult_change+1],main=paste(c('Temperature','Precipitation')[mult_change+1],'time series'), ylim=c(series_mn,series_mx))
   grid()
   if ('QM' %in% fun){
     par(new=TRUE)
@@ -601,7 +626,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
     clr <- c(clr,'magenta')
   }
   par(new=TRUE)
-  if (var==1){
+  if (mult_change==1){
     lines(mu_obs_M*dm_mod_M,col='red')
   } else {
     lines(mu_obs_M+dm_mod_M,col='red')
@@ -648,7 +673,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
       clr <- c(clr,'magenta')
     }
     par(new=TRUE)
-    if (var==1){
+    if (mult_change==1){
       lines(mu_obs_M*dm_mod_Mw[,w],col='red')
     } else {
       lines(mu_obs_M+dm_mod_Mw[,w],col='red')
@@ -710,7 +735,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
     clr <- c(clr,'magenta')
   }
   par(new=TRUE)
-  if (var==1){
+  if (mult_change==1){
     lines(s_obs_M*ds_mod_M,col='red')
   } else {
     lines(s_obs_M+ds_mod_M,col='red')
@@ -757,7 +782,7 @@ report <- function(obs,mod,var,fun,y_init,y_wind){
       clr <- c(clr,'magenta')
     }
     par(new=TRUE)
-    if (var==1){
+    if (mult_change==1){
       lines(s_obs_M*ds_mod_Mw[,w],col='red')
     } else {
       lines(s_obs_M+ds_mod_Mw[,w],col='red')
