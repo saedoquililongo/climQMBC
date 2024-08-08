@@ -11,13 +11,15 @@ Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzale
 *Maintainer contact: sebastian.aedo.q@gmail.com\
 Version: 1.0.0, updated Apr 2024
 
+Implementation details: [Chadwick, C., Gironás, J., González-Leiva, F., and Aedo, S. (2023). Bias adjustment to preserve changes in variability: the unbiased mapping of GCM changes. Hydrological Sciences Journal, https://doi.org/10.1080/02626667.2023.2201450](https://doi.org/10.1080/02626667.2023.2201450)
+
 
 ## Introduction
 Bias Correction is the process of eliminating GCM or RCM biases based on observed values. Several bias correction bethods have been developed to correct the bias of GCM or RCM simulations; however, based on the formulation of these methods, they preserve different changes of the modeled series and perform different under certain conditions.
 
 The climQMBC package makes available five different Quantile Mapping methods for bias correction of climatic variables. These are the Quantile Mapping (QM), Detrended Quantile Mapping (DQM), Quantile Delta Mapping (DQM), Unbiased Quantile Mapping (UQM), and Scaled Distribution Mapping (SDM) methods. The package also provides a **_report_** function to compare the performance or evaluate the tradeoffs between each method, based on the conservation of changes in the mean and standard deviation of the GMCs.
 
-The climQMBC package considers bias correction of monthly and annual series of variables whose changes are relative (precipitation) or absolute (temperature).
+The climQMBC package considers bias correction of daily, monthly and annual series of variables whose changes are relative (for example, precipitation) or absolute (for example, temperature).
 
 Bias correction of modeled series (GCMs outputs) is performed at a single location based on the observed values. As a general approach, the QM methods looks for relationships between the modeled series and observed data and applies it to the modeled series to obtain an unbiased climate series in the historical and future periods. The climQMBC package applies these relations as a continuum, where for each year it considers a window with length equal to the number of years of the historical period and ends in the analyzed year to correct that specific year. This process is repeated for each year of the future period. Note that this continuum methodology does not apply for the standard QM method.
 
