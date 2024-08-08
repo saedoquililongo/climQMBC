@@ -12,6 +12,8 @@ Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzale
 Version: 1.0.0, updated Apr 2024\
 Written in R version 4.2.2
 
+Implementation details: [Chadwick, C., Gironás, J., González-Leiva, F., and Aedo, S. (2023). Bias adjustment to preserve changes in variability: the unbiased mapping of GCM changes. Hydrological Sciences Journal, https://doi.org/10.1080/02626667.2023.2201450](https://doi.org/10.1080/02626667.2023.2201450)
+
 ## Dependencies
 Imports needed:
 - abind (>=1.4-5)
