@@ -33,7 +33,7 @@ UQM(
 
 \item{pp_factor}{(Optional) A float which multiplied to pp_threshold indicates the maximum value of the random values that replace no-rain values. Default is 1/100.}
 
-\item{day_win}{(Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: win = 1}
+\item{day_win}{(Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: day_win = 6}
 
 \item{user_pdf}{(Optional) A flag indicating if the user will define the probability distribution functions (pdf) for the observed and modeled series. The distributions will be the same for all periods and sub-periods. user_pdf = 1 or True: User defines the pdf ; user_pdf = 0 or False: pdf defined by the Kolmogorov -Smirnov test (default)}
 
