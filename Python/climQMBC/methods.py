@@ -37,7 +37,7 @@ Written by Sebastian Aedo Quililongo (1*)
       Santiago, Chile
       
 *Maintainer contact: sebastian.aedo.q@gmail.com
-Revision: 2, updated Apr 2024
+Revision: 3, updated Apr 2026
 """
 
 from .utils import formatQM, getStats, getDist, getCDF, getCDFinv
@@ -49,7 +49,7 @@ import numpy as np
 
 
 def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100,
-       day_win=1, user_pdf=False, pdf_obs=None, pdf_mod=None):
+       day_win=6, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Quantile Mapping (QM) method, as described by Cannon et al. 
@@ -98,7 +98,7 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100,
                          to consider backwards and forward to get the statistics
                          of each calendar day.The length of the window will be 
                          (2*win_day-1). For example, day_win=15 -> window of 29.
-                         Default: win = 1
+                         Default: day_win = 6
 
         user_pdf:        A flag indicating if the user will define the
                          probability distribution functions (pdf) for the
@@ -225,7 +225,7 @@ def QM(obs, mod, allow_negatives=1, frq='A', pp_threshold=1, pp_factor=1/100,
 
 
 def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
-        pp_factor=1/100, day_win=1, user_pdf=False, pdf_obs=None, pdf_mod=None):
+        pp_factor=1/100, day_win=6, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Detrended Quantile Mapping (DQM) method, as described by Cannon
@@ -285,7 +285,7 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
                          to consider backwards and forward to get the statistics
                          of each calendar day.The length of the window will be 
                          (2*win_day-1). For example, day_win=15 -> window of 29.
-                         Default: win = 1
+                         Default: day_win = 6
 
         user_pdf:        A flag indicating if the user will define the
                          probability distribution functions (pdf) for the
@@ -448,7 +448,7 @@ def DQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
 
 
 def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
-        pp_factor=1/100, rel_change_th=2, inv_mod_th=None, day_win=1,
+        pp_factor=1/100, rel_change_th=2, inv_mod_th=None, day_win=6,
         user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
@@ -519,7 +519,7 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
                          to consider backwards and forward to get the statistics
                          of each calendar day.The length of the window will be 
                          (2*win_day-1). For example, day_win=15 -> window of 29.
-                         Default: win = 1
+                         Default: day_win = 6
 
         user_pdf:        A flag indicating if the user will define the
                          probability distribution functions (pdf) for the
@@ -705,7 +705,7 @@ def QDM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
 
 
 def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
-        pp_factor=1/100, day_win=1, user_pdf=False, pdf_obs=None, pdf_mod=None):
+        pp_factor=1/100, day_win=6, user_pdf=False, pdf_obs=None, pdf_mod=None):
     """
     This function performs bias correction of modeled series based on observed
     data by the Unbiased Quantile Mapping (UQM) method, as described by Chadwick
@@ -765,7 +765,7 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
                          to consider backwards and forward to get the statistics
                          of each calendar day.The length of the window will be 
                          (2*win_day-1). For example, day_win=15 -> window of 29.
-                         Default: win = 1
+                         Default: day_win = 6
 
         user_pdf:        A flag indicating if the user will define the
                          probability distribution functions (pdf) for the
@@ -958,7 +958,7 @@ def UQM(obs, mod, mult_change=1, allow_negatives=1, frq='A', pp_threshold=1,
     return UQM_series
 
 
-def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100, day_win=1):
+def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100, day_win=6):
     """
     This function performs bias correction of modeled series based on observed
     data by the Scaled Distribution Mapping (SDM) method, as described by 
@@ -1011,7 +1011,7 @@ def SDM(obs, mod, SDM_var, frq='A', pp_threshold=1, pp_factor=1/100, day_win=1):
                          to consider backwards and forward to get the statistics
                          of each calendar day.The length of the window will be 
                          (2*win_day-1). For example, day_win=15 -> window of 29.
-                         Default: win = 1
+                         Default: day_win = 6
 
     Output:
         SDM_series: A column vector of data bias corrected with the QM method.
