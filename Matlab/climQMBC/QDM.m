@@ -67,7 +67,7 @@ function QDM_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,p
 %              consider backwards and forward to get the statistics
 %              of each calendar day.The length of the window will be 
 %              (2*win_day-1). For example, day_win=15 -> window of 29.
-%              Default: win = 1
+%              Default: day_win = 6
 %
 %   user_pdf = A flag indicating if the user will define the probability
 %              distribution functions (pdf) for the observed and modeled
@@ -121,7 +121,7 @@ function QDM_series = QDM(obs,mod,mult_change,allow_negatives,frq,pp_threshold,p
 %      Santiago, Chile
 %
 % *Maintainer contact: sebastian.aedo.q@gmail.com
-% Revision: 1, updated Apr 2024
+% Revision: 2, updated Apr 2026
 %
 
 
@@ -157,7 +157,7 @@ if ~exist('inv_mod_th','var')
 end
 
 if ~exist('day_win','var')
-    day_win = 1;
+    day_win = 6;
 end
 
 if ~exist('user_pdf','var')

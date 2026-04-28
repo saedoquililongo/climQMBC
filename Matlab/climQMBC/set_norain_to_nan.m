@@ -43,7 +43,7 @@ function  series_moving = set_norain_to_nan(series_moving,pp_threshold,pp_factor
 %      Santiago, Chile
 %
 % *Maintainer contact: sebastian.aedo.q@gmail.com
-% Revision: 1, updated Apr 2024
+% Revision: 2, updated Apr 2026
 %
 
 %%
@@ -53,7 +53,7 @@ if ~exist('min_rainday','var')
 end
 
 % Falta evaluar qué ocurre con la información de períodos proyectados
-rainday_count = sum(series_moving>pp_threshold,2);
+rainday_count = sum(series_moving>=pp_threshold,2);
 
 if length(size(series_moving))==2
     for per = 1:size(series_moving,1)
