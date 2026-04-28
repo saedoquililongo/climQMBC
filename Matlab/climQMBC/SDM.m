@@ -49,7 +49,7 @@ function SDM_series = SDM(obs,mod,SDM_var,frq,pp_threshold,pp_factor,day_win)
 %   day_win = (only for frq='D') An integer indicating how many days to
 %             consider backwards and forward to get the statistics of each
 %             calendar day.The length of the window will be (2*win_day-1).
-%             For example, day_win=15 -> window of 29. Default: win = 1
+%             For example, day_win=15 -> window of 29. Default: day_win = 6
 %
 % Output:
 %   SDM_series = A column vector of data bias corrected with the QM method.
@@ -77,7 +77,7 @@ function SDM_series = SDM(obs,mod,SDM_var,frq,pp_threshold,pp_factor,day_win)
 %      Santiago, Chile
 %
 % *Maintainer contact: sebastian.aedo.q@gmail.com
-% Revision: 1, updated Apr 2024
+% Revision: 2, updated Apr 2026
 %
 
 
@@ -93,7 +93,7 @@ if ~exist('pp_factor','var')
 end
 
 if ~exist('day_win','var')
-    day_win = 1;
+    day_win = 6;
 end
 
 if ~exist('frq','var')
