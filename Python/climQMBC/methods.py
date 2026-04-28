@@ -37,7 +37,7 @@ Written by Sebastian Aedo Quililongo (1*)
       Santiago, Chile
       
 *Maintainer contact: sebastian.aedo.q@gmail.com
-Revision: 2, updated Apr 2024
+Revision: 3, updated Apr 2026
 """
 
 from .utils import formatQM, getStats, getDist, getCDF, getCDFinv
