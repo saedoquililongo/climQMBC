@@ -21,7 +21,7 @@ Written by Sebastian Aedo Quililongo (1*)
       Santiago, Chile
       
 *Maintainer contact: sebastian.aedo.q@gmail.com
-Revision: 2, updated Apr 2024
+Revision: 3, updated Apr 2026
 """
 
 import scipy.stats as stat
@@ -291,7 +291,7 @@ def set_norain_to_nan(series_moving, pp_threshold, pp_factor, min_rainday=30):
         series_moving:  The input, but with no-rain values replaced with nans.
     """
 
-    rainday_count = np.sum(series_moving>pp_threshold,1)
+    rainday_count = np.sum(series_moving>=pp_threshold,1)
     
     if len(rainday_count.shape)==1:
         for per in range(series_moving.shape[0]):
