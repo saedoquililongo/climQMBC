@@ -204,7 +204,7 @@ set_norain_to_nan <- function(series_moving, pp_threshold, pp_factor, min_rainda
   }
   
   if (length(dim(series_moving))==2) {
-    rainday_count <- apply(series_moving>pp_threshold,1,sum)
+    rainday_count <- apply(series_moving>=pp_threshold,1,sum)
     for (per in 1:length(rainday_count)){
       bool_low <- series_moving[per,]<pp_threshold
       replace_values_nans <-runif(sum(bool_low))*pp_factor*pp_threshold
@@ -212,7 +212,7 @@ set_norain_to_nan <- function(series_moving, pp_threshold, pp_factor, min_rainda
       series_moving[per,bool_low] <- replace_values_nans
     }
   } else {
-    rainday_count <- apply(series_moving>pp_threshold,c(1,3),sum)
+    rainday_count <- apply(series_moving>=pp_threshold,c(1,3),sum)
     for (per1 in 1:dim(rainday_count)[1]) {
       for (per2 in 1:dim(rainday_count)[2]) { 
         bool_low <- series_moving[per1,,per2]<pp_threshold

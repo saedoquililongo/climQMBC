@@ -19,7 +19,7 @@ SDM(obs, mod, SDM_var, frq, pp_threshold, pp_factor, day_win)
 
 \item{pp_factor}{(Optional) A float which multiplied to pp_threshold indicates the maximum value of the random values that replace no-rain values. Default is 1/100.}
 
-\item{day_win}{(Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: win = 1}
+\item{day_win}{(Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: day_win = 6}
 }
 \value{
 SDM_series: A column vector of data bias corrected with the QM method. [ndata_mod, 1]

@@ -14,7 +14,7 @@
 #' @param frq (Optional) A string specifying if the input frequency is daily, monthly or annual. Daily:     frq = 'D' ; Monthly:   frq = 'M' ; Annual:    frq = 'A' (default)
 #' @param pp_threshold (Optional) A float indicating the threshold to consider no-rain values. Default is 1.
 #' @param pp_factor (Optional) A float which multiplied to pp_threshold indicates the maximum value of the random values that replace no-rain values. Default is 1/100.
-#' @param day_win (Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: win = 1
+#' @param day_win (Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: day_win = 6
 #' @param user_pdf (Optional) A flag indicating if the user will define the probability distribution functions (pdf) for the observed and modeled series. The distributions will be the same for all periods and sub-periods. user_pdf = 1 or True: User defines the pdf ; user_pdf = 0 or False: pdf defined by the Kolmogorov -Smirnov test (default)
 #' @param pdf_obs (Optional) An integer indicating the probability distribution function (pdf) to be used for the observed data. The pdf will be the same for all periods and sub-periods. Default: None
 #' @param pdf_mod (Optional) An integer indicating the probability distribution function (pdf) to be used for the modeled data. The pdf will be the same for all periods and sub-periods. Default: None
@@ -50,7 +50,7 @@ QM <- function(obs, mod, allow_negatives, frq, pp_threshold, pp_factor, day_win,
   }
   
   if(missing(day_win)) {
-    day_win <- 1
+    day_win <- 6
   }
   
   if(missing(user_pdf)) {
@@ -212,7 +212,7 @@ QM <- function(obs, mod, allow_negatives, frq, pp_threshold, pp_factor, day_win,
 #' @param frq (Optional) A string specifying if the input frequency is daily, monthly or annual. Daily:     frq = 'D' ; Monthly:   frq = 'M' ; Annual:    frq = 'A' (default)
 #' @param pp_threshold (Optional) A float indicating the threshold to consider no-rain values. Default is 1.
 #' @param pp_factor (Optional) A float which multiplied to pp_threshold indicates the maximum value of the random values that replace no-rain values. Default is 1/100.
-#' @param day_win (Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: win = 1
+#' @param day_win (Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: day_win = 6
 #' @param user_pdf (Optional) A flag indicating if the user will define the probability distribution functions (pdf) for the observed and modeled series. The distributions will be the same for all periods and sub-periods. user_pdf = 1 or True: User defines the pdf ; user_pdf = 0 or False: pdf defined by the Kolmogorov -Smirnov test (default)
 #' @param pdf_obs (Optional) An integer indicating the probability distribution function (pdf) to be used for the observed data. The pdf will be the same for all periods and sub-periods. Default: None
 #' @param pdf_mod (Optional) An integer indicating the probability distribution function (pdf) to be used for the modeled data. The pdf will be the same for all periods and sub-periods. Default: None
@@ -252,7 +252,7 @@ DQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
   }
   
   if(missing(day_win)) {
-    day_win <- 1
+    day_win <- 6
   }
   
   if(missing(user_pdf)) {
@@ -458,7 +458,7 @@ DQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
 #' @param pp_factor (Optional) A float which multiplied to pp_threshold indicates the maximum value of the random values that replace no-rain values. Default is 1/100.
 #' @param rel_change_th (Optional)  A float indicating the maximum scaling factor  (Equation 4 of Cannon et al. (2015)) when the denominator is below inv_mod_th.
 #' @param inv_mod_th (Optional) A float indicating the upper threshold of the  denominator of the scaling factor (Equation 4 of Cannon et al. (2015)) to truncate the scaling factor. This parameter is defined as default as the pp_threshold parameter, described above.
-#' @param day_win (Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: win = 1
+#' @param day_win (Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: day_win = 6
 #' @param user_pdf (Optional) A flag indicating if the user will define the probability distribution functions (pdf) for the observed and modeled series. The distributions will be the same for all periods and sub-periods. user_pdf = 1 or True: User defines the pdf ; user_pdf = 0 or False: pdf defined by the Kolmogorov -Smirnov test (default)
 #' @param pdf_obs (Optional) An integer indicating the probability distribution function (pdf) to be used for the observed data. The pdf will be the same for all periods and sub-periods. Default: None
 #' @param pdf_mod (Optional) An integer indicating the probability distribution function (pdf) to be used for the modeled data. The pdf will be the same for all periods and sub-periods. Default: None
@@ -509,7 +509,7 @@ QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
   }
   
   if(missing(day_win)) {
-    day_win <- 1
+    day_win <- 6
   }
   
   if(missing(user_pdf)) {
@@ -746,7 +746,7 @@ QDM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
 #' @param frq (Optional) A string specifying if the input frequency is daily, monthly or annual. Daily:     frq = 'D' ; Monthly:   frq = 'M' ; Annual:    frq = 'A' (default)
 #' @param pp_threshold (Optional) A float indicating the threshold to consider no-rain values. Default is 1.
 #' @param pp_factor (Optional) A float which multiplied to pp_threshold indicates the maximum value of the random values that replace no-rain values. Default is 1/100.
-#' @param day_win (Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: win = 1
+#' @param day_win (Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: day_win = 6
 #' @param user_pdf (Optional) A flag indicating if the user will define the probability distribution functions (pdf) for the observed and modeled series. The distributions will be the same for all periods and sub-periods. user_pdf = 1 or True: User defines the pdf ; user_pdf = 0 or False: pdf defined by the Kolmogorov -Smirnov test (default)
 #' @param pdf_obs (Optional) An integer indicating the probability distribution function (pdf) to be used for the observed data. The pdf will be the same for all periods and sub-periods. Default: None
 #' @param pdf_mod (Optional) An integer indicating the probability distribution function (pdf) to be used for the modeled data. The pdf will be the same for all periods and sub-periods. Default: None
@@ -786,7 +786,7 @@ UQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
   }
   
   if(missing(day_win)) {
-    day_win <- 1
+    day_win <- 6
   }
   
   if(missing(user_pdf)) {
@@ -1032,7 +1032,7 @@ UQM <- function(obs, mod, mult_change, allow_negatives, frq, pp_threshold,
 #' @param frq (Optional) A string specifying if the input frequency is daily, monthly or annual. ; Daily:     frq = 'D' ; Monthly:   frq = 'M' ; Annual:    frq = 'A' (default)
 #' @param pp_threshold (Optional) A float indicating the threshold to consider no-rain values. Default is 1.
 #' @param pp_factor (Optional) A float which multiplied to pp_threshold indicates the maximum value of the random values that replace no-rain values. Default is 1/100.
-#' @param day_win (Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: win = 1
+#' @param day_win (Optional) (only for frq='D') An integer indicating how many days to consider backwards and forward to get the statistics of each calendar day.The length of the window will be  (2*win_day-1). For example, day_win=15 -> window of 29. Default: day_win = 6
 #'
 #' @return SDM_series: A column vector of data bias corrected with the QM method. [ndata_mod, 1]
 #' @export
@@ -1059,7 +1059,7 @@ SDM <- function(obs ,mod, SDM_var, frq, pp_threshold, pp_factor, day_win){
   }
   
   if(missing(day_win)) {
-    day_win <- 1
+    day_win <- 6
   }
 
   # Define the no-rain value and the threshold to truncate the tail of the
