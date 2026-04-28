@@ -9,7 +9,7 @@ Authors: Sebastian Aedo Quililongo (1*), Cristian Chadwick (2), Fernando Gonzale
 (4) Centro de Cambio Global UC, Pontificia Universidad Catolica de Chile, Santiago, Chile. 
 
 *Maintainer contact: sebastian.aedo.q@gmail.com\
-Version: 1.0.0, updated Apr 2024\
+Version: 1.0.1, updated Apr 2026\
 Written in R version 4.2.2
 
 Implementation details: [Chadwick, C., Gironás, J., González-Leiva, F., and Aedo, S. (2023). Bias adjustment to preserve changes in variability: the unbiased mapping of GCM changes. Hydrological Sciences Journal, https://doi.org/10.1080/02626667.2023.2201450](https://doi.org/10.1080/02626667.2023.2201450)
@@ -38,7 +38,11 @@ We suggest the user to look at the climQMBC_tester_R.R script. This script show 
 
 
 ## Version history
-### Version 1.0.0 (current version on github)
+### Version 1.0.1 (current version on github)
+- **General:** Fix inequality issue in `set_norain_to_nan` and update default `day_win=6` (moving window of 11 days as a value between 7 and 15 days)
+
+
+### Version 1.0.0
 - **General:** Bias correction of daily data is now available, considering years of 365 days and a moving window centered in the day to be corrected. The length of the moving window is defined by the user by the argument `day_win` (Default value is 1). If `allow_negatives=0` (like precipitation) only rainday values will be corrected and used to define the most appropiate probability distribution function and scaling factors or projected changes. Additionally, for `allow_negatives=0` a `pp_threshold_mod` will be calculated internally to match the number of raindays in the historical period between the observations and modeled series.
 - **General:** Improved the calculation of moving windows and projected changes, making the functions faster.
 - **All but SDM:** The `var` argument is replaced with `allow_negatives` and `mult_change`. `allow_negatives` is an optional argument that takes values of 1 or 0 to define if the data allow negative values or not, respectively. If `allow_negatives=0`, probability distribution functions that allow negative values are dropped and values below `pp_threshold` are replaced with random values between 0 and `pp_threshold*pp_factor` (ideal for precipitation). `mult_change` is an optional argument that takes values of 1 or 0 to define if scaling factors or projected changes are incorporated multiplicatively or additively, respectively. Default values are `mult_change=1` and `allow_negatives=1`. As a suggestion, for precipitation use `mult_change=1` and `allow_negatives=0`; for temperature in Celsius use `mult_change=0` and `allow_negatives=1`; for temperature in Kelvin use `mult_change=1` and `allow_negatives=1`.
