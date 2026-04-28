@@ -30,7 +30,7 @@ We suggest the user to look at the climQMBC_tester_Matlab.m script. This script 
 
 ## Version history
 ### Version 1.0.1 (current version on github)
-- **General:** Fix inequality issue in `set_norain_to_nan` and update default `day_win=6` (moving window of 11 days as a value between 7 an 15 days)
+- **General:** Fix inequality issue in `set_norain_to_nan` and update default `day_win=6` (moving window of 11 days as a value between 7 and 15 days)
 
 ### Version 1.0.0
 - **General:** Bias correction of daily data is now available, considering years of 365 days and a moving window centered in the day to be corrected. The length of the moving window is defined by the user by the argument `day_win` (Default value is 1). If `allow_negatives=0` (like precipitation) only rainday values will be corrected and used to define the most appropiate probability distribution function and scaling factors or projected changes. Additionally, for `allow_negatives=0` a `pp_threshold_mod` will be calculated internally to match the number of raindays in the historical period between the observations and modeled series.
