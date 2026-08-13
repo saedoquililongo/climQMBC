@@ -31,7 +31,7 @@ We suggest the user to look at the climQMBC_tester_Matlab.m script. This script 
 ## Version history
 
 ### Version 1.1.0 (current version on github)
-- **General:** Updated climQMBC_tester scripts including an application example for gridded products.
+- **General:** Added a new functionality `set_norain_to_nan` to evaluate the performance of each of the bias correction methods available in the climQMBC package. <Description pending>.
 - **General:** Updated the Sample_data datasets. The available dataset now includes daily and monthly precipitation (mm) and mean temperature (C) both in text and netcdf files. Observational data is based on ERA5-Land and modeled data is based on the GCM MPI-ESM1-2-HR run by the SSP 5-8.5 scenario of the AR6-IPCC. The text files has a single time series at the coordinate 4.64N and 75.48W, located near the Cocora Valley, Quindío, Colombia. The netcdf file has 6 cells centered in the aforementioned point. The files name structure is xxx_yyy_pp.zzz, where xxx can be mod or obs for modeled or observed data, respectively, yyy can be tmp or pp for temperature or precipitation data, respectively pp can be D or M for daily and monthly data, respectively, and zzz can be csv or nc for the text or netcdf file, respectively. The historical period of the sample datasets begin in 1985 and has a length of 30 years (1985 to 2014, including both years), and the modeled period begins in 1985 and has a length 116 years (1985 to 2100, including both years).
 - **General:** Updated climQMBC_tester scripts including an application example for gridded products.
 
