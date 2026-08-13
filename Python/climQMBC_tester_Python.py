@@ -226,8 +226,8 @@ nc_mod = xr.open_dataset(f'../Sample_data/netcdf/mod_{variable}_M.nc')
 # bc_array = np.zeros(mod_array.shape)
 # for i in range(obs_array.shape[1]):
 #     for j in range(obs_array.shape[2]):
-#         obs = obs_array[:,i,j]
-#         mod = mod_array[:,i,j]
+#         obs = np.array([obs_array[:,i,j]]).T
+#         mod = np.array([mod_array[:,i,j]]).T
         
 #         bc_array[:,i,j] = UQM(obs, mod, mult_change=mult_change,
 #                               allow_negatives=allow_negatives, frq=frq)
