@@ -213,6 +213,10 @@ mod <- matrix(mod[,variable])
 #    - 'M': Monthly data (report function works only with 'M')
 #    - 'A': Anual data
 
+## Example 5
+#  Example 5 shows how to apply the bias correction methods available
+#  in the climQMBC package to gridded products.
+
 variable <- 'pr'
 allow_negatives <- 0
 mult_change <- 1
@@ -227,8 +231,6 @@ nc_mod <- nc_open(paste(getwd(),'/../Sample_data/netcdf/mod_',variable,'_M.nc',s
 # observed and modeled netcdf have the exact same grid and dimensions
 obs_array <- ncvar_get(nc_obs,variable)
 mod_array <- ncvar_get(nc_mod,variable)
-
-
 
 # Perform a bias correction method to each cell independently
 bc_array <- array(0,dim(mod_array))
