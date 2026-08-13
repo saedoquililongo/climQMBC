@@ -203,6 +203,10 @@ mod = pd.read_csv(f'../Sample_data/csv/mod_{variable}_D.csv')[[variable]].values
 #    - 'M': Monthly data (report function works only with 'M')
 #    - 'A': Anual data
 
+## Example 5
+#  Example 5 shows how to apply the bias correction methods available
+#  in the climQMBC package to gridded products.
+
 variable = 'pr'
 allow_negatives = 0
 mult_change = 1
