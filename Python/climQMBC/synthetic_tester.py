@@ -166,10 +166,16 @@ def synthetic_tester(obs, mod, allow_negatives, mult_change, SDM_var, yn=10000):
     li_stats_qdm_f = get_tester_stats(QDM_f_series,obs_f,mult_change)
     li_stats_uqm_f = get_tester_stats(UQM_f_series,obs_f,mult_change)
     li_stats_sdm_f = get_tester_stats(SDM_f_series,obs_f,mult_change)
+    
+    if mult_change==1:
+        columns=['NSE','KGE','Mean','Std. Dev','Skew','P05','P10','P25','P50','P75','P90','P95']
+    else:
+        columns=['1-NSE','1-KGE','Mean','Std. Dev','Skew','P05','P10','P25','P50','P75','P90','P95']
+        
 
     df_tester_stats = pd.DataFrame([li_stats_qm_h,li_stats_sdm_h,
                                     li_stats_qm_f,li_stats_dqm_f,li_stats_qdm_f,li_stats_uqm_f,li_stats_sdm_f],
                                    index=['QM_h','SDM_h','QM_f','DQM_f','QDM_f','UQM_f','SDM_f'],
-                                   columns=['NSE','KGE','Mean','Std. Dev','Skew','P05','P10','P25','P50','P75','P90','P95'])
+                                   columns=columns)
     
     return df_tester_stats
